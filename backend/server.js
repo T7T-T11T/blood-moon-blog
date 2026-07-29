@@ -27,8 +27,6 @@
  * - /api/comments    评论管理（审核/删除）
  * - /api/links       友链管理（增删改查）
  * - /api/settings    网站设置管理（批量更新）
- * - /api/tasks       任务管理
- * - /api/pomodoro    番茄钟记录
  * - /api/dashboard   仪表盘统计
  * - /api/upload      文件上传
  */
@@ -41,11 +39,9 @@ const cors = require('cors')
 
 // 路由模块
 const authRoutes = require('./routes/auth')
-const taskRoutes = require('./routes/tasks')
 const articleRoutes = require('./routes/articles')
 const categoryRoutes = require('./routes/categories')
 const tagRoutes = require('./routes/tags')
-const pomodoroRoutes = require('./routes/pomodoro')
 const dashboardRoutes = require('./routes/dashboard')
 const uploadRoutes = require('./routes/upload')
 const commentRoutes = require('./routes/comments')
@@ -82,8 +78,6 @@ app.use('/api/links', linkRoutes)          // 友链（公开浏览 + 管理）
 app.use('/api/settings', settingRoutes)    // 网站设置（公开读取 + 管理）
 
 // 需要登录的接口
-app.use('/api/tasks', taskRoutes)          // 任务
-app.use('/api/pomodoro', pomodoroRoutes)   // 番茄钟
 app.use('/api/dashboard', dashboardRoutes) // 仪表盘
 app.use('/api/upload', uploadRoutes)       // 文件上传
 

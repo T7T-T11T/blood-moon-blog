@@ -1,10 +1,10 @@
 <template>
-  <div class="article-edit-page">
+  <div class="article-edit-page animate-fade-in">
     <div class="edit-container">
-      <!-- 左侧编辑区 -->
+      <!-- 左侧编辑主区域 -->
       <div class="editor-main">
         <el-form ref="formRef" :model="form" :rules="rules" class="article-form">
-          <!-- 标题输入 -->
+          <!-- 标题输入（大号无边框） -->
           <el-form-item prop="title" class="title-form-item">
             <el-input
               v-model="form.title"
@@ -27,7 +27,7 @@
             />
           </el-form-item>
 
-          <!-- 内容编辑器 -->
+          <!-- Markdown 内容编辑器 -->
           <el-form-item prop="content" class="content-form-item">
             <div class="editor-wrapper">
               <MdEditor
@@ -41,7 +41,7 @@
         </el-form>
       </div>
 
-      <!-- 右侧设置面板 -->
+      <!-- 右侧发布设置面板 -->
       <div class="settings-panel">
         <!-- 发布设置 -->
         <div class="panel-section">
@@ -51,7 +51,7 @@
             <span class="setting-label">状态</span>
             <el-tag
               :type="form.status === '已发布' ? 'success' : 'warning'"
-              effect="dark"
+              effect="light"
               size="small"
             >
               {{ form.status }}
@@ -80,7 +80,7 @@
             <span class="setting-label">标签</span>
             <el-select
               v-model="form.tag_ids"
-              placeholder="选择或输入标签"
+              placeholder="选择标签"
               multiple
               filterable
               allow-create
@@ -108,7 +108,7 @@
               <el-icon><Document /></el-icon>
               <span>存为草稿</span>
             </el-button>
-            <el-button size="large" :disabled="isNew" @click="handleCancel"> 取消 </el-button>
+            <el-button size="large" :disabled="isNew" @click="handleCancel">取消</el-button>
           </div>
         </div>
 
@@ -134,6 +134,13 @@
 </template>
 
 <script setup>
+/**
+ * @file ArticleEdit.vue
+ * @description 文章编辑/新增页面（管理端）
+ * 作用：提供标题、摘要、Markdown 正文、分类与标签的编辑表单，
+ *       支持保存、保存并发布、存为草稿三种操作。编辑模式下加载已有文章详情。
+ * 依赖 API：getAdminArticleDetail / addArticle / updateArticle / getCategories / getTags
+ */
 import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
@@ -150,16 +157,13 @@ const router = useRouter();
 /** 表单引用 */
 const formRef = ref(null);
 
-/** 是否新建文章 */
+/** 是否为新建模式（无路由 id 参数） */
 const isNew = computed(() => !route.params.id);
 
-/** 文章详情（编辑模式下） */
+/** 文章详情（编辑模式下缓存原始数据） */
 const article = ref(null);
 
-/** 加载状态 */
-const loading = ref(false);
-
-/** 保存状态 */
+/** 保存中状态 */
 const saving = ref(false);
 
 /** 分类列表 */
@@ -178,7 +182,7 @@ const form = ref({
   status: '草稿'
 });
 
-/** 表单验证规则 */
+/** 表单校验规则 */
 const rules = {
   title: [
     { required: true, message: '请输入文章标题', trigger: 'blur' },
@@ -189,7 +193,7 @@ const rules = {
 
 /**
  * md-editor-v3 工具栏配置
- * 说明：使用 '|' 作为分组分隔符
+ * 使用 '|' 作为分组分隔符
  */
 const toolbars = [
   'bold',
@@ -218,14 +222,13 @@ const toolbars = [
 ];
 
 /**
- * 格式化日期
- * @param {string} dateStr - 日期字符串
+ * 格式化日期为完整本地时间
+ * @param {string} dateStr - 后端返回的时间字符串
  * @returns {string} 格式化后的日期
  */
 function formatDate(dateStr) {
   if (!dateStr) return '-';
-  const date = new Date(dateStr);
-  return date.toLocaleString('zh-CN', {
+  return new Date(dateStr).toLocaleString('zh-CN', {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
@@ -258,15 +261,15 @@ async function loadTags() {
   }
 }
 
-/** 加载文章详情（编辑模式） */
+/** 加载文章详情（仅编辑模式） */
 async function loadArticle() {
   if (isNew.value) return;
 
-  loading.value = true;
   try {
     const res = await getAdminArticleDetail(route.params.id);
     if (res.code === 200) {
       article.value = res.data;
+      // 回填表单字段
       form.value.title = res.data.title;
       form.value.summary = res.data.summary || '';
       form.value.content = res.data.content;
@@ -277,18 +280,17 @@ async function loadArticle() {
   } catch (e) {
     console.error('加载文章失败:', e);
     ElMessage.error('加载文章失败');
-  } finally {
-    loading.value = false;
   }
 }
 
 /**
- * 保存文章
- * @param {string} status - 文章状态（已发布/草稿）
+ * 保存文章（新增或更新）
+ * @param {string} status - 目标状态（已发布/草稿）
  */
 async function saveArticle(status = '草稿') {
   if (!formRef.value) return;
 
+  // 先做表单校验
   try {
     await formRef.value.validate();
   } catch {
@@ -315,6 +317,7 @@ async function saveArticle(status = '草稿') {
 
     if (res.code === 200) {
       ElMessage.success(isNew.value ? '创建成功' : '更新成功');
+      // 新建成功后跳转到编辑页（带新 id），否则返回列表
       if (isNew.value && res.data?.id) {
         router.replace(`/admin/articles/edit/${res.data.id}`);
       } else {
@@ -346,7 +349,7 @@ function handleDraft() {
   saveArticle('草稿');
 }
 
-/** 取消编辑 */
+/** 取消编辑，返回列表 */
 function handleCancel() {
   router.push('/admin/articles');
 }
@@ -359,11 +362,12 @@ onMounted(() => {
 </script>
 
 <style scoped>
+/* ========== 编辑页容器（全屏铺满内容区） ========== */
 .article-edit-page {
   padding: 0;
   margin: -24px -32px;
   min-height: calc(100vh - 60px);
-  background: #fff;
+  background: var(--bg-card);
 }
 
 .edit-container {
@@ -371,7 +375,7 @@ onMounted(() => {
   height: calc(100vh - 60px);
 }
 
-/* 编辑主区域 */
+/* ========== 左侧编辑主区域 ========== */
 .editor-main {
   flex: 1;
   padding: 32px 40px;
@@ -382,7 +386,7 @@ onMounted(() => {
   max-width: 860px;
 }
 
-/* 标题样式 */
+/* 标题输入：大号无边框 */
 .title-form-item {
   margin-bottom: 8px;
 }
@@ -391,23 +395,21 @@ onMounted(() => {
   box-shadow: none;
   border: none;
   padding: 0;
-  font-size: 32px;
-  font-weight: 700;
 }
 
 .title-input :deep(.el-input__inner) {
-  font-size: 32px;
+  font-size: 30px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--text-primary);
   line-height: 1.3;
 }
 
 .title-input :deep(.el-input__inner::placeholder) {
-  color: #cbd5e1;
+  color: var(--text-placeholder);
   font-weight: 400;
 }
 
-/* 摘要样式 */
+/* 摘要输入 */
 .summary-form-item {
   margin-bottom: 16px;
 }
@@ -415,24 +417,24 @@ onMounted(() => {
 .summary-input :deep(.el-textarea__inner) {
   font-size: 14px;
   line-height: 1.6;
-  color: #475569;
+  color: var(--text-secondary);
 }
 
-/* 编辑器样式 */
+/* Markdown 编辑器外层包装 */
 .content-form-item {
   margin-bottom: 0;
 }
 
 .editor-wrapper {
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
   overflow: hidden;
-  transition: border-color 0.2s;
+  transition: border-color 0.2s var(--ease-out);
 }
 
 .editor-wrapper:focus-within {
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.1);
 }
 
 .editor-wrapper :deep(.md-editor) {
@@ -442,8 +444,8 @@ onMounted(() => {
 }
 
 .editor-wrapper :deep(.md-editor__toolbar) {
-  background: #f8fafc;
-  border-bottom: 1px solid #e2e8f0;
+  background: var(--bg-body);
+  border-bottom: 1px solid var(--border);
   padding: 8px 12px;
 }
 
@@ -455,12 +457,12 @@ onMounted(() => {
   padding: 24px 28px;
 }
 
-/* 设置面板 */
+/* ========== 右侧设置面板 ========== */
 .settings-panel {
   width: 280px;
   flex-shrink: 0;
-  background: #f8fafc;
-  border-left: 1px solid #e2e8f0;
+  background: var(--bg-body);
+  border-left: 1px solid var(--border);
   padding: 24px;
   overflow-y: auto;
 }
@@ -472,7 +474,7 @@ onMounted(() => {
 .panel-title {
   font-size: 12px;
   font-weight: 600;
-  color: #64748b;
+  color: var(--text-secondary);
   margin: 0 0 16px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -483,7 +485,7 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   padding: 8px 0;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--border-light);
   gap: 12px;
 }
 
@@ -498,7 +500,7 @@ onMounted(() => {
 
 .setting-label {
   font-size: 13px;
-  color: #64748b;
+  color: var(--text-secondary);
   white-space: nowrap;
 }
 
@@ -516,7 +518,7 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   padding: 8px 0;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--border-light);
 }
 
 .info-item:last-child {
@@ -525,16 +527,16 @@ onMounted(() => {
 
 .info-label {
   font-size: 13px;
-  color: #64748b;
+  color: var(--text-secondary);
 }
 
 .info-value {
   font-size: 13px;
-  color: #0f172a;
+  color: var(--text-primary);
   font-weight: 500;
 }
 
-/* 操作按钮 */
+/* 操作按钮纵向排列 */
 .action-buttons {
   display: flex;
   flex-direction: column;
@@ -546,7 +548,7 @@ onMounted(() => {
   justify-content: flex-start;
 }
 
-/* 响应式 */
+/* ========== 响应式 ========== */
 @media (max-width: 1024px) {
   .settings-panel {
     display: none;
@@ -561,6 +563,10 @@ onMounted(() => {
   .title-input :deep(.el-input__wrapper),
   .title-input :deep(.el-input__inner) {
     font-size: 24px;
+  }
+
+  .article-edit-page {
+    margin: -16px;
   }
 }
 </style>

@@ -18,12 +18,10 @@
  * - /admin/articles        文章管理
  * - /admin/categories      分类管理
  * - /admin/tags            标签管理
- * - /admin/comments        评论管理
- * - /admin/links           友链管理
- * - /admin/tasks           任务管理
- * - /admin/pomodoro        番茄钟
- * - /admin/statistics      数据统计
- * - /admin/settings        系统设置
+ * - /admin/comments    评论管理
+ * - /admin/links       友链管理
+ * - /admin/statistics  数据统计
+ * - /admin/settings    系统设置
  *
  * 【认证路由】
  * - /login                 登录
@@ -160,21 +158,9 @@ const routes = [
         meta: { title: '友链管理', requiresAuth: true }
       },
       {
-        path: 'tasks',
-        name: 'TaskList',
-        component: () => import('../views/TaskList.vue'),
-        meta: { title: '任务管理', requiresAuth: true }
-      },
-      {
-        path: 'pomodoro',
-        name: 'Pomodoro',
-        component: () => import('../views/Pomodoro.vue'),
-        meta: { title: '番茄钟', requiresAuth: true }
-      },
-      {
         path: 'statistics',
         name: 'Statistics',
-        component: () => import('../views/Statistics.vue'),
+        component: () => import('../views/admin/Statistics.vue'),
         meta: { title: '数据统计', requiresAuth: true }
       },
       {
@@ -187,10 +173,6 @@ const routes = [
   },
 
   // ========== 旧路径重定向（兼容历史链接） ==========
-  { path: '/task', redirect: '/admin/tasks' },
-  { path: '/task/add', redirect: '/admin/tasks' },
-  { path: '/task/list', redirect: '/admin/tasks' },
-  { path: '/task/edit/:id?', redirect: '/admin/tasks' },
   { path: '/statistics', redirect: '/admin/statistics' },
   { path: '/settings', redirect: '/admin/settings' },
 

@@ -1,205 +1,148 @@
-/** * @file About.vue * @description 关于我页面组件（杂志风个人主页） * *
-作用：展示博主个人信息与联系方式，杂志风个人主页布局 * - 顶部 Hero：个人卡片（头像、姓名、简介） * -
-联系方式：邮箱、GitHub、QQ、微信（如有配置则显示） * - 技能标签区域（静态内容） * -
-底部社交链接（点击跳转对应主页） * * 数据获取： * - getSettings() 获取网站设置（键值对对象） *
-返回：{ site_name, site_description, author_name, author_bio, author_avatar, * author_email,
-author_github, author_qq, author_wechat, ... } * * 设计要点： * - 主色调青绿色 #0d9488 * - Hero
-渐变背景 + 头像阴影 * - 联系方式卡片网格，悬浮高亮 * - 技能标签彩色徽章 * - 响应式：移动端单列布局
-*/
+/** * @file About.vue * @description 关于我页面（杂志风个人主页，卡片化舍弃） * * 作用： * - 大号
+Hero：博主姓名为最大字号 + 简介 * - 内容分区：简介、技能标签、联系方式（GitHub / 邮箱） * -
+大量留白，克制排版 * * 数据获取： * - getSettings() 返回键值对对象 * -
+字段同时兼容驼峰与下划线命名（siteName / site_name 等） * * 动效（2-3 组）： * - 入场：Hero 文案
+fade-in-up 错峰 * - 滚动：各分区进入视口时 fade-in-up 错峰（Intersection Observer） * -
+悬浮：技能标签上移、联系方式箭头右移 */
 <template>
-  <div class="about-page">
-    <!-- Hero 区域：个人卡片（头像 + 姓名 + 简介） -->
+  <div ref="rootRef" class="about-page">
+    <!-- ============ Hero 区域：博主姓名为最大字号 ============ -->
     <section class="hero">
       <div class="hero-inner">
-        <!-- 头像：存在 author_avatar 展示图片，否则使用默认图标 -->
-        <div class="avatar">
-          <img v-if="authorAvatar" :src="authorAvatar" :alt="authorName" class="avatar-img" />
-          <el-icon v-else :size="56" color="#fff"><UserFilled /></el-icon>
-        </div>
-        <h1 class="hero-title">{{ authorName }}</h1>
-        <p class="hero-subtitle">{{ siteDescription }}</p>
-        <p class="hero-bio">{{ authorBio }}</p>
+        <p class="hero-eyebrow animate-fade-in-down">ABOUT</p>
+        <h1 class="hero-title animate-fade-in-up">{{ authorName }}</h1>
+        <p class="hero-tagline animate-fade-in-up delay-100">{{ siteDescription }}</p>
       </div>
-      <!-- 装饰光斑（纯视觉，不可交互） -->
-      <div class="hero-decoration" aria-hidden="true"></div>
+      <!-- 装饰光斑（纯视觉） -->
+      <div class="hero-orb" aria-hidden="true"></div>
     </section>
 
-    <!-- 主体内容 -->
+    <!-- ============ 主体内容 ============ -->
     <div class="content-wrapper">
-      <!-- 联系方式：存在任一联系方式时展示 -->
-      <section v-if="hasContact" class="contact-section">
-        <div class="section-header">
-          <h2 class="section-title">联系方式</h2>
-        </div>
-        <div class="contact-grid">
-          <!-- 邮箱：配置了 author_email 时展示 -->
-          <a v-if="authorEmail" :href="`mailto:${authorEmail}`" class="contact-card">
-            <div class="contact-icon">
-              <el-icon :size="24"><Message /></el-icon>
-            </div>
-            <div class="contact-info">
-              <span class="contact-label">邮箱</span>
-              <span class="contact-value">{{ authorEmail }}</span>
-            </div>
-          </a>
+      <!-- 简介 -->
+      <section class="block reveal">
+        <h2 class="block-title">简介</h2>
+        <p class="block-text">{{ authorBio }}</p>
+      </section>
 
-          <!-- GitHub：配置了 author_github 时展示 -->
-          <a
-            v-if="authorGithub"
-            :href="githubUrl"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="contact-card"
-          >
-            <div class="contact-icon">
-              <el-icon :size="24"><Link /></el-icon>
-            </div>
-            <div class="contact-info">
+      <!-- 技能 / 兴趣 -->
+      <section class="block reveal">
+        <h2 class="block-title">技能 / 兴趣</h2>
+        <div class="skill-list">
+          <span v-for="skill in skills" :key="skill" class="skill-tag">{{ skill }}</span>
+        </div>
+      </section>
+
+      <!-- 联系方式 -->
+      <section v-if="hasContact" class="block reveal">
+        <h2 class="block-title">联系方式</h2>
+        <ul class="contact-list">
+          <!-- GitHub -->
+          <li v-if="githubUrl" class="contact-item">
+            <a :href="githubUrl" target="_blank" rel="noopener noreferrer" class="contact-link">
               <span class="contact-label">GitHub</span>
-              <span class="contact-value">{{ authorGithub }}</span>
-            </div>
-          </a>
-
-          <!-- QQ：配置了 author_qq 时展示 -->
-          <div v-if="authorQq" class="contact-card">
-            <div class="contact-icon">
-              <el-icon :size="24"><ChatDotRound /></el-icon>
-            </div>
-            <div class="contact-info">
-              <span class="contact-label">QQ</span>
-              <span class="contact-value">{{ authorQq }}</span>
-            </div>
-          </div>
-
-          <!-- 微信：配置了 author_wechat 时展示 -->
-          <div v-if="authorWechat" class="contact-card">
-            <div class="contact-icon">
-              <el-icon :size="24"><ChatLineRound /></el-icon>
-            </div>
-            <div class="contact-info">
-              <span class="contact-label">微信</span>
-              <span class="contact-value">{{ authorWechat }}</span>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- 技能标签区域（静态内容） -->
-      <section class="skills-section">
-        <div class="section-header">
-          <h2 class="section-title">技能标签</h2>
-        </div>
-        <div class="skills-tags">
-          <span v-for="skill in skills" :key="skill" class="skill-tag">
-            {{ skill }}
-          </span>
-        </div>
-      </section>
-
-      <!-- 底部社交链接：存在可跳转社交账号时展示 -->
-      <section v-if="hasSocial" class="social-section">
-        <div class="section-header">
-          <h2 class="section-title">关注我</h2>
-        </div>
-        <div class="social-links">
-          <!-- GitHub 主页跳转 -->
-          <a
-            v-if="authorGithub"
-            :href="githubUrl"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="social-link"
-          >
-            <el-icon :size="20"><Link /></el-icon>
-            <span>GitHub</span>
-          </a>
-          <!-- 邮件联系 -->
-          <a v-if="authorEmail" :href="`mailto:${authorEmail}`" class="social-link">
-            <el-icon :size="20"><Message /></el-icon>
-            <span>发送邮件</span>
-          </a>
-        </div>
+              <span class="contact-value">{{ githubHandle }}</span>
+              <span class="contact-arrow" aria-hidden="true">→</span>
+            </a>
+          </li>
+          <!-- 邮箱 -->
+          <li v-if="authorEmail" class="contact-item">
+            <a :href="`mailto:${authorEmail}`" class="contact-link">
+              <span class="contact-label">Email</span>
+              <span class="contact-value">{{ authorEmail }}</span>
+              <span class="contact-arrow" aria-hidden="true">→</span>
+            </a>
+          </li>
+        </ul>
       </section>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
-import { UserFilled, Message, Link, ChatDotRound, ChatLineRound } from '@element-plus/icons-vue';
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue';
 import { getSettings } from '../../api/settings';
 
-/** 网站设置（键值对对象，初始为空对象） */
+/** 组件根节点引用（用于作用域内的滚动观察） */
+const rootRef = ref(null);
+
+/** 网站设置（键值对对象） */
 const settings = ref({});
 
-/** 静态技能标签列表 */
+/** Intersection Observer 实例（滚动揭示动画） */
+let observer = null;
+
+/** 静态技能 / 兴趣标签 */
 const skills = [
   'Vue 3',
-  'Composition API',
-  'Element Plus',
   'JavaScript',
   'TypeScript',
   'Node.js',
-  'Express',
-  'MySQL',
+  'Element Plus',
   'Vite',
   'Pinia',
-  'Vue Router',
-  'ECharts'
+  'Vue Router'
 ];
 
-/** 博主姓名（取自设置，兜底为默认值） */
-const authorName = computed(() => settings.value.author_name || '匿名博主');
+/**
+ * 通用取值器：同时兼容驼峰与下划线命名
+ * 用于应对后端设置键名风格不确定的情况
+ * @param {string} camel - 驼峰键名，如 authorName
+ * @param {string} snake - 下划线键名，如 author_name
+ * @returns {string} 命中值，无则空字符串
+ */
+function pick(camel, snake) {
+  const v = settings.value[camel] ?? settings.value[snake];
+  return v == null ? '' : String(v);
+}
 
-/** 博主简介（取自设置，兜底为默认值） */
-const authorBio = computed(() => settings.value.author_bio || '热爱技术，喜欢分享。');
+/** 博主姓名 */
+const authorName = computed(() => pick('authorName', 'author_name') || '匿名博主');
 
-/** 博主头像 URL（取自设置，无则为空） */
-const authorAvatar = computed(() => settings.value.author_avatar || '');
+/** 博主简介 */
+const authorBio = computed(() => pick('authorBio', 'author_bio') || '热爱技术，喜欢分享。');
 
-/** 站点描述（取自设置，兜底为默认值） */
-const siteDescription = computed(() => settings.value.site_description || '分享技术，记录成长');
+/** 站点描述 */
+const siteDescription = computed(
+  () => pick('siteDescription', 'site_description') || '分享技术，记录成长'
+);
 
-/** 博主邮箱（取自设置，无则为空） */
-const authorEmail = computed(() => settings.value.author_email || '');
+/** 博主邮箱 */
+const authorEmail = computed(() => pick('email', 'author_email'));
 
-/** 博主 GitHub 账号（取自设置，无则为空，可为完整 URL 或用户名） */
-const authorGithub = computed(() => settings.value.author_github || '');
-
-/** 博主 QQ（取自设置，无则为空） */
-const authorQq = computed(() => settings.value.author_qq || '');
-
-/** 博主微信（取自设置，无则为空） */
-const authorWechat = computed(() => settings.value.author_wechat || '');
+/** GitHub 账号（可为完整 URL 或用户名） */
+const authorGithub = computed(() => pick('githubUrl', 'author_github'));
 
 /**
  * GitHub 完整访问 URL
- * - 已是完整 URL（以 http 开头）直接使用
+ * - 已是完整 URL 直接使用
  * - 否则拼接 https://github.com/ 前缀
  * @returns {string} GitHub 主页地址
  */
 const githubUrl = computed(() => {
   const gh = authorGithub.value;
-  // 为空时返回空字符串
   if (!gh) return '';
-  // 已是完整 URL 直接使用，否则拼接前缀
   if (/^https?:\/\//i.test(gh)) return gh;
   return `https://github.com/${gh}`;
 });
 
 /**
- * 是否存在任一联系方式（控制联系方式区块展示）
- * @returns {boolean} 存在联系方式返回 true
+ * GitHub 展示文本（URL 时取最后一段路径作为显示名）
+ * @returns {string} 用户名或原值
  */
-const hasContact = computed(() =>
-  Boolean(authorEmail.value || authorGithub.value || authorQq.value || authorWechat.value)
-);
+const githubHandle = computed(() => {
+  const gh = authorGithub.value;
+  if (!gh) return '';
+  if (/^https?:\/\//i.test(gh)) {
+    // 取 URL 末尾路径段
+    const parts = gh.replace(/\/+$/, '').split('/');
+    return parts[parts.length - 1] || gh;
+  }
+  return gh;
+});
 
-/**
- * 是否存在可跳转的社交链接（控制底部社交区块展示）
- * @returns {boolean} 存在可跳转社交账号返回 true
- */
-const hasSocial = computed(() => Boolean(authorEmail.value || authorGithub.value));
+/** 是否存在任一联系方式（控制联系方式区块展示） */
+const hasContact = computed(() => Boolean(githubUrl.value || authorEmail.value));
 
 /**
  * 加载网站设置
@@ -209,210 +152,155 @@ const hasSocial = computed(() => Boolean(authorEmail.value || authorGithub.value
 async function loadSettings() {
   try {
     const { data } = await getSettings();
-    // 仅在返回非空对象时合并，避免覆盖默认值
     if (data && typeof data === 'object') {
       settings.value = data;
     }
+    await nextTick();
+    initObserver();
   } catch (e) {
     console.error('加载网站设置失败:', e);
   }
 }
 
+/**
+ * 初始化 Intersection Observer
+ * 监听组件内所有 .reveal 元素，进入视口时添加 visible 类触发动画
+ */
+function initObserver() {
+  if (observer) observer.disconnect();
+  if (!rootRef.value) return;
+  observer = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+          observer.unobserve(entry.target);
+        }
+      });
+    },
+    { threshold: 0.15, rootMargin: '0px 0px -60px 0px' }
+  );
+  rootRef.value.querySelectorAll('.reveal').forEach((el) => observer.observe(el));
+}
+
 onMounted(() => {
   loadSettings();
+});
+
+onUnmounted(() => {
+  if (observer) observer.disconnect();
 });
 </script>
 
 <style scoped>
-.about-page {
-  --color-primary: #0d9488; /* 主色：青绿 */
-  --color-primary-dark: #0f766e; /* 主色深 */
-  --color-primary-light: #14b8a6; /* 主色浅 */
-  --color-text: #0f172a; /* 主文本 */
-  --color-text-secondary: #475569; /* 次级文本 */
-  --color-text-muted: #94a3b8; /* 弱化文本 */
-  --color-bg: #ffffff; /* 卡片背景 */
-  --color-bg-soft: #f8fafc; /* 页面背景 */
-  --color-border: #e2e8f0; /* 分割线 */
-  --max-width: 960px; /* 内容最大宽度 */
-}
-
 /* ========== Hero 区域 ========== */
 .hero {
   position: relative;
-  padding: 80px 32px 72px;
+  padding: 120px 32px 96px;
   background: linear-gradient(135deg, #0f766e 0%, #0d9488 45%, #14b8a6 100%);
   overflow: hidden;
   color: #fff;
+  isolation: isolate;
 }
 
 .hero-inner {
   position: relative;
   z-index: 2;
-  max-width: var(--max-width);
+  max-width: 960px;
   margin: 0 auto;
   text-align: center;
 }
 
-/* 头像 */
-.avatar {
-  width: 128px;
-  height: 128px;
-  margin: 0 auto 24px;
-  border-radius: 50%;
-  overflow: hidden;
-  background: rgba(255, 255, 255, 0.2);
-  border: 4px solid rgba(255, 255, 255, 0.4);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.25);
+.hero-eyebrow {
+  margin: 0 0 18px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 6px;
+  color: rgba(255, 255, 255, 0.78);
 }
 
-.avatar-img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
+/* 博主姓名为最大字号 */
 .hero-title {
-  margin: 0 0 12px;
-  font-size: 44px;
+  margin: 0 0 24px;
+  font-size: clamp(56px, 10vw, 104px);
   font-weight: 800;
-  letter-spacing: -1.5px;
-  text-shadow: 0 2px 20px rgba(0, 0, 0, 0.15);
+  letter-spacing: -3px;
+  line-height: 1.02;
+  text-shadow: 0 4px 30px rgba(0, 0, 0, 0.2);
 }
 
-.hero-subtitle {
-  margin: 0 0 16px;
-  font-size: 18px;
-  font-weight: 500;
+.hero-tagline {
+  margin: 0 auto;
+  max-width: 560px;
+  font-size: clamp(16px, 2vw, 20px);
+  font-weight: 400;
   color: rgba(255, 255, 255, 0.9);
   letter-spacing: 0.5px;
 }
 
-.hero-bio {
-  margin: 0 auto;
-  max-width: 560px;
-  font-size: 15px;
-  line-height: 1.8;
-  color: rgba(255, 255, 255, 0.85);
-}
-
 /* Hero 装饰光斑 */
-.hero-decoration {
+.hero-orb {
   position: absolute;
-  top: -100px;
-  right: -60px;
-  width: 320px;
-  height: 320px;
+  top: -140px;
+  right: -100px;
+  width: 420px;
+  height: 420px;
   background: radial-gradient(circle, rgba(255, 255, 255, 0.18) 0%, transparent 70%);
   border-radius: 50%;
   z-index: 1;
+  pointer-events: none;
 }
 
 /* ========== 内容区 ========== */
 .content-wrapper {
-  max-width: var(--max-width);
+  max-width: 760px;
   margin: 0 auto;
-  padding: 56px 32px 64px;
+  padding: 88px 32px 96px;
 }
 
-/* 区块间距 */
-.contact-section,
-.skills-section,
-.social-section {
-  margin-bottom: 48px;
-}
-
-.contact-section:last-child,
-.skills-section:last-child,
-.social-section:last-child {
-  margin-bottom: 0;
-}
-
-/* 区块标题 */
-.section-header {
-  margin-bottom: 24px;
-  padding-bottom: 14px;
-  border-bottom: 2px solid var(--color-border);
-}
-
-.section-title {
-  margin: 0;
-  font-size: 24px;
-  font-weight: 700;
-  color: var(--color-text);
-  letter-spacing: -0.5px;
-}
-
-/* ========== 联系方式 ========== */
-.contact-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr); /* 桌面端 2 列 */
-  gap: 16px;
-}
-
-.contact-card {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 20px;
-  background: var(--color-bg);
-  border: 1px solid var(--color-border);
-  border-radius: 14px;
-  text-decoration: none;
-  color: inherit;
+/* 内容分区：使用分隔线 + 大留白，舍弃卡片 */
+.block {
+  padding-bottom: 64px;
+  margin-bottom: 64px;
+  border-bottom: 1px solid var(--border);
+  /* 入场前隐藏 */
+  opacity: 0;
+  transform: translateY(28px);
   transition:
-    transform 0.3s ease,
-    box-shadow 0.3s ease,
-    border-color 0.3s ease;
+    opacity 0.6s var(--ease-out),
+    transform 0.6s var(--ease-out);
 }
 
-/* 联系卡片悬浮：上移 + 主色边框 */
-.contact-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.1);
-  border-color: rgba(13, 148, 136, 0.4);
+.block:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
 }
 
-.contact-icon {
-  flex-shrink: 0;
-  width: 44px;
-  height: 44px;
-  border-radius: 10px;
-  background: rgba(13, 148, 136, 0.1);
-  color: var(--color-primary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.block.visible {
+  opacity: 1;
+  transform: translateY(0);
 }
 
-.contact-info {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+.block-title {
+  margin: 0 0 24px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--primary);
 }
 
-.contact-label {
-  font-size: 12px;
-  color: var(--color-text-muted);
-}
-
-.contact-value {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--color-text);
-  /* 值最多 1 行，超出截断 */
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.block-text {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.85;
+  color: var(--text-primary);
+  letter-spacing: 0.2px;
 }
 
 /* ========== 技能标签 ========== */
-.skills-tags {
+.skill-list {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
@@ -422,81 +310,114 @@ onMounted(() => {
   padding: 8px 18px;
   font-size: 14px;
   font-weight: 500;
-  color: var(--color-primary);
-  background: rgba(13, 148, 136, 0.08);
-  border: 1px solid rgba(13, 148, 136, 0.2);
+  color: var(--primary);
+  background: var(--primary-bg);
   border-radius: 20px;
   transition:
-    background 0.2s ease,
-    transform 0.2s ease;
-  cursor: default;
+    transform 0.25s var(--ease-spring),
+    background 0.25s var(--ease-out);
 }
 
-/* 技能标签悬浮：背景加深 + 轻微上移 */
 .skill-tag:hover {
-  background: rgba(13, 148, 136, 0.15);
-  transform: translateY(-2px);
-}
-
-/* ========== 底部社交链接 ========== */
-.social-links {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
-}
-
-.social-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 24px;
-  font-size: 14px;
-  font-weight: 600;
+  transform: translateY(-3px);
+  background: var(--primary);
   color: #fff;
-  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-light) 100%);
-  text-decoration: none;
-  border-radius: 24px;
-  transition:
-    transform 0.2s ease,
-    box-shadow 0.2s ease;
 }
 
-/* 社交链接悬浮：上移 + 阴影增强 */
-.social-link:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(13, 148, 136, 0.35);
+/* ========== 联系方式列表 ========== */
+.contact-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.contact-item {
+  border-bottom: 1px solid var(--border);
+}
+
+.contact-item:last-child {
+  border-bottom: none;
+}
+
+.contact-link {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 22px 0;
+  text-decoration: none;
+  color: inherit;
+  transition: transform 0.25s var(--ease-out);
+}
+
+.contact-link:hover {
+  transform: translateX(8px);
+}
+
+.contact-label {
+  flex-shrink: 0;
+  width: 80px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+.contact-value {
+  flex: 1;
+  min-width: 0;
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: color 0.25s var(--ease-out);
+}
+
+.contact-link:hover .contact-value {
+  color: var(--primary);
+}
+
+.contact-arrow {
+  flex-shrink: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  transition:
+    transform 0.3s var(--ease-spring),
+    color 0.25s var(--ease-out);
+}
+
+.contact-link:hover .contact-arrow {
+  color: var(--primary);
+  transform: translateX(6px);
 }
 
 /* ========== 响应式 ========== */
-/* 手机：单列布局 */
 @media (max-width: 768px) {
   .hero {
-    padding: 56px 20px 48px;
+    padding: 80px 20px 64px;
   }
-
-  .avatar {
-    width: 96px;
-    height: 96px;
+  .content-wrapper {
+    padding: 56px 20px 64px;
   }
-
-  .hero-title {
-    font-size: 32px;
+  .block {
+    padding-bottom: 48px;
+    margin-bottom: 48px;
   }
-
-  .hero-subtitle {
+  .block-text {
     font-size: 16px;
   }
-
-  .content-wrapper {
-    padding: 32px 16px 48px;
+  .contact-link {
+    gap: 12px;
   }
-
-  .contact-grid {
-    grid-template-columns: 1fr;
+  .contact-label {
+    width: 64px;
+    font-size: 11px;
   }
-
-  .section-title {
-    font-size: 20px;
+  .contact-value {
+    font-size: 15px;
   }
 }
 </style>

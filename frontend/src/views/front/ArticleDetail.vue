@@ -1,32 +1,31 @@
-/** * @file ArticleDetail.vue * @description 文章详情页（杂志风/阅读体验优先） * *
-作用：展示单篇文章的完整内容，包含： * -
-文章头部：分类标签、大号标题、摘要、元信息（浏览量/日期/分类） * - 封面图（存在 cover_image 时展示）
-* - 文章正文：使用 marked 渲染 Markdown，行高 1.8，代码高亮样式 * -
-标签区域：展示所有标签，可点击跳转 /tag/:slug * - 上一篇/下一篇导航 * - 评论区：树形评论列表 +
-评论表单（昵称/邮箱/内容），支持回复（parent_id） * * 数据获取： * - getArticleDetail(id)
-获取文章详情 * - getComments(articleId) 获取评论树形列表 * - postComment(articleId, data) 发表评论 *
-* 路由参数：useRoute().params.id 获取文章 ID * * 设计要点： * - 主色调青绿色 #0d9488 * -
-阅读体验优先：800px 内容宽度、行高 1.8、正文 17px * - 评论树形结构通过递归渲染 children 实现 */
+/** * @file ArticleDetail.vue * @description 文章详情页 - 沉浸式阅读体验 * * 作用： * -
+顶部固定阅读进度条（随滚动填充） * - 文章头部：大标题 + 元信息 + 摘要 * - Markdown 正文（marked
+渲染，max-width 800px） * - 标签、上一篇/下一篇导航 * - 树形评论列表 + 回复表单 * - 返回顶部浮动按钮
+* * 设计： * - 主色青绿色 #0d9488 * - 阅读优先：800px 内容宽度、行高 1.8 * - 三组动效：阅读进度条 /
+内容滚动揭示 / 返回顶部按钮 */
 <template>
-  <div v-loading="loading" class="article-detail">
+  <div class="article-detail">
+    <!-- 阅读进度条：固定顶部，随滚动填充 -->
+    <div class="progress-bar" :style="{ width: progress + '%' }"></div>
+
     <!-- 返回按钮 -->
     <div class="back-bar">
       <button class="back-btn" @click="goBack">
         <el-icon><ArrowLeft /></el-icon>
-        <span>返回列表</span>
+        <span>返回</span>
       </button>
     </div>
 
-    <!-- 文章内容：article 加载完成后展示 -->
+    <!-- 文章正文 -->
     <article v-if="article" class="article-content">
-      <!-- 文章头部：分类标签、标题、摘要、元信息 -->
-      <header class="article-header">
-        <!-- 元信息行：分类标签 + 日期 + 浏览量 -->
+      <!-- 文章头部 -->
+      <header class="article-header reveal">
+        <!-- 元信息 -->
         <div class="article-meta">
           <router-link
             v-if="article.category_slug"
             :to="`/category/${article.category_slug}`"
-            class="category-tag"
+            class="meta-category"
           >
             {{ article.category_name }}
           </router-link>
@@ -38,33 +37,25 @@
             <el-icon><View /></el-icon>
             {{ article.view_count }} 阅读
           </span>
-          <span v-if="article.category_name" class="meta-item">
-            <el-icon><Collection /></el-icon>
-            {{ article.category_name }}
-          </span>
         </div>
 
-        <!-- 文章标题（大号字） -->
+        <!-- 大标题 -->
         <h1 class="article-title">{{ article.title }}</h1>
 
-        <!-- 文章摘要：存在 summary 时展示 -->
+        <!-- 摘要 -->
         <p v-if="article.summary" class="article-summary">{{ article.summary }}</p>
       </header>
 
-      <!-- 封面图：存在 cover_image 时展示 -->
-      <figure v-if="article.cover_image" class="article-cover">
+      <!-- 封面图 -->
+      <figure v-if="article.cover_image" class="article-cover reveal">
         <img :src="article.cover_image" :alt="article.title" loading="lazy" />
       </figure>
 
-      <!-- 文章正文：使用 marked 渲染 Markdown -->
-      <div class="article-body" v-html="renderedContent"></div>
+      <!-- Markdown 正文 -->
+      <div class="article-body reveal" v-html="renderedContent"></div>
 
-      <!-- 标签区域：展示所有标签，可点击跳转 /tag/:slug -->
-      <section v-if="article.tags && article.tags.length > 0" class="article-tags">
-        <span class="tags-label">
-          <el-icon><PriceTag /></el-icon>
-          标签：
-        </span>
+      <!-- 标签 -->
+      <section v-if="article.tags && article.tags.length > 0" class="article-tags reveal">
         <router-link
           v-for="tag in article.tags"
           :key="tag.id"
@@ -75,96 +66,84 @@
         </router-link>
       </section>
 
-      <!-- 文章底部：上一篇/下一篇导航 -->
-      <footer class="article-footer">
-        <div class="prev-next">
-          <!-- 上一篇文章：存在 prev_article 时展示 -->
-          <router-link
-            v-if="article.prev_article"
-            :to="`/article/${article.prev_article.id}`"
-            class="nav-link prev"
-          >
-            <span class="nav-direction">
-              <el-icon><ArrowLeft /></el-icon>
-              上一篇
-            </span>
-            <span class="nav-title">{{ article.prev_article.title }}</span>
-          </router-link>
-          <!-- 占位：无上一篇文章时保持布局对齐 -->
-          <div v-else class="nav-link placeholder"></div>
+      <!-- 上一篇 / 下一篇 -->
+      <footer class="article-footer reveal">
+        <router-link
+          v-if="article.prev_article"
+          :to="`/article/${article.prev_article.id}`"
+          class="nav-card prev"
+        >
+          <span class="nav-direction">
+            <el-icon><ArrowLeft /></el-icon>
+            上一篇
+          </span>
+          <span class="nav-title">{{ article.prev_article.title }}</span>
+        </router-link>
+        <div v-else class="nav-card placeholder"></div>
 
-          <!-- 下一篇文章：存在 next_article 时展示 -->
-          <router-link
-            v-if="article.next_article"
-            :to="`/article/${article.next_article.id}`"
-            class="nav-link next"
-          >
-            <span class="nav-direction">
-              下一篇
-              <el-icon><ArrowRight /></el-icon>
-            </span>
-            <span class="nav-title">{{ article.next_article.title }}</span>
-          </router-link>
-          <!-- 占位：无下一篇文章时保持布局对齐 -->
-          <div v-else class="nav-link placeholder"></div>
-        </div>
+        <router-link
+          v-if="article.next_article"
+          :to="`/article/${article.next_article.id}`"
+          class="nav-card next"
+        >
+          <span class="nav-direction">
+            下一篇
+            <el-icon><ArrowRight /></el-icon>
+          </span>
+          <span class="nav-title">{{ article.next_article.title }}</span>
+        </router-link>
+        <div v-else class="nav-card placeholder"></div>
       </footer>
     </article>
 
     <!-- 评论区 -->
-    <section v-if="article" class="comment-section">
+    <section v-if="article" class="comment-section reveal">
       <h2 class="section-title">
-        <el-icon><ChatDotRound /></el-icon>
-        评论 <span class="comment-count">{{ commentCount }}</span>
+        评论
+        <span class="comment-count">{{ commentCount }}</span>
       </h2>
 
       <!-- 评论表单 -->
       <div class="comment-form-wrapper">
-        <!-- 回复提示：当前处于回复状态时展示 -->
         <div v-if="replyTo" class="reply-tip">
-          <span>回复 @{{ replyTo.nickname }}：</span>
-          <el-button text size="small" @click="cancelReply">取消回复</el-button>
+          <span>回复 @{{ replyTo.nickname }}</span>
+          <button class="cancel-btn" @click="cancelReply">取消</button>
         </div>
-        <el-form :model="commentForm" class="comment-form" label-position="top">
+        <div class="comment-form">
           <div class="form-row">
-            <el-form-item label="昵称" class="form-item-nickname">
-              <el-input v-model="commentForm.nickname" placeholder="请输入昵称" maxlength="30" />
-            </el-form-item>
-            <el-form-item label="邮箱" class="form-item-email">
-              <el-input
-                v-model="commentForm.email"
-                placeholder="请输入邮箱（不会公开）"
-                maxlength="100"
-              />
-            </el-form-item>
-          </div>
-          <el-form-item label="评论内容">
-            <el-input
-              v-model="commentForm.content"
-              type="textarea"
-              :rows="4"
-              placeholder="写下你的评论..."
-              maxlength="500"
-              show-word-limit
+            <input
+              v-model="commentForm.nickname"
+              type="text"
+              class="form-input"
+              placeholder="昵称 *"
+              maxlength="30"
             />
-          </el-form-item>
-          <div class="form-actions">
-            <el-button
-              type="primary"
-              :loading="submitting"
-              :disabled="!canSubmit"
-              @click="submitComment"
-            >
-              发表评论
-            </el-button>
+            <input
+              v-model="commentForm.email"
+              type="email"
+              class="form-input"
+              placeholder="邮箱 *（不会公开）"
+              maxlength="100"
+            />
           </div>
-        </el-form>
+          <textarea
+            v-model="commentForm.content"
+            class="form-textarea"
+            placeholder="写下你的评论..."
+            rows="4"
+            maxlength="500"
+          ></textarea>
+          <div class="form-actions">
+            <button class="submit-btn" :disabled="!canSubmit || submitting" @click="submitComment">
+              {{ submitting ? '提交中…' : '发表评论' }}
+            </button>
+          </div>
+        </div>
       </div>
 
-      <!-- 评论列表：树形结构，递归渲染 -->
+      <!-- 评论列表 -->
       <div v-if="comments.length > 0" class="comment-list">
         <div v-for="comment in comments" :key="comment.id" class="comment-item">
-          <!-- 评论内容 -->
           <div class="comment-main">
             <div class="comment-avatar">
               <img
@@ -187,7 +166,7 @@
             </div>
           </div>
 
-          <!-- 子回复列表：递归渲染 children -->
+          <!-- 子评论：递归渲染 children -->
           <div v-if="comment.children && comment.children.length > 0" class="comment-children">
             <div v-for="child in comment.children" :key="child.id" class="comment-item child">
               <div class="comment-main">
@@ -218,36 +197,31 @@
 
       <!-- 评论空状态 -->
       <div v-else class="comment-empty">
-        <el-icon :size="48" color="#cbd5e1"><ChatLineSquare /></el-icon>
         <p class="empty-text">暂无评论，快来抢沙发吧！</p>
       </div>
     </section>
 
-    <!-- 错误提示：加载完成但未获取到文章 -->
+    <!-- 错误状态 -->
     <div v-if="!loading && !article" class="error-state">
-      <el-icon :size="64" color="#94a3b8"><Warning /></el-icon>
       <p class="error-text">文章不存在或已被删除</p>
-      <el-button type="primary" @click="goBack">返回首页</el-button>
+      <button class="back-home-btn" @click="goHome">返回首页</button>
     </div>
+
+    <!-- 返回顶部浮动按钮 -->
+    <transition name="fade-scale">
+      <button v-if="showBackTop" class="back-top" aria-label="返回顶部" @click="scrollToTop">
+        <el-icon><Top /></el-icon>
+      </button>
+    </transition>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { marked } from 'marked';
 import { ElMessage } from 'element-plus';
-import {
-  ArrowLeft,
-  ArrowRight,
-  Clock,
-  View,
-  Collection,
-  PriceTag,
-  ChatDotRound,
-  ChatLineSquare,
-  Warning
-} from '@element-plus/icons-vue';
+import { ArrowLeft, ArrowRight, Clock, View, Top } from '@element-plus/icons-vue';
 import { getArticleDetail } from '../../api/articles';
 import { getComments, postComment } from '../../api/comments';
 
@@ -269,7 +243,16 @@ const submitting = ref(false);
 /** 当前回复目标（null 表示顶级评论） */
 const replyTo = ref(null);
 
-/** 评论表单数据 */
+/** 阅读进度（0-100） */
+const progress = ref(0);
+
+/** 是否显示返回顶部按钮 */
+const showBackTop = ref(false);
+
+/** Intersection Observer 实例 */
+let observer = null;
+
+/** 评论表单 */
 const commentForm = ref({
   nickname: '',
   email: '',
@@ -277,27 +260,22 @@ const commentForm = ref({
 });
 
 /**
- * 渲染后的文章内容
- * 使用 marked 将 Markdown 转换为 HTML
- * @returns {string} 渲染后的 HTML 字符串
+ * 渲染后的 Markdown HTML
+ * @returns {string}
  */
 const renderedContent = computed(() => {
-  // 文章未加载时返回空字符串，避免渲染异常
   if (!article.value || !article.value.content) return '';
   return marked(article.value.content);
 });
 
 /**
- * 评论总数（包含子回复）
- * 遍历评论树，累加顶级评论与子回复数量
- * @returns {number} 评论总数
+ * 评论总数（含子回复）
+ * @returns {number}
  */
 const commentCount = computed(() => {
   let count = 0;
-  // 遍历顶级评论
   for (const comment of comments.value) {
     count += 1;
-    // 存在子回复时累加子回复数量
     if (comment.children && Array.isArray(comment.children)) {
       count += comment.children.length;
     }
@@ -306,9 +284,8 @@ const commentCount = computed(() => {
 });
 
 /**
- * 是否可以提交评论
- * 昵称、邮箱、内容均非空时允许提交
- * @returns {boolean} 是否可提交
+ * 是否可提交评论
+ * @returns {boolean}
  */
 const canSubmit = computed(() => {
   return (
@@ -319,24 +296,42 @@ const canSubmit = computed(() => {
 });
 
 /**
- * 格式化日期为 YYYY-MM-DD
- * @param {string} dateStr - 后端返回的日期字符串
- * @returns {string} 格式化后的日期，无效时返回空字符串
+ * 格式化日期 YYYY-MM-DD
+ * @param {string} dateStr
+ * @returns {string}
  */
 function formatDate(dateStr) {
   if (!dateStr) return '';
   const date = new Date(dateStr);
-  // 兼容无效日期，避免展示 NaN
   if (isNaN(date.getTime())) return '';
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+/**
+ * 滚动监听：更新阅读进度 + 控制返回顶部按钮显隐
+ * - 进度 = 已滚动距离 / (文档总高 - 视口高) * 100
+ * - 滚动超过 400px 显示返回顶部
+ */
+function handleScroll() {
+  const scrollTop = window.scrollY;
+  const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+  // 兜底：文档高度小于视口时进度为 0
+  progress.value = docHeight > 0 ? Math.min(100, (scrollTop / docHeight) * 100) : 0;
+  showBackTop.value = scrollTop > 400;
+}
+
+/**
+ * 平滑滚动到顶部
+ */
+function scrollToTop() {
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 /**
  * 加载文章详情
- * 通过 getArticleDetail 获取文章数据，自动增加浏览量
  * @returns {Promise<void>}
  */
 async function loadArticle() {
@@ -345,8 +340,10 @@ async function loadArticle() {
     const id = route.params.id;
     const { data } = await getArticleDetail(id);
     article.value = data;
-    // 文章加载成功后并行加载评论
+    // 文章加载后并行：加载评论 + 初始化滚动揭示
     loadComments();
+    await nextTick();
+    initObserver();
   } catch (e) {
     console.error('加载文章失败:', e);
     article.value = null;
@@ -357,14 +354,12 @@ async function loadArticle() {
 
 /**
  * 加载评论列表
- * 通过 getComments 获取文章的树形评论数据
  * @returns {Promise<void>}
  */
 async function loadComments() {
   try {
     const id = route.params.id;
     const { data } = await getComments(id);
-    // 兼容数组或对象包裹的数组两种返回结构
     comments.value = Array.isArray(data) ? data : (data?.list ?? []);
   } catch (e) {
     console.error('加载评论失败:', e);
@@ -373,34 +368,47 @@ async function loadComments() {
 }
 
 /**
+ * 初始化 Intersection Observer
+ * 监听 .reveal 元素，进入视口时添加 visible 类
+ */
+function initObserver() {
+  if (observer) observer.disconnect();
+  observer = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+          observer.unobserve(entry.target);
+        }
+      });
+    },
+    { threshold: 0.05, rootMargin: '0px 0px -40px 0px' }
+  );
+  document.querySelectorAll('.article-detail .reveal').forEach((el) => observer.observe(el));
+}
+
+/**
  * 设置回复目标
- * 点击回复按钮时调用，记录被回复的评论，作为 parent_id 提交
- * @param {Object} comment - 被回复的评论对象
+ * @param {Object} comment
  */
 function setReplyTo(comment) {
   replyTo.value = comment;
-  // 滚动到评论表单，引导用户输入
   const formEl = document.querySelector('.comment-form-wrapper');
   if (formEl) {
     formEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 }
 
-/**
- * 取消回复
- * 清空回复目标，恢复为顶级评论模式
- */
+/** 取消回复 */
 function cancelReply() {
   replyTo.value = null;
 }
 
 /**
  * 提交评论
- * 校验表单后调用 postComment，提交成功后刷新评论列表并重置表单
  * @returns {Promise<void>}
  */
 async function submitComment() {
-  // 二次校验：防止按钮 disabled 状态被绕过
   if (!canSubmit.value) {
     ElMessage.warning('请填写完整的评论信息');
     return;
@@ -408,7 +416,6 @@ async function submitComment() {
   submitting.value = true;
   try {
     const id = route.params.id;
-    // 组装评论数据，存在回复目标时携带 parent_id
     const payload = {
       nickname: commentForm.value.nickname.trim(),
       email: commentForm.value.email.trim(),
@@ -419,10 +426,8 @@ async function submitComment() {
     }
     await postComment(id, payload);
     ElMessage.success('评论发表成功');
-    // 重置表单与回复状态
     commentForm.value.content = '';
     replyTo.value = null;
-    // 刷新评论列表，展示新评论
     await loadComments();
   } catch (e) {
     console.error('发表评论失败:', e);
@@ -432,24 +437,24 @@ async function submitComment() {
   }
 }
 
-/**
- * 返回上一页
- */
+/** 返回上一页 */
 function goBack() {
   router.back();
 }
 
+/** 返回首页 */
+function goHome() {
+  router.push('/');
+}
+
 /**
- * 监听路由参数变化
- * 文章 ID 变化时重新加载文章，支持上一篇/下一篇导航
+ * 监听路由 ID 变化：切换文章时重新加载
  */
 watch(
   () => route.params.id,
   (newId, oldId) => {
-    // 仅在 ID 实际变化时重新加载，避免首次加载重复请求
     if (newId && newId !== oldId) {
       loadArticle();
-      // 切换文章后回到顶部
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   }
@@ -457,86 +462,100 @@ watch(
 
 onMounted(() => {
   loadArticle();
+  window.addEventListener('scroll', handleScroll, { passive: true });
+});
+
+onUnmounted(() => {
+  window.removeEventListener('scroll', handleScroll);
+  if (observer) observer.disconnect();
 });
 </script>
 
 <style scoped>
+/* ========== 容器 ========== */
 .article-detail {
-  --color-primary: #0d9488; /* 主色：青绿 */
-  --color-primary-dark: #0f766e; /* 主色深 */
-  --color-primary-light: #14b8a6; /* 主色浅 */
-  --color-text: #0f172a; /* 主文本 */
-  --color-text-secondary: #475569; /* 次级文本 */
-  --color-text-muted: #94a3b8; /* 弱化文本 */
-  --color-bg: #ffffff; /* 卡片背景 */
-  --color-bg-soft: #f8fafc; /* 弱化背景 */
-  --color-border: #e2e8f0; /* 分割线 */
+  position: relative;
   max-width: 800px;
   margin: 0 auto;
+  padding: 32px 32px 80px;
+}
+
+/* ========== 阅读进度条 ========== */
+.progress-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 3px;
+  background: linear-gradient(to right, var(--primary), var(--primary-light));
+  z-index: 200;
+  transition: width 0.1s linear;
+  box-shadow: 0 0 8px rgba(13, 148, 136, 0.4);
 }
 
 /* ========== 返回按钮 ========== */
 .back-bar {
-  margin-bottom: 24px;
+  margin-bottom: 32px;
 }
 
 .back-btn {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  background: #fff;
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  color: var(--color-text-secondary);
-  font-size: 14px;
+  gap: 6px;
+  padding: 8px 14px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  color: var(--text-secondary);
+  font-size: 13px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition:
+    color 0.25s var(--ease-out),
+    border-color 0.25s var(--ease-out),
+    background 0.25s var(--ease-out),
+    transform 0.25s var(--ease-out);
 }
 
 .back-btn:hover {
-  border-color: var(--color-primary);
-  color: var(--color-primary);
+  color: var(--primary);
+  border-color: var(--primary);
+  background: var(--primary-bg);
+  transform: translateX(-3px);
 }
 
-/* ========== 文章卡片 ========== */
+/* ========== 文章正文 ========== */
 .article-content {
-  background: var(--color-bg);
-  border-radius: 16px;
-  padding: 48px;
-  border: 1px solid var(--color-border);
+  /* 卡片化被舍弃：仅用空白与分隔线组织 */
 }
 
 /* ========== 文章头部 ========== */
 .article-header {
-  margin-bottom: 32px;
-  padding-bottom: 28px;
-  border-bottom: 1px solid var(--color-border);
+  margin-bottom: 40px;
+  padding-bottom: 32px;
+  border-bottom: 1px solid var(--border);
 }
 
 .article-meta {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 20px;
-  margin-bottom: 16px;
-  font-size: 14px;
-  color: var(--color-text-muted);
+  gap: 16px;
+  margin-bottom: 20px;
+  font-size: 13px;
+  color: var(--text-tertiary);
 }
 
-.category-tag {
-  display: inline-block;
-  padding: 4px 14px;
-  background: linear-gradient(135deg, rgba(13, 148, 136, 0.1), rgba(8, 145, 178, 0.1));
-  color: var(--color-primary);
-  border-radius: 20px;
-  font-weight: 500;
+.meta-category {
+  padding: 4px 12px;
+  font-weight: 600;
+  color: var(--primary);
+  background: var(--primary-bg);
+  border-radius: 12px;
   text-decoration: none;
-  transition: background 0.2s ease;
+  transition: background 0.25s var(--ease-out);
 }
 
-.category-tag:hover {
-  background: linear-gradient(135deg, rgba(13, 148, 136, 0.2), rgba(8, 145, 178, 0.2));
+.meta-category:hover {
+  background: rgba(13, 148, 136, 0.18);
 }
 
 .meta-item {
@@ -546,28 +565,28 @@ onMounted(() => {
 }
 
 .article-title {
-  font-size: 38px;
-  font-weight: 800;
-  color: var(--color-text);
   margin: 0 0 20px;
-  line-height: 1.3;
+  font-size: clamp(28px, 4vw, 42px);
+  font-weight: 800;
+  color: var(--text-primary);
+  line-height: 1.25;
   letter-spacing: -1px;
 }
 
 .article-summary {
-  font-size: 16px;
-  color: var(--color-text-secondary);
-  line-height: 1.7;
   margin: 0;
   padding-left: 16px;
-  border-left: 3px solid var(--color-primary);
+  font-size: 16px;
   font-style: italic;
+  color: var(--text-secondary);
+  line-height: 1.7;
+  border-left: 3px solid var(--primary);
 }
 
 /* ========== 封面图 ========== */
 .article-cover {
-  margin: 0 0 32px;
-  border-radius: 12px;
+  margin: 0 0 40px;
+  border-radius: 14px;
   overflow: hidden;
 }
 
@@ -579,7 +598,7 @@ onMounted(() => {
   object-fit: cover;
 }
 
-/* ========== 文章正文 ========== */
+/* ========== 文章正文 Markdown ========== */
 .article-body {
   font-size: 17px;
   line-height: 1.8;
@@ -590,20 +609,20 @@ onMounted(() => {
   font-size: 32px;
   margin: 48px 0 24px;
   padding-bottom: 12px;
-  border-bottom: 2px solid var(--color-border);
-  color: var(--color-text);
+  border-bottom: 2px solid var(--border);
+  color: var(--text-primary);
 }
 
 .article-body :deep(h2) {
   font-size: 26px;
   margin: 40px 0 20px;
-  color: var(--color-text);
+  color: var(--text-primary);
 }
 
 .article-body :deep(h3) {
   font-size: 22px;
   margin: 32px 0 16px;
-  color: var(--color-text);
+  color: var(--text-primary);
 }
 
 .article-body :deep(p) {
@@ -622,19 +641,19 @@ onMounted(() => {
 
 /* 行内代码 */
 .article-body :deep(code) {
-  background: #f1f5f9;
   padding: 2px 8px;
+  background: #f1f5f9;
   border-radius: 4px;
   font-size: 15px;
-  color: var(--color-primary-dark);
-  font-family: 'Menlo', 'Monaco', 'Consolas', monospace;
+  color: var(--primary-dark);
+  font-family: var(--font-mono);
 }
 
 /* 代码块 */
 .article-body :deep(pre) {
+  padding: 20px;
   background: #1e293b;
   color: #e2e8f0;
-  padding: 20px;
   border-radius: 12px;
   overflow-x: auto;
   margin: 24px 0;
@@ -643,28 +662,28 @@ onMounted(() => {
 }
 
 .article-body :deep(pre code) {
-  background: transparent;
   padding: 0;
+  background: transparent;
   color: inherit;
   font-size: inherit;
 }
 
 /* 引用块 */
 .article-body :deep(blockquote) {
-  border-left: 4px solid var(--color-primary);
+  margin: 24px 0;
   padding: 16px 24px;
   background: rgba(13, 148, 136, 0.05);
+  border-left: 4px solid var(--primary);
   border-radius: 0 8px 8px 0;
-  margin: 24px 0;
-  color: var(--color-text-secondary);
+  color: var(--text-secondary);
 }
 
 /* 链接 */
 .article-body :deep(a) {
-  color: var(--color-primary);
+  color: var(--primary);
   text-decoration: none;
-  border-bottom: 1px dashed var(--color-primary);
-  transition: border-color 0.2s ease;
+  border-bottom: 1px dashed var(--primary);
+  transition: border-style 0.2s var(--ease-out);
 }
 
 .article-body :deep(a:hover) {
@@ -687,89 +706,78 @@ onMounted(() => {
 
 .article-body :deep(th),
 .article-body :deep(td) {
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--border);
   padding: 10px 16px;
   text-align: left;
 }
 
 .article-body :deep(th) {
-  background: var(--color-bg-soft);
+  background: var(--bg-body);
   font-weight: 600;
 }
 
-/* ========== 标签区域 ========== */
+/* ========== 标签 ========== */
 .article-tags {
   display: flex;
-  align-items: center;
   flex-wrap: wrap;
   gap: 10px;
-  margin-top: 40px;
+  margin-top: 48px;
   padding-top: 28px;
-  border-top: 1px solid var(--color-border);
-}
-
-.tags-label {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 14px;
-  color: var(--color-text-muted);
-  font-weight: 500;
-}
-
-.tags-label .el-icon {
-  color: var(--color-primary);
+  border-top: 1px solid var(--border);
 }
 
 .tag-item {
-  font-size: 13px;
-  color: var(--color-primary);
-  background: rgba(13, 148, 136, 0.08);
   padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--primary);
+  background: var(--primary-bg);
   border-radius: 16px;
   text-decoration: none;
-  transition: all 0.2s ease;
+  transition:
+    background 0.25s var(--ease-out),
+    transform 0.25s var(--ease-spring);
 }
 
 .tag-item:hover {
-  background: rgba(13, 148, 136, 0.15);
-  transform: translateY(-1px);
+  background: var(--primary);
+  color: #fff;
+  transform: translateY(-2px);
 }
 
-/* ========== 文章底部 ========== */
+/* ========== 上一篇 / 下一篇 ========== */
 .article-footer {
-  margin-top: 40px;
-  padding-top: 28px;
-  border-top: 1px solid var(--color-border);
-}
-
-.prev-next {
   display: flex;
-  justify-content: space-between;
   gap: 24px;
+  margin-top: 48px;
+  padding-top: 28px;
+  border-top: 1px solid var(--border);
 }
 
-.nav-link {
+.nav-card {
   flex: 1;
   display: flex;
   flex-direction: column;
   gap: 8px;
   padding: 20px;
-  background: var(--color-bg-soft);
+  background: var(--bg-body);
   border-radius: 12px;
   text-decoration: none;
-  color: var(--color-text-secondary);
-  transition: all 0.2s ease;
+  color: var(--text-secondary);
+  transition:
+    background 0.25s var(--ease-out),
+    color 0.25s var(--ease-out),
+    transform 0.25s var(--ease-out);
   min-width: 0;
 }
 
-.nav-link:hover {
-  background: #f1f5f9;
-  color: var(--color-primary);
-  transform: translateY(-2px);
+.nav-card:hover {
+  background: var(--primary-bg);
+  color: var(--primary);
+  transform: translateY(-3px);
 }
 
-.nav-link.placeholder {
+.nav-card.placeholder {
   background: transparent;
   pointer-events: none;
 }
@@ -778,9 +786,20 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 13px;
-  color: var(--color-text-muted);
-  font-weight: 500;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+}
+
+.nav-card.next {
+  text-align: right;
+  align-items: flex-end;
+}
+
+.nav-card.next .nav-direction {
+  flex-direction: row-reverse;
 }
 
 .nav-title {
@@ -793,86 +812,149 @@ onMounted(() => {
   line-height: 1.5;
 }
 
-.nav-link.next {
-  text-align: right;
-  align-items: flex-end;
-}
-
-.nav-link.next .nav-direction {
-  flex-direction: row-reverse;
-}
-
 /* ========== 评论区 ========== */
 .comment-section {
-  margin-top: 32px;
-  background: var(--color-bg);
-  border-radius: 16px;
-  padding: 40px;
-  border: 1px solid var(--color-border);
+  margin-top: 64px;
+  padding-top: 40px;
+  border-top: 2px solid var(--border);
 }
 
 .section-title {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin: 0 0 28px;
-  font-size: 22px;
-  font-weight: 700;
-  color: var(--color-text);
-}
-
-.section-title .el-icon {
-  color: var(--color-primary);
+  gap: 12px;
+  margin: 0 0 32px;
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--text-primary);
+  letter-spacing: -0.5px;
 }
 
 .comment-count {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 24px;
+  min-width: 28px;
   height: 24px;
   padding: 0 8px;
   font-size: 13px;
   font-weight: 600;
   color: #fff;
-  background: var(--color-primary);
+  background: var(--primary);
   border-radius: 12px;
 }
 
 /* 评论表单 */
 .comment-form-wrapper {
-  background: var(--color-bg-soft);
-  border-radius: 12px;
   padding: 24px;
-  margin-bottom: 32px;
+  margin-bottom: 40px;
+  background: var(--bg-body);
+  border-radius: 14px;
 }
 
 .reply-tip {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 12px;
   margin-bottom: 16px;
+  padding: 10px 14px;
   background: rgba(13, 148, 136, 0.08);
-  border-left: 3px solid var(--color-primary);
-  border-radius: 4px;
+  border-left: 3px solid var(--primary);
+  border-radius: 6px;
   font-size: 13px;
-  color: var(--color-primary-dark);
+  color: var(--primary-dark);
+}
+
+.cancel-btn {
+  background: none;
+  border: none;
+  color: var(--primary);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.cancel-btn:hover {
+  text-decoration: underline;
 }
 
 .comment-form .form-row {
   display: flex;
-  gap: 16px;
+  gap: 12px;
+  margin-bottom: 12px;
 }
 
-.comment-form .form-item-nickname,
-.comment-form .form-item-email {
+.form-input {
   flex: 1;
+  height: 42px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 14px;
+  color: var(--text-primary);
+  background: #fff;
+  outline: none;
+  transition:
+    border-color 0.25s var(--ease-out),
+    box-shadow 0.25s var(--ease-out);
+}
+
+.form-input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.12);
+}
+
+.form-textarea {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 14px;
+  color: var(--text-primary);
+  background: #fff;
+  outline: none;
+  resize: vertical;
+  font-family: inherit;
+  transition:
+    border-color 0.25s var(--ease-out),
+    box-shadow 0.25s var(--ease-out);
+}
+
+.form-textarea:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.12);
 }
 
 .form-actions {
   display: flex;
   justify-content: flex-end;
+  margin-top: 12px;
+}
+
+.submit-btn {
+  padding: 10px 24px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--primary);
+  border: none;
+  border-radius: 20px;
+  cursor: pointer;
+  transition:
+    background 0.25s var(--ease-out),
+    transform 0.25s var(--ease-spring),
+    box-shadow 0.25s var(--ease-out);
+}
+
+.submit-btn:hover:not(:disabled) {
+  background: var(--primary-dark);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(13, 148, 136, 0.35);
+}
+
+.submit-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* 评论列表 */
@@ -910,7 +992,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-light) 100%);
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
   color: #fff;
   font-size: 16px;
   font-weight: 600;
@@ -932,42 +1014,42 @@ onMounted(() => {
 .comment-nickname {
   font-size: 14px;
   font-weight: 600;
-  color: var(--color-text);
+  color: var(--text-primary);
 }
 
 .comment-time {
   font-size: 12px;
-  color: var(--color-text-muted);
+  color: var(--text-tertiary);
 }
 
 .comment-content {
+  margin-bottom: 8px;
   font-size: 14px;
   line-height: 1.7;
-  color: var(--color-text-secondary);
-  margin-bottom: 8px;
+  color: var(--text-secondary);
   word-break: break-word;
 }
 
 .reply-btn {
   background: none;
   border: none;
-  color: var(--color-text-muted);
+  color: var(--text-tertiary);
   font-size: 13px;
   cursor: pointer;
   padding: 0;
-  transition: color 0.2s ease;
+  transition: color 0.2s var(--ease-out);
 }
 
 .reply-btn:hover {
-  color: var(--color-primary);
+  color: var(--primary);
 }
 
 /* 子评论 */
 .comment-children {
-  margin-left: 26px;
   margin-top: 16px;
+  margin-left: 26px;
   padding-left: 20px;
-  border-left: 2px solid var(--color-border);
+  border-left: 2px solid var(--border);
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -985,58 +1067,131 @@ onMounted(() => {
 }
 
 .empty-text {
-  margin: 16px 0 0;
+  margin: 0;
   font-size: 14px;
-  color: var(--color-text-muted);
+  color: var(--text-tertiary);
 }
 
 /* ========== 错误状态 ========== */
 .error-state {
   text-align: center;
-  padding: 80px 0;
+  padding: 80px 20px;
 }
 
 .error-text {
+  margin: 0 0 24px;
   font-size: 16px;
-  color: var(--color-text-secondary);
-  margin: 16px 0 24px;
+  color: var(--text-secondary);
+}
+
+.back-home-btn {
+  padding: 10px 24px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--primary);
+  border: none;
+  border-radius: 20px;
+  cursor: pointer;
+  transition:
+    background 0.25s var(--ease-out),
+    transform 0.25s var(--ease-spring);
+}
+
+.back-home-btn:hover {
+  background: var(--primary-dark);
+  transform: translateY(-2px);
+}
+
+/* ========== 返回顶部按钮 ========== */
+.back-top {
+  position: fixed;
+  bottom: 32px;
+  right: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  font-size: 20px;
+  color: #fff;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  z-index: 90;
+  box-shadow: 0 8px 24px rgba(13, 148, 136, 0.4);
+  transition:
+    transform 0.3s var(--ease-spring),
+    box-shadow 0.3s var(--ease-out);
+}
+
+.back-top:hover {
+  transform: translateY(-4px) scale(1.05);
+  box-shadow: 0 12px 32px rgba(13, 148, 136, 0.5);
+}
+
+/* 返回顶部按钮过渡 */
+.fade-scale-enter-active,
+.fade-scale-leave-active {
+  transition:
+    opacity 0.3s var(--ease-out),
+    transform 0.3s var(--ease-spring);
+}
+
+.fade-scale-enter-from,
+.fade-scale-leave-to {
+  opacity: 0;
+  transform: scale(0.5);
+}
+
+/* ========== 滚动揭示动画 ========== */
+.reveal {
+  opacity: 0;
+  transform: translateY(24px);
+  transition:
+    opacity 0.7s var(--ease-out),
+    transform 0.7s var(--ease-out);
+}
+
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 /* ========== 响应式 ========== */
 @media (max-width: 768px) {
-  .article-content,
-  .comment-section {
-    padding: 28px 20px;
+  .article-detail {
+    padding: 24px 20px 64px;
   }
-
-  .article-title {
-    font-size: 26px;
+  .article-header {
+    margin-bottom: 32px;
+    padding-bottom: 24px;
   }
-
-  .article-summary {
-    font-size: 15px;
-  }
-
-  .prev-next {
+  .article-footer {
     flex-direction: column;
+    gap: 16px;
   }
-
-  .nav-link.next {
+  .nav-card.next {
     text-align: left;
     align-items: flex-start;
   }
-
-  .nav-link.next .nav-direction {
+  .nav-card.next .nav-direction {
     flex-direction: row;
   }
-
   .comment-form .form-row {
     flex-direction: column;
-    gap: 0;
+    gap: 12px;
   }
-
   .comment-children {
     margin-left: 12px;
+    padding-left: 12px;
+  }
+  .back-top {
+    right: 20px;
+    bottom: 20px;
+    width: 44px;
+    height: 44px;
   }
 }
 </style>

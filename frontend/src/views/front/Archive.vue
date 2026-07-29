@@ -1,27 +1,29 @@
-/** * @file Archive.vue * @description 文章归档时间线组件（杂志风） * *
-作用：按年月分组展示所有已发布文章，提供时间线式浏览体验 * - 顶部 Hero：归档标题 + 文章总数统计 * -
-时间线主体：左侧年月节点 + 右侧文章列表 * - 每篇文章：可点击标题跳转详情（/article/:id）、发布日期 *
-- 加载中骨架 / 空状态兜底 * * 数据获取： * - getArticleArchives() 获取按年月分组的归档数据 *
-返回数组，每项：{ year, month, label: "2026年7月", articles: [{ id, title, created_at }] } * *
-设计要点： * - 主色调青绿色 #0d9488 * - 时间线竖线 + 节点圆点，年月作为分组标题 * - 文章条目悬浮高亮
-* - 响应式：移动端节点移至顶部，文章列表纵向堆叠 */
+/** * @file Archive.vue * @description 文章归档时间线页（杂志风，卡片化舍弃） * * 作用： * -
+按年月分组展示所有已发布文章，提供时间线式浏览体验 * - 左侧竖线 + 年月节点，右侧文章列表 * -
+每篇文章：标题（点击跳转详情 /article/:id）、日期、悬浮揭示摘要 * * 数据获取： * -
+getArticleArchives() 返回数组 [{ year, month, articles: [{ id, title, created_at, summary }] }] * -
+兼容返回 { list } 或数组两种结构 * * 动效（2-3 组）： * - 入场：Hero 文案 fade-in-up 错峰 * -
+滚动：时间线分组进入视口时 fade-in-up + 组内文章级联（Intersection Observer） * -
+悬浮：文章标题变主色 + 右移 + 摘要展开 */
 <template>
-  <div class="archive-page">
-    <!-- Hero 区域：归档标题 + 文章总数统计 -->
+  <div ref="rootRef" class="archive-page">
+    <!-- ============ Hero 区域 ============ -->
     <section class="hero">
       <div class="hero-inner">
-        <p class="hero-eyebrow">ARCHIVE</p>
-        <h1 class="hero-title">文章归档</h1>
-        <p class="hero-subtitle">共 {{ totalArticles }} 篇文章 · 按时间倒序排列</p>
+        <p class="hero-eyebrow animate-fade-in-down">ARCHIVE</p>
+        <h1 class="hero-title animate-fade-in-up">文章归档</h1>
+        <p class="hero-subtitle animate-fade-in-up delay-100">
+          共 {{ totalArticles }} 篇文章 · 按时间倒序
+        </p>
       </div>
-      <!-- 装饰光斑（纯视觉，不可交互） -->
-      <div class="hero-decoration" aria-hidden="true"></div>
+      <!-- 装饰光斑（纯视觉） -->
+      <div class="hero-orb" aria-hidden="true"></div>
     </section>
 
-    <!-- 主体：时间线 -->
+    <!-- ============ 主体：时间线 ============ -->
     <div class="content-wrapper">
       <main class="content-main">
-        <!-- 加载中骨架：首次加载且无数据时展示 -->
+        <!-- 加载骨架：首次加载且无数据时展示 -->
         <div v-if="loading && archives.length === 0" class="timeline-skeleton">
           <div v-for="n in 4" :key="n" class="skeleton-group">
             <div class="skeleton-label"></div>
@@ -29,43 +31,43 @@
           </div>
         </div>
 
-        <!-- 时间线：有归档数据时展示 -->
+        <!-- 时间线 -->
         <div v-else-if="archives.length > 0" class="timeline">
           <section
-            v-for="(group, index) in archives"
+            v-for="(group, gi) in archives"
             :key="`${group.year}-${group.month}`"
-            class="timeline-group"
-            :style="{ '--group-index': index }"
+            class="timeline-group reveal"
+            :style="{ '--row-index': gi }"
           >
             <!-- 年月节点：竖线上的圆点 + 年月标签 -->
             <div class="timeline-node">
-              <span class="node-dot"></span>
-              <div class="node-label">
-                <span class="node-year">{{ group.year }}</span>
-                <span class="node-month">{{ group.label }}</span>
-                <span class="node-count">{{ group.articles.length }} 篇</span>
-              </div>
+              <span class="node-dot" aria-hidden="true"></span>
+              <span class="node-year">{{ group.year }}</span>
+              <span class="node-month">{{ monthLabel(group.month) }}</span>
+              <span class="node-count">{{ group.articles.length }} 篇</span>
             </div>
 
-            <!-- 文章列表：当前年月下的所有文章 -->
+            <!-- 文章列表 -->
             <ul class="article-list">
               <li
-                v-for="article in group.articles"
+                v-for="(article, ai) in group.articles"
                 :key="article.id"
                 class="article-item"
-                @click="goToArticle(article.id)"
+                :style="{ '--item-index': ai }"
               >
-                <span class="article-date">{{ formatDate(article.created_at) }}</span>
-                <span class="article-title">{{ article.title }}</span>
+                <router-link :to="`/article/${article.id}`" class="article-link">
+                  <span class="article-date">{{ formatDate(article.created_at) }}</span>
+                  <span class="article-title">{{ article.title }}</span>
+                  <span class="article-summary">{{ article.summary || '暂无摘要' }}</span>
+                </router-link>
               </li>
             </ul>
           </section>
         </div>
 
-        <!-- 空状态：非加载且无归档时展示 -->
+        <!-- 空状态 -->
         <div v-else class="empty-state">
-          <el-icon :size="56" color="#cbd5e1"><Document /></el-icon>
-          <p class="empty-text">暂无文章归档</p>
+          <p class="empty-title">暂无文章归档</p>
           <p class="empty-desc">文章发布后将在此按时间归档展示</p>
         </div>
       </main>
@@ -74,12 +76,11 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
-import { useRouter } from 'vue-router';
-import { Document } from '@element-plus/icons-vue';
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue';
 import { getArticleArchives } from '../../api/articles';
 
-const router = useRouter();
+/** 组件根节点引用（用于作用域内的滚动观察） */
+const rootRef = ref(null);
 
 /** 归档数据（按年月分组的数组） */
 const archives = ref([]);
@@ -87,18 +88,18 @@ const archives = ref([]);
 /** 加载状态（控制骨架屏展示） */
 const loading = ref(false);
 
+/** Intersection Observer 实例（滚动揭示动画） */
+let observer = null;
+
 /**
  * 文章总数（汇总所有年月分组下的文章数量）
  * @returns {number} 文章总篇数
  */
 const totalArticles = computed(() => {
   let count = 0;
-  // 遍历每个年月分组，累加文章数量
+  // 仅在分组存在 articles 数组时累加，避免无效数据
   for (const group of archives.value) {
-    // 仅在分组存在 articles 数组时累加，避免无效数据
-    if (Array.isArray(group.articles)) {
-      count += group.articles.length;
-    }
+    if (Array.isArray(group.articles)) count += group.articles.length;
   }
   return count;
 });
@@ -109,23 +110,30 @@ const totalArticles = computed(() => {
  * @returns {string} 格式化后的日期，无效时返回空字符串
  */
 function formatDate(dateStr) {
-  // 日期为空直接返回空字符串
   if (!dateStr) return '';
   const date = new Date(dateStr);
   // 兼容无效日期，避免展示 NaN
   if (isNaN(date.getTime())) return '';
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
 }
 
 /**
- * 跳转到文章详情页
- * @param {number} id - 文章 ID
+ * 将月份字段转为中文展示标签
+ * 兼容数字（1-12）、数字字符串、已带"月"的字符串
+ * @param {number|string} month - 月份
+ * @returns {string} 形如 "3月" 的标签
  */
-function goToArticle(id) {
-  router.push(`/article/${id}`);
+function monthLabel(month) {
+  if (month == null || month === '') return '';
+  // 已是字符串且包含"月"直接返回
+  if (typeof month === 'string' && month.includes('月')) return month;
+  const n = Number(month);
+  // 数字月份转为 "X月"
+  if (!isNaN(n) && n >= 1 && n <= 12) return `${n}月`;
+  return String(month);
 }
 
 /**
@@ -139,6 +147,9 @@ async function loadArchives() {
     const { data } = await getArticleArchives();
     // 兼容数组或 { list } 两种返回结构
     archives.value = Array.isArray(data) ? data : (data?.list ?? []);
+    // 数据更新后初始化滚动揭示
+    await nextTick();
+    initObserver();
   } catch (e) {
     console.error('加载归档失败:', e);
   } finally {
@@ -146,53 +157,69 @@ async function loadArchives() {
   }
 }
 
+/**
+ * 初始化 Intersection Observer
+ * 监听组件内所有 .reveal 元素，进入视口时添加 visible 类触发动画
+ */
+function initObserver() {
+  if (observer) observer.disconnect();
+  if (!rootRef.value) return;
+  observer = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+          // 揭示后停止观察，避免重复触发
+          observer.unobserve(entry.target);
+        }
+      });
+    },
+    { threshold: 0.1, rootMargin: '0px 0px -60px 0px' }
+  );
+  // 仅观察组件内的 reveal 元素，避免跨页面干扰
+  rootRef.value.querySelectorAll('.reveal').forEach((el) => observer.observe(el));
+}
+
 onMounted(() => {
   loadArchives();
+});
+
+onUnmounted(() => {
+  // 组件卸载时清理观察者，避免内存泄漏
+  if (observer) observer.disconnect();
 });
 </script>
 
 <style scoped>
-.archive-page {
-  --color-primary: #0d9488; /* 主色：青绿 */
-  --color-primary-dark: #0f766e; /* 主色深 */
-  --color-primary-light: #14b8a6; /* 主色浅 */
-  --color-text: #0f172a; /* 主文本 */
-  --color-text-secondary: #475569; /* 次级文本 */
-  --color-text-muted: #94a3b8; /* 弱化文本 */
-  --color-bg: #ffffff; /* 卡片背景 */
-  --color-bg-soft: #f8fafc; /* 页面背景 */
-  --color-border: #e2e8f0; /* 分割线 */
-  --max-width: 960px; /* 内容最大宽度 */
-}
-
 /* ========== Hero 区域 ========== */
 .hero {
   position: relative;
-  padding: 80px 32px 72px;
+  padding: 88px 32px 72px;
   background: linear-gradient(135deg, #0f766e 0%, #0d9488 45%, #14b8a6 100%);
   overflow: hidden;
   color: #fff;
+  isolation: isolate;
 }
 
 .hero-inner {
   position: relative;
   z-index: 2;
-  max-width: var(--max-width);
+  max-width: 960px;
   margin: 0 auto;
   text-align: center;
 }
 
 .hero-eyebrow {
-  margin: 0 0 12px;
+  margin: 0 0 14px;
   font-size: 13px;
   font-weight: 600;
-  letter-spacing: 4px;
-  color: rgba(255, 255, 255, 0.8);
+  letter-spacing: 5px;
+  color: rgba(255, 255, 255, 0.78);
 }
 
 .hero-title {
   margin: 0 0 16px;
-  font-size: 48px;
+  font-size: clamp(40px, 6vw, 56px);
   font-weight: 800;
   letter-spacing: -1.5px;
   text-shadow: 0 2px 20px rgba(0, 0, 0, 0.15);
@@ -206,22 +233,23 @@ onMounted(() => {
 }
 
 /* Hero 装饰光斑 */
-.hero-decoration {
+.hero-orb {
   position: absolute;
-  top: -100px;
-  right: -60px;
-  width: 320px;
-  height: 320px;
+  top: -120px;
+  right: -80px;
+  width: 360px;
+  height: 360px;
   background: radial-gradient(circle, rgba(255, 255, 255, 0.18) 0%, transparent 70%);
   border-radius: 50%;
   z-index: 1;
+  pointer-events: none;
 }
 
 /* ========== 内容区 ========== */
 .content-wrapper {
-  max-width: var(--max-width);
+  max-width: 960px;
   margin: 0 auto;
-  padding: 56px 32px 64px;
+  padding: 64px 32px 80px;
 }
 
 .content-main {
@@ -233,45 +261,44 @@ onMounted(() => {
   position: relative;
 }
 
-/* 时间线连续竖线：贯穿所有分组 */
+/* 连续竖线：贯穿所有分组 */
 .timeline::before {
   content: '';
   position: absolute;
-  left: 179px; /* 与节点右边缘对齐 */
+  left: 119px;
   top: 8px;
   bottom: 8px;
   width: 2px;
-  background: var(--color-border);
+  background: var(--border);
 }
 
+/* 分组：入场前隐藏 */
 .timeline-group {
   position: relative;
   display: flex;
   align-items: flex-start;
-  margin-bottom: 48px;
-  /* 分组入场动画：按索引错峰淡入 */
-  animation: group-in 0.5s ease backwards;
-  animation-delay: calc(var(--group-index) * 80ms);
+  margin-bottom: 56px;
+  opacity: 0;
+  transform: translateY(24px);
+  transition:
+    opacity 0.6s var(--ease-out),
+    transform 0.6s var(--ease-out);
+  transition-delay: calc(var(--row-index) * 80ms);
 }
 
-@keyframes group-in {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+/* 进入视口后揭示 */
+.timeline-group.visible {
+  opacity: 1;
+  transform: translateY(0);
 }
 
-/* 年月节点：左侧标签列 */
+/* 年月节点列 */
 .timeline-node {
   position: relative;
-  flex: 0 0 180px;
-  box-sizing: border-box;
+  flex: 0 0 120px;
   padding-right: 24px;
   text-align: right;
+  box-sizing: border-box;
 }
 
 /* 节点圆点：位于竖线上 */
@@ -281,17 +308,17 @@ onMounted(() => {
   right: -8px;
   width: 14px;
   height: 14px;
-  background: var(--color-primary);
+  background: var(--primary);
   border: 3px solid #fff;
   border-radius: 50%;
-  box-shadow: 0 0 0 2px var(--color-primary);
+  box-shadow: 0 0 0 2px var(--primary);
 }
 
 .node-year {
   display: block;
-  font-size: 28px;
+  font-size: 30px;
   font-weight: 800;
-  color: var(--color-text);
+  color: var(--text-primary);
   line-height: 1;
   letter-spacing: -0.5px;
 }
@@ -301,57 +328,97 @@ onMounted(() => {
   margin-top: 6px;
   font-size: 14px;
   font-weight: 600;
-  color: var(--color-primary);
+  color: var(--primary);
 }
 
 .node-count {
   display: block;
   margin-top: 4px;
   font-size: 12px;
-  color: var(--color-text-muted);
+  color: var(--text-tertiary);
 }
 
 /* 文章列表 */
 .article-list {
   list-style: none;
   margin: 0;
-  padding: 0 0 0 28px;
+  padding: 0 0 0 32px;
   flex: 1;
   min-width: 0;
 }
 
+/* 文章项：组揭示后级联展开 */
 .article-item {
-  display: flex;
-  align-items: baseline;
-  gap: 16px;
-  padding: 14px 16px;
-  border-radius: 10px;
-  cursor: pointer;
-  transition: background 0.2s ease;
+  opacity: 0;
+  transform: translateY(12px);
+  transition:
+    opacity 0.5s var(--ease-out),
+    transform 0.5s var(--ease-out);
+  transition-delay: calc(var(--item-index) * 50ms);
 }
 
-.article-item:hover {
-  background: var(--color-bg-soft);
+.timeline-group.visible .article-item {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* 文章链接：日期 + 标题同行，摘要悬浮展开 */
+.article-link {
+  display: block;
+  padding: 14px 16px;
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  color: inherit;
+  transition:
+    background 0.25s var(--ease-out),
+    transform 0.25s var(--ease-out);
+}
+
+.article-link:hover {
+  background: var(--bg-body);
+  transform: translateX(6px);
 }
 
 .article-date {
-  flex-shrink: 0;
+  display: inline-block;
+  margin-right: 16px;
   font-size: 13px;
   font-variant-numeric: tabular-nums;
-  color: var(--color-text-muted);
+  color: var(--text-tertiary);
 }
 
 .article-title {
-  font-size: 15px;
-  font-weight: 500;
-  color: var(--color-text);
-  line-height: 1.5;
-  transition: color 0.2s ease;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  transition: color 0.25s var(--ease-out);
 }
 
-/* 悬浮时标题变为主色 */
-.article-item:hover .article-title {
-  color: var(--color-primary);
+/* 悬浮时标题变主色 */
+.article-link:hover .article-title {
+  color: var(--primary);
+}
+
+/* 摘要：默认收起，悬浮展开 */
+.article-summary {
+  display: block;
+  max-height: 0;
+  overflow: hidden;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  opacity: 0;
+  transition:
+    max-height 0.35s var(--ease-out),
+    opacity 0.3s var(--ease-out),
+    margin 0.35s var(--ease-out);
+}
+
+.article-link:hover .article-summary {
+  max-height: 80px;
+  margin-top: 8px;
+  opacity: 1;
 }
 
 /* ========== 骨架屏 ========== */
@@ -362,11 +429,11 @@ onMounted(() => {
 }
 
 .skeleton-group {
-  padding-left: 180px;
+  padding-left: 152px;
 }
 
 .skeleton-label {
-  width: 140px;
+  width: 120px;
   height: 32px;
   margin-left: auto;
   margin-bottom: 20px;
@@ -400,71 +467,56 @@ onMounted(() => {
   padding: 80px 20px;
 }
 
-.empty-text {
-  margin: 16px 0 8px;
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--color-text-secondary);
+.empty-title {
+  margin: 0 0 8px;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-secondary);
 }
 
 .empty-desc {
   margin: 0;
   font-size: 14px;
-  color: var(--color-text-muted);
+  color: var(--text-tertiary);
 }
 
 /* ========== 响应式 ========== */
-/* 手机：节点移至顶部，文章列表纵向堆叠 */
 @media (max-width: 768px) {
   .hero {
     padding: 56px 20px 48px;
   }
-
-  .hero-title {
-    font-size: 36px;
-  }
-
   .content-wrapper {
-    padding: 32px 16px 48px;
+    padding: 40px 16px 56px;
   }
-
   /* 竖线移至最左侧 */
   .timeline::before {
     left: 7px;
   }
-
   /* 分组改为纵向布局，左侧留出竖线空间 */
   .timeline-group {
     flex-direction: column;
     padding-left: 32px;
   }
-
   /* 节点改为顶部标签 */
   .timeline-node {
-    position: relative;
     flex: none;
     width: auto;
     padding-right: 0;
     padding-bottom: 16px;
     text-align: left;
   }
-
   /* 圆点移至竖线上（左侧） */
   .node-dot {
     left: -29px;
     right: auto;
     top: 4px;
   }
-
   .node-year {
-    font-size: 22px;
+    font-size: 24px;
   }
-
-  /* 文章列表取消左缩进 */
   .article-list {
     padding-left: 0;
   }
-
   .skeleton-group {
     padding-left: 32px;
   }

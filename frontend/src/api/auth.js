@@ -6,7 +6,7 @@ import request from './request';
 
 /**
  * 用户注册
- * @param {Object} data - { username, password, confirm }
+ * @param {Object} data - { username, password, email }
  * @returns {Promise} 接口响应
  */
 export function registerAPI(data) {

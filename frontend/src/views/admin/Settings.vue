@@ -1,5 +1,5 @@
 <template>
-  <div class="settings-page">
+  <div class="settings-page animate-fade-in-up">
     <!-- 页面头部 -->
     <div class="page-header">
       <h2 class="page-title">网站设置</h2>
@@ -21,15 +21,14 @@
                 :type="field.type || 'text'"
                 :rows="field.rows || 2"
                 :placeholder="field.placeholder"
-                :input-style="field.type === 'textarea' ? textareaStyle : null"
               />
               <p class="field-tip">{{ field.tip }}</p>
             </el-form-item>
           </el-form>
         </el-tab-pane>
 
-        <!-- Tab2：个人信息 -->
-        <el-tab-pane label="个人信息" name="author">
+        <!-- Tab2：博主信息 -->
+        <el-tab-pane label="博主信息" name="author">
           <el-form :model="settings" label-position="top" class="settings-form">
             <el-form-item v-for="field in authorFields" :key="field.key" :label="field.label">
               <el-input
@@ -37,7 +36,6 @@
                 :type="field.type || 'text'"
                 :rows="field.rows || 2"
                 :placeholder="field.placeholder"
-                :input-style="field.type === 'textarea' ? textareaStyle : null"
               />
               <p class="field-tip">{{ field.tip }}</p>
             </el-form-item>
@@ -52,16 +50,15 @@
 /**
  * @file Settings.vue
  * @description 网站设置页面（管理端）
- * 作用：分组展示网站设置项（站点信息 / 个人信息），通过 ElTabs 切换分组，
- *       页面加载时调用 getSettings() 拉取全部设置，保存时调用
- *       updateSettings() 批量更新。
+ * 作用：分组展示网站设置项（站点信息 / 博主信息），通过 ElTabs 切换分组，
+ *       页面加载时调用 getSettings() 拉取全部设置，保存时调用 updateSettings() 批量更新。
  * 依赖 API：getSettings / updateSettings
  */
 import { ref, reactive, onMounted } from 'vue';
 import { ElMessage } from 'element-plus';
-import { getSettings, updateSettings } from '../../api/settings';
+import { getSettings, updateSettings } from '@/api/settings';
 
-/** 当前激活的 Tab（site=站点信息，author=个人信息） */
+/** 当前激活的 Tab（site=站点信息，author=博主信息） */
 const activeTab = ref('site');
 
 /** 加载状态 */
@@ -69,9 +66,6 @@ const loading = ref(false);
 
 /** 保存状态 */
 const saving = ref(false);
-
-/** 多行文本框的统一样式 */
-const textareaStyle = { minHeight: '80px' };
 
 /**
  * 站点信息字段配置
@@ -93,12 +87,23 @@ const siteFields = [
     tip: '用于 SEO 和分享预览'
   },
   {
+    key: 'site_url',
+    label: '站点网址',
+    placeholder: 'https://example.com',
+    tip: '站点完整访问地址'
+  },
+  {
     key: 'site_keywords',
     label: '站点关键词',
     placeholder: '多个关键词用英文逗号分隔',
     tip: '用于 SEO，多个关键词用逗号分隔'
   },
-  { key: 'site_icp', label: '备案号', placeholder: '如：京ICP备12345678号', tip: '显示在网站底部' },
+  {
+    key: 'site_icp',
+    label: '备案号',
+    placeholder: '如：京ICP备12345678号',
+    tip: '显示在网站底部'
+  },
   {
     key: 'footer_text',
     label: '底部文案',
@@ -110,14 +115,14 @@ const siteFields = [
 ];
 
 /**
- * 个人信息字段配置
+ * 博主信息字段配置
  * @type {Array<{key:string,label:string,type?:string,rows?:number,placeholder?:string,tip:string}>}
  */
 const authorFields = [
   {
     key: 'author_name',
-    label: '作者名称',
-    placeholder: '请输入作者名称',
+    label: '博主名称',
+    placeholder: '请输入博主名称',
     tip: '在文章作者信息中显示'
   },
   {
@@ -129,10 +134,10 @@ const authorFields = [
     tip: '在关于页面展示'
   },
   {
-    key: 'author_avatar',
-    label: '头像 URL',
-    placeholder: 'https://example.com/avatar.png',
-    tip: '作者头像的图片地址'
+    key: 'author_github',
+    label: 'GitHub',
+    placeholder: 'https://github.com/username',
+    tip: 'GitHub 主页链接'
   },
   {
     key: 'author_email',
@@ -141,25 +146,19 @@ const authorFields = [
     tip: '用于读者联系作者'
   },
   {
-    key: 'author_github',
-    label: 'GitHub',
-    placeholder: 'https://github.com/username',
-    tip: 'GitHub 主页链接'
+    key: 'author_avatar',
+    label: '头像 URL',
+    placeholder: 'https://example.com/avatar.png',
+    tip: '博主头像的图片地址'
   },
   { key: 'author_qq', label: 'QQ 号', placeholder: '请输入 QQ 号', tip: '用于读者联系作者' },
   { key: 'author_wechat', label: '微信号', placeholder: '请输入微信号', tip: '用于读者联系作者' }
 ];
 
-/**
- * 所有设置项的键集合，用于初始化空值与提交时过滤
- * 通过合并两个分组的 key 计算得出
- */
+/** 所有设置项的键集合，用于初始化空值与提交时过滤 */
 const allKeys = [...siteFields, ...authorFields].map((f) => f.key);
 
-/**
- * 设置数据（响应式对象）
- * 初始化为空字符串，加载后用后端数据覆盖
- */
+/** 设置数据（响应式对象，初始化为空字符串） */
 const settings = reactive(
   allKeys.reduce((acc, key) => {
     acc[key] = '';
@@ -174,26 +173,24 @@ const settings = reactive(
 async function loadSettings() {
   loading.value = true;
   try {
-    const { data } = await getSettings();
-    // 后端返回 { key: value } 键值对，仅写入已声明的 key，避免注入未知字段
-    allKeys.forEach((key) => {
-      // 仅当后端返回了该 key 时才赋值，否则保留空字符串
-      if (data && Object.prototype.hasOwnProperty.call(data, key)) {
-        settings[key] = data[key] ?? '';
-      }
-    });
+    const res = await getSettings();
+    if (res.code === 200) {
+      const data = res.data;
+      // 仅写入已声明的 key，避免注入未知字段
+      allKeys.forEach((key) => {
+        if (data && Object.prototype.hasOwnProperty.call(data, key)) {
+          settings[key] = data[key] ?? '';
+        }
+      });
+    }
   } catch (e) {
-    // 响应拦截器已统一提示错误，这里仅兜底日志
     console.error('加载设置失败:', e);
   } finally {
     loading.value = false;
   }
 }
 
-/**
- * 保存设置
- * 调用 updateSettings() 批量提交所有设置项
- */
+/** 保存设置（批量提交所有设置项） */
 async function handleSave() {
   saving.value = true;
   try {
@@ -206,7 +203,6 @@ async function handleSave() {
     await updateSettings(payload);
     ElMessage.success('保存成功');
   } catch (e) {
-    // 响应拦截器已统一提示错误，这里仅兜底日志
     console.error('保存设置失败:', e);
   } finally {
     saving.value = false;
@@ -219,33 +215,20 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.settings-page {
-  animation: fade-in 0.3s ease;
-}
-
-@keyframes fade-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-/* 页面头部 */
+/* ========== 页面头部 ========== */
 .page-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
   flex-wrap: wrap;
   gap: 16px;
 }
 
 .page-title {
-  font-size: 24px;
+  font-size: 22px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--text-primary);
   margin: 0;
 }
 
@@ -254,15 +237,14 @@ onMounted(() => {
   gap: 12px;
 }
 
-/* 设置容器 */
+/* ========== 设置容器 ========== */
 .settings-container {
-  background: #fff;
-  border-radius: 16px;
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
   padding: 24px 32px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--shadow-sm);
 }
 
-/* 设置表单 */
 .settings-form {
   max-width: 640px;
   padding-top: 8px;
@@ -270,25 +252,25 @@ onMounted(() => {
 
 .field-tip {
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--text-tertiary);
   margin: 4px 0 0;
   line-height: 1.5;
 }
 
-/* 覆盖 Element Plus 主题色为青绿色 */
+/* 覆盖 Element Plus Tab 主题色为青绿色 */
 .settings-tabs :deep(.el-tabs__item.is-active) {
-  color: #0d9488;
+  color: var(--primary);
 }
 
 .settings-tabs :deep(.el-tabs__active-bar) {
-  background-color: #0d9488;
+  background-color: var(--primary);
 }
 
 .settings-tabs :deep(.el-tabs__item:hover) {
-  color: #0d9488;
+  color: var(--primary);
 }
 
-/* 响应式 */
+/* ========== 响应式 ========== */
 @media (max-width: 768px) {
   .page-header {
     flex-direction: column;

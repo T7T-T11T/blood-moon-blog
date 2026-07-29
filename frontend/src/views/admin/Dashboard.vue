@@ -1,59 +1,32 @@
 <template>
   <div class="dashboard-page">
-    <!-- 统计卡片 -->
+    <!-- 统计卡片行 -->
     <div class="stats-row">
-      <div class="stat-card animate-fade-in-up" style="--delay: 0ms">
-        <div class="stat-icon articles">
-          <el-icon :size="24"><Document /></el-icon>
+      <div
+        v-for="(stat, index) in statCards"
+        :key="stat.label"
+        class="stat-card animate-fade-in-up hover-lift"
+        :class="'delay-' + (index + 1) * 100"
+      >
+        <div class="stat-icon" :class="stat.theme">
+          <el-icon :size="22"><component :is="stat.icon" /></el-icon>
         </div>
         <div class="stat-info">
-          <span class="stat-value">{{ stats.articles }}</span>
-          <span class="stat-label">总文章</span>
-        </div>
-        <div class="stat-trend up">
-          <el-icon><Top /></el-icon>
-          +12%
-        </div>
-      </div>
-      <div class="stat-card animate-fade-in-up" style="--delay: 100ms">
-        <div class="stat-icon views">
-          <el-icon :size="24"><View /></el-icon>
-        </div>
-        <div class="stat-info">
-          <span class="stat-value">{{ stats.views }}</span>
-          <span class="stat-label">总阅读</span>
-        </div>
-        <div class="stat-trend up">
-          <el-icon><Top /></el-icon>
-          +25%
-        </div>
-      </div>
-      <div class="stat-card animate-fade-in-up" style="--delay: 200ms">
-        <div class="stat-icon categories">
-          <el-icon :size="24"><Folder /></el-icon>
-        </div>
-        <div class="stat-info">
-          <span class="stat-value">{{ stats.categories }}</span>
-          <span class="stat-label">分类数</span>
-        </div>
-      </div>
-      <div class="stat-card animate-fade-in-up" style="--delay: 300ms">
-        <div class="stat-icon comments">
-          <el-icon :size="24"><ChatDotRound /></el-icon>
-        </div>
-        <div class="stat-info">
-          <span class="stat-value">{{ stats.tags }}</span>
-          <span class="stat-label">标签数</span>
+          <span class="stat-value">{{ stat.value }}</span>
+          <span class="stat-label">{{ stat.label }}</span>
         </div>
       </div>
     </div>
 
-    <!-- 内容区域 -->
+    <!-- 双栏内容区：热门文章 + 最新文章 -->
     <div class="content-row">
       <!-- 热门文章 -->
-      <div class="card hot-articles">
+      <section class="content-card animate-fade-in-up delay-200">
         <div class="card-header">
-          <h3>热门文章</h3>
+          <h3 class="card-title">
+            <el-icon><TrendCharts /></el-icon>
+            热门文章
+          </h3>
           <router-link to="/admin/articles" class="view-all">查看全部</router-link>
         </div>
         <div class="card-body">
@@ -61,16 +34,20 @@
             <span class="rank" :class="{ top: index < 3 }">{{ index + 1 }}</span>
             <div class="article-info">
               <h4 class="article-title">{{ article.title }}</h4>
-              <span class="article-meta">{{ article.view_count }} 阅读</span>
+              <span class="article-meta">{{ article.view_count || 0 }} 阅读</span>
             </div>
           </div>
+          <div v-if="!hotArticles.length" class="empty-tip">暂无数据</div>
         </div>
-      </div>
+      </section>
 
       <!-- 最新文章 -->
-      <div class="card latest-articles">
+      <section class="content-card animate-fade-in-up delay-300">
         <div class="card-header">
-          <h3>最新文章</h3>
+          <h3 class="card-title">
+            <el-icon><Clock /></el-icon>
+            最新文章
+          </h3>
           <router-link to="/admin/articles" class="view-all">查看全部</router-link>
         </div>
         <div class="card-body">
@@ -79,114 +56,134 @@
               <h4 class="article-title">{{ article.title }}</h4>
               <span class="article-meta">{{ formatDate(article.created_at) }}</span>
             </div>
-            <el-tag size="small" :type="article.status === '已发布' ? 'success' : 'info'">
+            <el-tag
+              size="small"
+              :type="article.status === '已发布' ? 'success' : 'info'"
+              effect="plain"
+            >
               {{ article.status }}
             </el-tag>
           </div>
+          <div v-if="!latestArticles.length" class="empty-tip">暂无数据</div>
         </div>
-      </div>
+      </section>
     </div>
 
     <!-- 快捷操作 -->
-    <div class="quick-actions">
+    <section class="quick-actions animate-fade-in-up delay-300">
       <h3 class="section-title">快捷操作</h3>
       <div class="action-grid">
-        <router-link to="/admin/articles/add" class="action-card">
-          <el-icon :size="32" color="#0d9488"><EditPen /></el-icon>
-          <span>写文章</span>
-        </router-link>
-        <router-link to="/admin/categories" class="action-card">
-          <el-icon :size="32" color="#0d9488"><Folder /></el-icon>
-          <span>管理分类</span>
-        </router-link>
-        <router-link to="/admin/tags" class="action-card">
-          <el-icon :size="32" color="#0d9488"><PriceTag /></el-icon>
-          <span>管理标签</span>
-        </router-link>
-        <router-link to="/admin/tasks" class="action-card">
-          <el-icon :size="32" color="#0d9488"><List /></el-icon>
-          <span>任务管理</span>
+        <router-link
+          v-for="action in quickActions"
+          :key="action.label"
+          :to="action.path"
+          class="action-card"
+        >
+          <el-icon :size="28" color="var(--primary)"><component :is="action.icon" /></el-icon>
+          <span>{{ action.label }}</span>
         </router-link>
       </div>
-    </div>
+    </section>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+/**
+ * @file Dashboard.vue
+ * @description 后台仪表盘页面
+ * 作用：并行加载文章/分类/标签/热门/最新数据，展示统计概览、热门与最新文章列表及快捷操作入口。
+ * 依赖 API：getPublicArticles / getCategories / getTags / getHotArticles / getLatestArticles
+ */
+import { ref, computed, onMounted, markRaw } from 'vue';
 import {
   Document,
   View,
   Folder,
-  ChatDotRound,
-  Top,
-  EditPen,
   PriceTag,
-  List
+  TrendCharts,
+  Clock,
+  EditPen,
+  Link
 } from '@element-plus/icons-vue';
 import { getPublicArticles, getHotArticles, getLatestArticles } from '@/api/articles';
 import { getCategories } from '@/api/categories';
 import { getTags } from '@/api/tags';
 
 /** 统计数据 */
-const stats = ref({
-  articles: 0,
-  views: 0,
-  categories: 0,
-  tags: 0
-});
+const stats = ref({ articles: 0, views: 0, categories: 0, tags: 0 });
 
-/** 热门文章 */
+/** 热门文章列表 */
 const hotArticles = ref([]);
 
-/** 最新文章 */
+/** 最新文章列表 */
 const latestArticles = ref([]);
 
-/** 格式化日期 */
+/** 快捷操作项（markRaw 避免图标组件响应式包装） */
+const quickActions = [
+  { label: '写文章', path: '/admin/articles/add', icon: markRaw(EditPen) },
+  { label: '管理分类', path: '/admin/categories', icon: markRaw(Folder) },
+  { label: '管理标签', path: '/admin/tags', icon: markRaw(PriceTag) },
+  { label: '友链管理', path: '/admin/links', icon: markRaw(Link) }
+];
+
+/** 统计卡片配置（根据 stats 计算得出） */
+const statCards = computed(() => [
+  { label: '总文章', value: stats.value.articles, icon: markRaw(Document), theme: 'teal' },
+  { label: '总阅读', value: stats.value.views, icon: markRaw(View), theme: 'blue' },
+  { label: '分类数', value: stats.value.categories, icon: markRaw(Folder), theme: 'amber' },
+  { label: '标签数', value: stats.value.tags, icon: markRaw(PriceTag), theme: 'violet' }
+]);
+
+/**
+ * 格式化日期为短日期
+ * @param {string} dateStr - 后端返回的时间字符串
+ * @returns {string} 格式化后的短日期
+ */
 function formatDate(dateStr) {
-  const date = new Date(dateStr);
-  return date.toLocaleDateString('zh-CN', {
-    month: 'short',
-    day: 'numeric'
-  });
+  if (!dateStr) return '-';
+  return new Date(dateStr).toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' });
 }
 
-/** 加载仪表盘数据 */
+/**
+ * 并行加载仪表盘所有数据
+ * 使用 Promise.allSettled 保证单个接口失败不影响其他数据展示
+ */
 async function loadDashboard() {
-  try {
-    const [articlesRes, categoriesRes, tagsRes, hotRes, latestRes] = await Promise.allSettled([
-      getPublicArticles({ page_size: 1 }),
-      getCategories(),
-      getTags(),
-      getHotArticles(5),
-      getLatestArticles(5)
-    ]);
+  const [articlesRes, categoriesRes, tagsRes, hotRes, latestRes] = await Promise.allSettled([
+    getPublicArticles({ page_size: 1 }),
+    getCategories(),
+    getTags(),
+    getHotArticles(5),
+    getLatestArticles(5)
+  ]);
 
-    if (articlesRes.status === 'fulfilled' && articlesRes.value.code === 200) {
-      stats.value.articles = articlesRes.value.data.pagination.total;
-      stats.value.views = articlesRes.value.data.list.reduce(
-        (sum, a) => sum + (a.view_count || 0),
-        0
-      );
-    }
+  // 文章总数与阅读量
+  if (articlesRes.status === 'fulfilled' && articlesRes.value.code === 200) {
+    stats.value.articles = articlesRes.value.data.pagination?.total || 0;
+    stats.value.views = (articlesRes.value.data.list || []).reduce(
+      (sum, a) => sum + (a.view_count || 0),
+      0
+    );
+  }
 
-    if (categoriesRes.status === 'fulfilled' && categoriesRes.value.code === 200) {
-      stats.value.categories = categoriesRes.value.data.length;
-    }
+  // 分类数
+  if (categoriesRes.status === 'fulfilled' && categoriesRes.value.code === 200) {
+    stats.value.categories = categoriesRes.value.data.length;
+  }
 
-    if (tagsRes.status === 'fulfilled' && tagsRes.value.code === 200) {
-      stats.value.tags = tagsRes.value.data.length;
-    }
+  // 标签数
+  if (tagsRes.status === 'fulfilled' && tagsRes.value.code === 200) {
+    stats.value.tags = tagsRes.value.data.length;
+  }
 
-    if (hotRes.status === 'fulfilled' && hotRes.value.code === 200) {
-      hotArticles.value = hotRes.value.data;
-    }
+  // 热门文章
+  if (hotRes.status === 'fulfilled' && hotRes.value.code === 200) {
+    hotArticles.value = hotRes.value.data || [];
+  }
 
-    if (latestRes.status === 'fulfilled' && latestRes.value.code === 200) {
-      latestArticles.value = latestRes.value.data;
-    }
-  } catch (e) {
-    console.error('加载仪表盘数据失败:', e);
+  // 最新文章
+  if (latestRes.status === 'fulfilled' && latestRes.value.code === 200) {
+    latestArticles.value = latestRes.value.data || [];
   }
 }
 
@@ -196,23 +193,10 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.dashboard-page {
-  animation: fade-in 0.3s ease;
-}
-
-@keyframes fade-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-/* 统计卡片 */
+/* ========== 统计卡片行 ========== */
 .stats-row {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 20px;
   margin-bottom: 24px;
 }
@@ -221,77 +205,56 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 16px;
-  padding: 24px;
-  background: #fff;
-  border-radius: 16px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-  transition: all 0.3s ease;
-}
-
-.stat-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.08);
+  padding: 22px 24px;
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
 }
 
 .stat-icon {
-  width: 56px;
-  height: 56px;
-  border-radius: 14px;
+  width: 52px;
+  height: 52px;
+  border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
   color: #fff;
+  flex-shrink: 0;
 }
 
-.stat-icon.articles {
-  background: linear-gradient(135deg, #0d9488, #0891b2);
+/* 渐变主题色 */
+.stat-icon.teal {
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
 }
-
-.stat-icon.views {
+.stat-icon.blue {
   background: linear-gradient(135deg, #3b82f6, #2563eb);
 }
-
-.stat-icon.categories {
+.stat-icon.amber {
   background: linear-gradient(135deg, #f59e0b, #d97706);
 }
-
-.stat-icon.comments {
+.stat-icon.violet {
   background: linear-gradient(135deg, #8b5cf6, #7c3aed);
 }
 
 .stat-info {
   flex: 1;
+  min-width: 0;
 }
 
 .stat-value {
   display: block;
-  font-size: 28px;
+  font-size: 26px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--text-primary);
+  line-height: 1.2;
 }
 
 .stat-label {
-  font-size: 14px;
-  color: #64748b;
-}
-
-.stat-trend {
-  display: flex;
-  align-items: center;
-  gap: 4px;
   font-size: 13px;
-  font-weight: 500;
+  color: var(--text-secondary);
 }
 
-.stat-trend.up {
-  color: #22c55e;
-}
-
-.stat-trend.down {
-  color: #ef4444;
-}
-
-/* 内容区域 */
+/* ========== 内容卡片 ========== */
 .content-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -299,10 +262,10 @@ onMounted(() => {
   margin-bottom: 24px;
 }
 
-.card {
-  background: #fff;
-  border-radius: 16px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+.content-card {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
   overflow: hidden;
 }
 
@@ -310,29 +273,33 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 20px 24px;
-  border-bottom: 1px solid #f1f5f9;
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--border-light);
 }
 
-.card-header h3 {
-  font-size: 16px;
+.card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
   font-weight: 600;
-  color: #0f172a;
+  color: var(--text-primary);
   margin: 0;
 }
 
 .view-all {
-  font-size: 14px;
-  color: #0d9488;
+  font-size: 13px;
+  color: var(--primary);
   text-decoration: none;
+  transition: color 0.2s var(--ease-out);
 }
 
 .view-all:hover {
-  text-decoration: underline;
+  color: var(--primary-dark);
 }
 
 .card-body {
-  padding: 16px 24px;
+  padding: 12px 24px;
 }
 
 .article-item {
@@ -340,7 +307,7 @@ onMounted(() => {
   align-items: center;
   gap: 12px;
   padding: 12px 0;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--border-light);
 }
 
 .article-item:last-child {
@@ -348,21 +315,22 @@ onMounted(() => {
 }
 
 .rank {
-  width: 28px;
-  height: 28px;
+  width: 26px;
+  height: 26px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f1f5f9;
-  border-radius: 8px;
-  font-size: 13px;
+  background: var(--bg-hover);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
   font-weight: 600;
-  color: #64748b;
+  color: var(--text-secondary);
   flex-shrink: 0;
 }
 
+/* 前三名高亮 */
 .rank.top {
-  background: linear-gradient(135deg, #0d9488, #0891b2);
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
   color: #fff;
 }
 
@@ -372,10 +340,10 @@ onMounted(() => {
 }
 
 .article-title {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 500;
-  color: #0f172a;
-  margin: 0 0 4px;
+  color: var(--text-primary);
+  margin: 0 0 2px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -383,21 +351,28 @@ onMounted(() => {
 
 .article-meta {
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--text-tertiary);
 }
 
-/* 快捷操作 */
+.empty-tip {
+  padding: 32px 0;
+  text-align: center;
+  color: var(--text-tertiary);
+  font-size: 14px;
+}
+
+/* ========== 快捷操作 ========== */
 .quick-actions {
-  background: #fff;
-  border-radius: 16px;
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
   padding: 24px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--shadow-sm);
 }
 
 .section-title {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 600;
-  color: #0f172a;
+  color: var(--text-primary);
   margin: 0 0 20px;
 }
 
@@ -413,24 +388,22 @@ onMounted(() => {
   align-items: center;
   gap: 12px;
   padding: 24px 16px;
-  background: #f8fafc;
-  border-radius: 14px;
+  background: var(--bg-body);
+  border-radius: var(--radius-md);
   text-decoration: none;
-  color: #475569;
-  transition: all 0.3s ease;
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.25s var(--ease-out);
 }
 
 .action-card:hover {
-  background: linear-gradient(135deg, rgba(13, 148, 136, 0.1), rgba(8, 145, 178, 0.05));
-  transform: translateY(-4px);
+  background: var(--primary-bg);
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-md);
 }
 
-.action-card span {
-  font-size: 14px;
-  font-weight: 500;
-}
-
-/* 响应式 */
+/* ========== 响应式 ========== */
 @media (max-width: 768px) {
   .content-row {
     grid-template-columns: 1fr;

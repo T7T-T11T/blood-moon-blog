@@ -1,83 +1,84 @@
-/** * @file Links.vue * @description 友情链接页面组件（卡片网格杂志风） * *
-作用：按分类分组展示友情链接，提供卡片式网格浏览体验 * - 顶部 Hero：友链标题 + 站点总数统计 * -
-分类分组：按 category 分组（友情链接 / 推荐站点 / 工具资源 等） * -
-卡片网格：头像/Logo、名称、描述、访问链接（新窗口打开） * - 卡片悬浮动画：上移 + 阴影增强 * -
-加载中骨架 / 空状态兜底 * * 数据获取： * - getLinks() 获取已通过友链列表 * 返回数组，每项：{ id,
-name, url, description, avatar_url, category, sort_order, status } * * 设计要点： * - 主色调青绿色
-#0d9488 * - 卡片网格 3-4 列，响应式自适应 * - 头像缺失时使用首字母占位 * - 响应式：平板 2-3
-列，手机单列 */
+/** * @file Links.vue * @description 友情链接页（杂志风，卡片网格改为分类列表） * * 作用： * - 按
+category 分组展示友链，列表式排版（非卡片） * - 每行：头像 + 名称 + 描述 + 访问箭头 * -
+头像缺失时使用名称首字母占位 * * 数据获取： * - getLinks() 返回数组 [{ id, name, url, description,
+avatar_url, category, sort_order }] * - 兼容返回 { list } 或数组两种结构 * * 动效（2-3 组）： * -
+入场：Hero 文案 fade-in-up 错峰 * - 滚动：每个分类分组进入视口时 fade-in-up（Intersection Observer）
+* - 悬浮：整行上移 + 名称变主色 + 头像放大 + 箭头右移 */
 <template>
-  <div class="links-page">
-    <!-- Hero 区域：友链标题 + 站点总数 -->
+  <div ref="rootRef" class="links-page">
+    <!-- ============ Hero 区域 ============ -->
     <section class="hero">
       <div class="hero-inner">
-        <p class="hero-eyebrow">FRIENDS</p>
-        <h1 class="hero-title">友情链接</h1>
-        <p class="hero-subtitle">共收录 {{ totalLinks }} 个站点</p>
+        <p class="hero-eyebrow animate-fade-in-down">FRIENDS</p>
+        <h1 class="hero-title animate-fade-in-up">友情链接</h1>
+        <p class="hero-subtitle animate-fade-in-up delay-100">共收录 {{ totalLinks }} 个站点</p>
       </div>
-      <!-- 装饰光斑（纯视觉，不可交互） -->
-      <div class="hero-decoration" aria-hidden="true"></div>
+      <!-- 装饰光斑（纯视觉） -->
+      <div class="hero-orb" aria-hidden="true"></div>
     </section>
 
-    <!-- 主体：分类分组 + 卡片网格 -->
+    <!-- ============ 主体：分类分组列表 ============ -->
     <div class="content-wrapper">
-      <!-- 加载中骨架：首次加载且无数据时展示 -->
-      <div v-if="loading && links.length === 0" class="link-grid">
-        <div v-for="n in 8" :key="n" class="link-card skeleton-card">
+      <!-- 加载骨架 -->
+      <div v-if="loading && links.length === 0" class="skeleton-list">
+        <div v-for="n in 6" :key="n" class="skeleton-row">
           <div class="skeleton-avatar"></div>
-          <div class="skeleton-line w-60"></div>
-          <div class="skeleton-line w-90"></div>
+          <div class="skeleton-lines">
+            <div class="skeleton-line w-40"></div>
+            <div class="skeleton-line w-80"></div>
+          </div>
         </div>
       </div>
 
-      <!-- 分类分组：有友链数据时按 category 分组展示 -->
+      <!-- 分类分组 -->
       <div v-else-if="groupedLinks.length > 0">
-        <section v-for="group in groupedLinks" :key="group.category" class="link-section">
+        <section
+          v-for="(group, gi) in groupedLinks"
+          :key="group.category"
+          class="link-section reveal"
+          :style="{ '--row-index': gi }"
+        >
           <!-- 分类标题 -->
           <div class="section-header">
             <h2 class="section-title">{{ group.category }}</h2>
             <span class="section-sub">{{ group.links.length }} 个站点</span>
           </div>
 
-          <!-- 卡片网格 -->
-          <div class="link-grid">
-            <a
-              v-for="(link, index) in group.links"
+          <!-- 站点列表（非卡片，使用分隔线列表） -->
+          <ul class="link-list">
+            <li
+              v-for="(link, li) in group.links"
               :key="link.id"
-              :href="link.url"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="link-card"
-              :style="{ '--card-index': index }"
+              class="link-row"
+              :style="{ '--item-index': li }"
             >
-              <!-- 头像/Logo：存在 avatar_url 展示图片，否则使用首字母占位 -->
-              <div class="card-avatar">
-                <img
-                  v-if="link.avatar_url"
-                  :src="link.avatar_url"
-                  :alt="link.name"
-                  loading="lazy"
-                />
-                <span v-else class="avatar-fallback">{{ getInitial(link.name) }}</span>
-              </div>
-              <!-- 名称与描述 -->
-              <div class="card-info">
-                <h3 class="card-name">{{ link.name }}</h3>
-                <p class="card-desc">{{ link.description || '暂无描述' }}</p>
-              </div>
-              <!-- 访问箭头 -->
-              <div class="card-visit">
-                <el-icon><Right /></el-icon>
-              </div>
-            </a>
-          </div>
+              <a :href="link.url" target="_blank" rel="noopener noreferrer" class="link-inner">
+                <!-- 头像：存在 avatar_url 展示图片，否则首字母占位 -->
+                <div class="link-avatar">
+                  <img
+                    v-if="link.avatar_url"
+                    :src="link.avatar_url"
+                    :alt="link.name"
+                    loading="lazy"
+                  />
+                  <span v-else class="avatar-fallback">{{ getInitial(link.name) }}</span>
+                </div>
+                <!-- 名称与描述 -->
+                <div class="link-info">
+                  <h3 class="link-name">{{ link.name }}</h3>
+                  <p class="link-desc">{{ link.description || '暂无描述' }}</p>
+                </div>
+                <!-- 访问箭头 -->
+                <span class="link-arrow" aria-hidden="true">→</span>
+              </a>
+            </li>
+          </ul>
         </section>
       </div>
 
-      <!-- 空状态：非加载且无友链时展示 -->
+      <!-- 空状态 -->
       <div v-else class="empty-state">
-        <el-icon :size="56" color="#cbd5e1"><Connection /></el-icon>
-        <p class="empty-text">暂无友情链接</p>
+        <p class="empty-title">暂无友情链接</p>
         <p class="empty-desc">友链申请通过后将在此展示</p>
       </div>
     </div>
@@ -85,15 +86,20 @@ name, url, description, avatar_url, category, sort_order, status } * * 设计要
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
-import { Right, Connection } from '@element-plus/icons-vue';
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue';
 import { getLinks } from '../../api/links';
+
+/** 组件根节点引用（用于作用域内的滚动观察） */
+const rootRef = ref(null);
 
 /** 友链列表（扁平数组） */
 const links = ref([]);
 
 /** 加载状态（控制骨架屏展示） */
 const loading = ref(false);
+
+/** Intersection Observer 实例（滚动揭示动画） */
+let observer = null;
 
 /** 预设分类展示顺序（未在此列表的分类按出现顺序追加） */
 const CATEGORY_ORDER = ['友情链接', '推荐站点', '工具资源'];
@@ -107,33 +113,28 @@ const totalLinks = computed(() => links.value.length);
 /**
  * 按分类分组的友链列表
  * - 按 category 字段分组，无 category 的归入"其他"
- * - 预设分类（友情链接/推荐站点/工具资源）按固定顺序优先展示
- * - 每组内按 sort_order 升序排序（sort_order 不存在时保持原序）
+ * - 预设分类按固定顺序优先展示
+ * - 每组内按 sort_order 升序排序
  * @returns {Array<{category: string, links: Array}>} 分组后的友链列表
  */
 const groupedLinks = computed(() => {
   const map = new Map();
   // 遍历所有友链，按 category 分组
   for (const link of links.value) {
-    // 无分类的友链归入"其他"
     const category = link.category || '其他';
-    if (!map.has(category)) {
-      map.set(category, []);
-    }
+    if (!map.has(category)) map.set(category, []);
     map.get(category).push(link);
   }
-
-  // 每组内按 sort_order 升序排序（缺失 sort_order 视为 0）
+  // 每组内按 sort_order 升序排序（缺失视为 0）
   for (const [, groupLinks] of map) {
     groupLinks.sort((a, b) => {
-      const orderA = Number(a.sort_order) || 0;
-      const orderB = Number(b.sort_order) || 0;
-      return orderA - orderB;
+      const oa = Number(a.sort_order) || 0;
+      const ob = Number(b.sort_order) || 0;
+      return oa - ob;
     });
   }
-
   const result = [];
-  // 先添加预设分类（仅添加存在的分类，保证固定顺序）
+  // 先添加预设分类（保证固定顺序）
   for (const cat of CATEGORY_ORDER) {
     if (map.has(cat)) {
       result.push({ category: cat, links: map.get(cat) });
@@ -150,10 +151,9 @@ const groupedLinks = computed(() => {
 /**
  * 获取名称首字符作为头像占位
  * @param {string} name - 友链名称
- * @returns {string} 首字符，空名称返回空字符串
+ * @returns {string} 首字符大写，空名称返回空字符串
  */
 function getInitial(name) {
-  // 名称不存在或为空时返回空字符串
   if (!name) return '';
   return name.charAt(0).toUpperCase();
 }
@@ -167,8 +167,9 @@ async function loadLinks() {
   loading.value = true;
   try {
     const { data } = await getLinks();
-    // 兼容数组或 { list } 两种返回结构
     links.value = Array.isArray(data) ? data : (data?.list ?? []);
+    await nextTick();
+    initObserver();
   } catch (e) {
     console.error('加载友链失败:', e);
   } finally {
@@ -176,53 +177,66 @@ async function loadLinks() {
   }
 }
 
+/**
+ * 初始化 Intersection Observer
+ * 监听组件内所有 .reveal 元素，进入视口时添加 visible 类触发动画
+ */
+function initObserver() {
+  if (observer) observer.disconnect();
+  if (!rootRef.value) return;
+  observer = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+          observer.unobserve(entry.target);
+        }
+      });
+    },
+    { threshold: 0.1, rootMargin: '0px 0px -60px 0px' }
+  );
+  rootRef.value.querySelectorAll('.reveal').forEach((el) => observer.observe(el));
+}
+
 onMounted(() => {
   loadLinks();
+});
+
+onUnmounted(() => {
+  if (observer) observer.disconnect();
 });
 </script>
 
 <style scoped>
-.links-page {
-  --color-primary: #0d9488; /* 主色：青绿 */
-  --color-primary-dark: #0f766e; /* 主色深 */
-  --color-primary-light: #14b8a6; /* 主色浅 */
-  --color-text: #0f172a; /* 主文本 */
-  --color-text-secondary: #475569; /* 次级文本 */
-  --color-text-muted: #94a3b8; /* 弱化文本 */
-  --color-bg: #ffffff; /* 卡片背景 */
-  --color-bg-soft: #f8fafc; /* 页面背景 */
-  --color-border: #e2e8f0; /* 分割线 */
-  --max-width: 1200px; /* 内容最大宽度 */
-}
-
 /* ========== Hero 区域 ========== */
 .hero {
   position: relative;
-  padding: 80px 32px 72px;
+  padding: 88px 32px 72px;
   background: linear-gradient(135deg, #0f766e 0%, #0d9488 45%, #14b8a6 100%);
   overflow: hidden;
   color: #fff;
+  isolation: isolate;
 }
 
 .hero-inner {
   position: relative;
   z-index: 2;
-  max-width: var(--max-width);
+  max-width: 960px;
   margin: 0 auto;
   text-align: center;
 }
 
 .hero-eyebrow {
-  margin: 0 0 12px;
+  margin: 0 0 14px;
   font-size: 13px;
   font-weight: 600;
-  letter-spacing: 4px;
-  color: rgba(255, 255, 255, 0.8);
+  letter-spacing: 5px;
+  color: rgba(255, 255, 255, 0.78);
 }
 
 .hero-title {
   margin: 0 0 16px;
-  font-size: 48px;
+  font-size: clamp(40px, 6vw, 56px);
   font-weight: 800;
   letter-spacing: -1.5px;
   text-shadow: 0 2px 20px rgba(0, 0, 0, 0.15);
@@ -236,27 +250,39 @@ onMounted(() => {
 }
 
 /* Hero 装饰光斑 */
-.hero-decoration {
+.hero-orb {
   position: absolute;
-  top: -100px;
-  right: -60px;
-  width: 320px;
-  height: 320px;
+  top: -120px;
+  right: -80px;
+  width: 360px;
+  height: 360px;
   background: radial-gradient(circle, rgba(255, 255, 255, 0.18) 0%, transparent 70%);
   border-radius: 50%;
   z-index: 1;
+  pointer-events: none;
 }
 
 /* ========== 内容区 ========== */
 .content-wrapper {
-  max-width: var(--max-width);
+  max-width: 960px;
   margin: 0 auto;
-  padding: 56px 32px 64px;
+  padding: 64px 32px 80px;
 }
 
-/* 分类区块 */
+/* 分类区块：入场前隐藏 */
 .link-section {
-  margin-bottom: 56px;
+  margin-bottom: 64px;
+  opacity: 0;
+  transform: translateY(24px);
+  transition:
+    opacity 0.6s var(--ease-out),
+    transform 0.6s var(--ease-out);
+  transition-delay: calc(var(--row-index) * 80ms);
+}
+
+.link-section.visible {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .link-section:last-child {
@@ -267,159 +293,162 @@ onMounted(() => {
 .section-header {
   display: flex;
   align-items: baseline;
-  gap: 12px;
-  margin-bottom: 24px;
+  gap: 14px;
+  margin-bottom: 20px;
   padding-bottom: 14px;
-  border-bottom: 2px solid var(--color-border);
+  border-bottom: 1px solid var(--border);
 }
 
 .section-title {
   margin: 0;
-  font-size: 24px;
+  font-size: 22px;
   font-weight: 700;
-  color: var(--color-text);
+  color: var(--text-primary);
   letter-spacing: -0.5px;
 }
 
 .section-sub {
   font-size: 13px;
-  color: var(--color-text-muted);
+  color: var(--text-tertiary);
 }
 
-/* ========== 卡片网格 ========== */
-.link-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr); /* 桌面端 4 列 */
-  gap: 20px;
+/* ========== 站点列表（分隔线列表，非卡片） ========== */
+.link-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
 }
 
-.link-card {
+.link-row {
+  border-bottom: 1px solid var(--border);
+}
+
+.link-row:last-child {
+  border-bottom: none;
+}
+
+.link-inner {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 18px;
-  background: var(--color-bg);
-  border: 1px solid var(--color-border);
-  border-radius: 14px;
+  gap: 18px;
+  padding: 18px 8px;
   text-decoration: none;
   color: inherit;
-  transition:
-    transform 0.3s ease,
-    box-shadow 0.3s ease,
-    border-color 0.3s ease;
-  /* 卡片入场动画：按索引错峰淡入 */
-  animation: card-in 0.5s ease backwards;
-  animation-delay: calc(var(--card-index) * 50ms);
+  transition: transform 0.3s var(--ease-out);
 }
 
-@keyframes card-in {
-  from {
-    opacity: 0;
-    transform: translateY(16px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+/* 悬浮：整行上移 + 主色强调 */
+.link-inner:hover {
+  transform: translateY(-3px);
 }
 
-/* 卡片悬浮：上移 + 阴影增强 + 主色边框 */
-.link-card:hover {
-  transform: translateY(-6px);
-  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.12);
-  border-color: rgba(13, 148, 136, 0.4);
-}
-
-/* 头像/Logo */
-.card-avatar {
+/* 头像 */
+.link-avatar {
   flex-shrink: 0;
-  width: 52px;
-  height: 52px;
-  border-radius: 12px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
   overflow: hidden;
-  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-light) 100%);
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: transform 0.3s var(--ease-spring);
 }
 
-.card-avatar img {
+.link-avatar img {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-/* 首字母占位（无头像时） */
+/* 悬浮时头像放大 */
+.link-inner:hover .link-avatar {
+  transform: scale(1.12);
+}
+
+/* 首字母占位 */
 .avatar-fallback {
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 800;
   color: #fff;
 }
 
 /* 名称与描述 */
-.card-info {
+.link-info {
   flex: 1;
   min-width: 0;
 }
 
-.card-name {
+.link-name {
   margin: 0 0 4px;
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 700;
-  color: var(--color-text);
-  /* 名称最多 1 行，超出截断 */
+  color: var(--text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  transition: color 0.2s ease;
+  transition: color 0.25s var(--ease-out);
 }
 
-/* 悬浮时名称变为主色 */
-.link-card:hover .card-name {
-  color: var(--color-primary);
+/* 悬浮时名称变主色 */
+.link-inner:hover .link-name {
+  color: var(--primary);
 }
 
-.card-desc {
+.link-desc {
   margin: 0;
   font-size: 13px;
-  color: var(--color-text-muted);
-  line-height: 1.4;
-  /* 描述最多 1 行，超出截断 */
+  color: var(--text-tertiary);
+  line-height: 1.5;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 /* 访问箭头 */
-.card-visit {
+.link-arrow {
   flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  color: var(--color-text-muted);
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-tertiary);
   transition:
-    color 0.2s ease,
-    transform 0.2s ease;
+    transform 0.3s var(--ease-spring),
+    color 0.25s var(--ease-out);
 }
 
 /* 悬浮时箭头变主色并右移 */
-.link-card:hover .card-visit {
-  color: var(--color-primary);
-  transform: translateX(4px);
+.link-inner:hover .link-arrow {
+  color: var(--primary);
+  transform: translateX(6px);
 }
 
 /* ========== 骨架屏 ========== */
-.skeleton-card {
-  pointer-events: none;
+.skeleton-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.skeleton-row {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 18px 8px;
 }
 
 .skeleton-avatar {
-  width: 52px;
-  height: 52px;
-  border-radius: 12px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
   flex-shrink: 0;
   background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
   background-size: 200% 100%;
   animation: shimmer 1.4s infinite;
+}
+
+.skeleton-lines {
+  flex: 1;
 }
 
 .skeleton-line {
@@ -431,11 +460,15 @@ onMounted(() => {
   animation: shimmer 1.4s infinite;
 }
 
-.w-60 {
-  width: 60%;
+.skeleton-line:last-child {
+  margin-bottom: 0;
 }
-.w-90 {
-  width: 90%;
+
+.w-40 {
+  width: 40%;
+}
+.w-80 {
+  width: 80%;
 }
 
 @keyframes shimmer {
@@ -453,55 +486,37 @@ onMounted(() => {
   padding: 80px 20px;
 }
 
-.empty-text {
-  margin: 16px 0 8px;
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--color-text-secondary);
+.empty-title {
+  margin: 0 0 8px;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-secondary);
 }
 
 .empty-desc {
   margin: 0;
   font-size: 14px;
-  color: var(--color-text-muted);
+  color: var(--text-tertiary);
 }
 
 /* ========== 响应式 ========== */
-/* 平板：3 列 */
-@media (max-width: 1024px) {
-  .link-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
-}
-
-/* 大手机/小平板：2 列 */
 @media (max-width: 768px) {
   .hero {
     padding: 56px 20px 48px;
   }
-
-  .hero-title {
-    font-size: 36px;
-  }
-
   .content-wrapper {
-    padding: 32px 16px 48px;
+    padding: 40px 16px 56px;
   }
-
-  .link-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 16px;
-  }
-
   .section-title {
-    font-size: 20px;
+    font-size: 18px;
   }
-}
-
-/* 小屏手机：单列 */
-@media (max-width: 480px) {
-  .link-grid {
-    grid-template-columns: 1fr;
+  .link-inner {
+    gap: 14px;
+    padding: 16px 4px;
+  }
+  .link-avatar {
+    width: 42px;
+    height: 42px;
   }
 }
 </style>

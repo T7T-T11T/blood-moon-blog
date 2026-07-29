@@ -1,10 +1,10 @@
 <template>
-  <div class="link-list-page">
+  <div class="link-list-page animate-fade-in-up">
     <!-- 页面头部 -->
     <div class="page-header">
       <div class="header-left">
         <h2 class="page-title">友链管理</h2>
-        <span class="count">{{ links.length }} 个友链</span>
+        <span class="count-badge">{{ links.length }} 个友链</span>
       </div>
       <el-button type="primary" @click="openCreateDialog">
         <el-icon><Plus /></el-icon>
@@ -15,11 +15,12 @@
     <!-- 友链表格 -->
     <div v-loading="loading" class="table-container">
       <el-table :data="links" stripe style="width: 100%">
-        <el-table-column label="头像/名称" min-width="200">
+        <!-- 名称/头像列 -->
+        <el-table-column label="名称" min-width="200">
           <template #default="{ row }">
             <div class="link-name-cell">
-              <el-avatar v-if="row.avatar_url" :src="row.avatar_url" :size="36" />
-              <el-avatar v-else :size="36">{{ row.name?.charAt(0) || '?' }}</el-avatar>
+              <el-avatar v-if="row.avatar_url" :src="row.avatar_url" :size="34" />
+              <el-avatar v-else :size="34">{{ row.name?.charAt(0) || '?' }}</el-avatar>
               <div class="name-info">
                 <span class="link-name">{{ row.name }}</span>
                 <span v-if="row.email" class="link-email">{{ row.email }}</span>
@@ -28,6 +29,7 @@
           </template>
         </el-table-column>
 
+        <!-- URL 列 -->
         <el-table-column label="URL" min-width="220">
           <template #default="{ row }">
             <a
@@ -42,31 +44,36 @@
           </template>
         </el-table-column>
 
-        <el-table-column label="描述" min-width="200">
+        <!-- 描述列 -->
+        <el-table-column label="描述" min-width="180">
           <template #default="{ row }">
             <span class="link-desc">{{ row.description || '-' }}</span>
           </template>
         </el-table-column>
 
+        <!-- 分类列 -->
         <el-table-column label="分类" width="120">
           <template #default="{ row }">
             <el-tag type="info" effect="plain">{{ row.category || '友情链接' }}</el-tag>
           </template>
         </el-table-column>
 
-        <el-table-column label="排序" width="90" align="center">
+        <!-- 排序列 -->
+        <el-table-column label="排序" width="80" align="center">
           <template #default="{ row }">
-            <span class="sort-order">{{ row.sort_order ?? 0 }}</span>
+            <span class="sort-text">{{ row.sort_order ?? 0 }}</span>
           </template>
         </el-table-column>
 
+        <!-- 状态列 -->
         <el-table-column label="状态" width="100">
           <template #default="{ row }">
-            <el-tag :type="getStatusTagType(row.status)" effect="dark">{{ row.status }}</el-tag>
+            <el-tag :type="getStatusTagType(row.status)" effect="light">{{ row.status }}</el-tag>
           </template>
         </el-table-column>
 
-        <el-table-column label="操作" width="160" fixed="right">
+        <!-- 操作列 -->
+        <el-table-column label="操作" width="140" fixed="right">
           <template #default="{ row }">
             <el-button type="primary" size="small" text @click="openEditDialog(row)"
               >编辑</el-button
@@ -78,13 +85,13 @@
 
       <!-- 空状态 -->
       <div v-if="!loading && links.length === 0" class="empty-state">
-        <el-icon :size="64" color="#94a3b8"><Link /></el-icon>
+        <el-icon :size="56" color="var(--text-tertiary)"><Link /></el-icon>
         <p class="empty-text">暂无友链</p>
         <el-button type="primary" @click="openCreateDialog">立即添加</el-button>
       </div>
     </div>
 
-    <!-- 新增/编辑对话框（复用同一表单） -->
+    <!-- 新增/编辑对话框 -->
     <el-dialog v-model="dialogVisible" :title="isEditing ? '编辑友链' : '新增友链'" width="560px">
       <el-form ref="formRef" :model="form" :rules="rules" label-width="90px">
         <el-form-item label="网站名称" prop="name">
@@ -133,14 +140,13 @@
 /**
  * @file LinkList.vue
  * @description 友链管理页面（管理端）
- * 作用：展示所有友情链接，支持新增、编辑、删除操作，
- *       新增与编辑复用同一对话框表单。
+ * 作用：展示所有友情链接，支持新增、编辑、删除操作，新增与编辑复用同一对话框表单。
  * 依赖 API：getAllLinks / createLink / updateLink / deleteLink
  */
 import { ref, onMounted } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { Plus, Link } from '@element-plus/icons-vue';
-import { getAllLinks, createLink, updateLink, deleteLink } from '../../api/links';
+import { getAllLinks, createLink, updateLink, deleteLink } from '@/api/links';
 
 /** 友链列表数据 */
 const links = ref([]);
@@ -151,7 +157,7 @@ const loading = ref(false);
 /** 对话框可见性 */
 const dialogVisible = ref(false);
 
-/** 是否为编辑模式（false 表示新增） */
+/** 是否为编辑模式 */
 const isEditing = ref(false);
 
 /** 编辑中的友链ID */
@@ -160,10 +166,10 @@ const editingId = ref(null);
 /** 保存中状态 */
 const saving = ref(false);
 
-/** 表单引用，用于触发表单校验 */
+/** 表单引用 */
 const formRef = ref(null);
 
-/** 表单初始数据，新增/编辑时复用 */
+/** 创建空表单初始数据，新增/编辑时复用 */
 function createEmptyForm() {
   return {
     name: '',
@@ -193,36 +199,31 @@ const rules = {
 /**
  * 根据友链状态返回对应的 ElTag 类型
  * @param {string} status - 友链状态（待审核/已通过/已拒绝）
- * @returns {string} ElTag 类型（warning/success/danger/info）
+ * @returns {string} ElTag 类型
  */
 function getStatusTagType(status) {
-  // 按状态映射颜色，与评论管理保持一致
   if (status === '已通过') return 'success';
   if (status === '已拒绝') return 'danger';
   if (status === '待审核') return 'warning';
   return 'info';
 }
 
-/**
- * 加载所有友链列表（含待审核）
- */
+/** 加载所有友链列表 */
 async function loadLinks() {
   loading.value = true;
   try {
-    const { data } = await getAllLinks();
-    // 后端直接返回友链数组
-    links.value = Array.isArray(data) ? data : [];
+    const res = await getAllLinks();
+    if (res.code === 200) {
+      links.value = Array.isArray(res.data) ? res.data : [];
+    }
   } catch (e) {
-    // 响应拦截器已统一提示错误，这里仅兜底日志
     console.error('加载友链列表失败:', e);
   } finally {
     loading.value = false;
   }
 }
 
-/**
- * 打开新增对话框，重置表单为初始状态
- */
+/** 打开新增对话框，重置表单 */
 function openCreateDialog() {
   isEditing.value = false;
   editingId.value = null;
@@ -231,7 +232,7 @@ function openCreateDialog() {
 }
 
 /**
- * 打开编辑对话框，填充当前行数据
+ * 打开编辑对话框，回填当前行数据
  * @param {Object} link - 当前行友链数据
  */
 function openEditDialog(link) {
@@ -251,13 +252,10 @@ function openEditDialog(link) {
   dialogVisible.value = true;
 }
 
-/**
- * 保存友链（新增或更新）
- * 先做表单校验，再根据 isEditing 调用对应接口
- */
+/** 保存友链（新增或更新） */
 async function handleSave() {
   if (!formRef.value) return;
-  // 校验表单，失败则终止保存
+  // 先做表单校验
   try {
     await formRef.value.validate();
   } catch {
@@ -266,7 +264,6 @@ async function handleSave() {
 
   saving.value = true;
   try {
-    // 编辑模式调用 updateLink，新增模式调用 createLink
     if (isEditing.value) {
       await updateLink(editingId.value, form.value);
       ElMessage.success('更新成功');
@@ -277,7 +274,6 @@ async function handleSave() {
     dialogVisible.value = false;
     loadLinks();
   } catch (e) {
-    // 响应拦截器已统一提示错误，这里仅兜底日志
     console.error('保存友链失败:', e);
   } finally {
     saving.value = false;
@@ -300,7 +296,7 @@ async function handleDelete(link) {
     ElMessage.success('删除成功');
     loadLinks();
   } catch (e) {
-    // 用户点击取消时进入此分支，无需处理
+    // 用户取消删除时进入此分支，无需处理
     if (e !== 'cancel') {
       console.error('删除友链失败:', e);
     }
@@ -313,25 +309,12 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.link-list-page {
-  animation: fade-in 0.3s ease;
-}
-
-@keyframes fade-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-/* 页面头部 */
+/* ========== 页面头部 ========== */
 .page-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
   flex-wrap: wrap;
   gap: 16px;
 }
@@ -343,26 +326,26 @@ onMounted(() => {
 }
 
 .page-title {
-  font-size: 24px;
+  font-size: 22px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--text-primary);
   margin: 0;
 }
 
-.count {
-  font-size: 14px;
-  color: #64748b;
-  background: #f1f5f9;
+.count-badge {
+  font-size: 13px;
+  color: var(--text-secondary);
+  background: var(--bg-hover);
   padding: 4px 12px;
   border-radius: 16px;
 }
 
-/* 表格容器 */
+/* ========== 表格容器 ========== */
 .table-container {
-  background: #fff;
-  border-radius: 16px;
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
   padding: 16px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--shadow-sm);
 }
 
 .link-name-cell {
@@ -379,30 +362,30 @@ onMounted(() => {
 
 .link-name {
   font-weight: 600;
-  color: #0f172a;
+  color: var(--text-primary);
   font-size: 14px;
 }
 
 .link-email {
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--text-tertiary);
 }
 
 .link-url {
-  color: #0d9488;
+  color: var(--primary);
   text-decoration: none;
   font-size: 13px;
   word-break: break-all;
-  transition: color 0.2s ease;
+  transition: color 0.2s var(--ease-out);
 }
 
 .link-url:hover {
-  color: #0f766e;
+  color: var(--primary-dark);
   text-decoration: underline;
 }
 
 .link-desc {
-  color: #64748b;
+  color: var(--text-secondary);
   font-size: 13px;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -411,29 +394,21 @@ onMounted(() => {
   overflow: hidden;
 }
 
-.sort-order {
+.sort-text {
   font-size: 14px;
-  color: #475569;
+  color: var(--text-primary);
   font-weight: 500;
 }
 
-/* 空状态 */
+/* ========== 空状态 ========== */
 .empty-state {
   text-align: center;
   padding: 64px 0;
 }
 
 .empty-text {
-  font-size: 16px;
-  color: #64748b;
-  margin: 16px 0 24px;
-}
-
-/* 响应式 */
-@media (max-width: 768px) {
-  .page-header {
-    flex-direction: column;
-    align-items: flex-start;
-  }
+  font-size: 15px;
+  color: var(--text-secondary);
+  margin: 12px 0 20px;
 }
 </style>
