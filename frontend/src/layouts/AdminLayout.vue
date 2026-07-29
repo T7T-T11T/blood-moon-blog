@@ -153,7 +153,8 @@ const contentMenu = [
 /** 系统菜单项 */
 const systemMenu = [
   { path: '/admin/statistics', label: '数据统计', icon: markRaw(TrendCharts) },
-  { path: '/admin/settings', label: '系统设置', icon: markRaw(Setting) }
+  { path: '/admin/settings', label: '系统设置', icon: markRaw(Setting) },
+  { path: '/admin/profile', label: '个人中心', icon: markRaw(User) }
 ];
 
 /**
@@ -175,7 +176,7 @@ async function handleCommand(command) {
       // 用户取消退出
     }
   } else if (command === 'profile') {
-    ElMessage.info('个人中心开发中');
+    router.push('/admin/profile');
   }
 }
 </script>

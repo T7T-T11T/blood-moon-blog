@@ -40,16 +40,14 @@ router.get('/stats', async (req, res) => {
       [userId]
     )
 
-    // 2. 分类总数
+    // 2. 分类总数（分类表无 user_id 字段，统计全部分类）
     const [categoryRows] = await pool.execute(
-      'SELECT COUNT(*) AS count FROM categories WHERE user_id = ?',
-      [userId]
+      'SELECT COUNT(*) AS count FROM categories'
     )
 
-    // 3. 标签总数
+    // 3. 标签总数（标签表无 user_id 字段，统计全部标签）
     const [tagRows] = await pool.execute(
-      'SELECT COUNT(*) AS count FROM tags WHERE user_id = ?',
-      [userId]
+      'SELECT COUNT(*) AS count FROM tags'
     )
 
     // 4. 评论总数
@@ -80,14 +78,23 @@ router.get('/stats', async (req, res) => {
       [userId]
     )
 
+    // 将 BigInt 字符串转为数字类型（mysql2 聚合函数默认返回字符串）
+    const stats = articleStats[0]
+    const trendWithNumber = publishTrend.map((t) => ({ ...t, count: Number(t.count) }))
+
     res.json({
       code: 200,
       data: {
-        articleStats: articleStats[0],
-        categoryCount: categoryRows[0].count,
-        tagCount: tagRows[0].count,
-        commentCount: commentRows[0].count,
-        publishTrend,
+        articleStats: {
+          total: Number(stats.total),
+          published: Number(stats.published),
+          draft: Number(stats.draft),
+          total_views: Number(stats.total_views)
+        },
+        categoryCount: Number(categoryRows[0].count),
+        tagCount: Number(tagRows[0].count),
+        commentCount: Number(commentRows[0].count),
+        publishTrend: trendWithNumber,
         latestArticles
       }
     })

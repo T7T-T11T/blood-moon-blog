@@ -1,5 +1,16 @@
 # 版本历史
 
+## v1.4.4 (2026-07-30)
+
+- feat(profile): 新增个人中心页面，支持修改头像、简介、邮箱、GitHub/QQ/微信链接及密码
+- feat(profile): 后端新增 GET/PUT /api/auth/profile 和 PUT /api/auth/password 接口
+- feat(profile): 管理后台系统菜单新增「个人中心」入口，右上角用户下拉可跳转
+- fix(dashboard): 修复文章状态饼图数据不正确
+  - categories/tags 表无 user_id 字段，移除错误的 WHERE 过滤条件
+  - 聚合查询字段（COUNT/SUM）BigInt 返回字符串，在响应中统一转为 Number 类型
+- fix(dialog): 分类/标签/友链管理对话框添加 append-to-body，解决被侧边栏遮挡问题
+- 前后端版本号统一升级至 1.4.4
+
 ## v1.4.3 (2026-07-30)
 
 - fix(login): 修复登录按钮无反应 bug

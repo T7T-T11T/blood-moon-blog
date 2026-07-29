@@ -81,7 +81,8 @@
     <el-dialog
       v-model="dialogVisible"
       :title="isEditing ? '编辑分类' : '新增分类'"
-      width="500px"
+      width="520px"
+      append-to-body
       class="category-dialog"
     >
       <el-form ref="formRef" :model="form" :rules="rules" label-width="80px" class="category-form">
