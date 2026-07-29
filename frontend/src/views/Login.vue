@@ -1,6 +1,6 @@
 <!--
   登录页面
-  作用：用户登录入口，提交后获取 token 存入 store 并跳转目标页
+  作用：管理员登录入口，提交后获取 token 存入 store 并跳转目标页
   设计：左右分栏 —— 左侧深色青绿渐展示区（品牌 + 浮动装饰球），右侧登录表单
   动画：左栏滑入、表单缩放淡入、装饰球浮动（纯 CSS 实现）
 -->
@@ -27,8 +27,8 @@
     <main class="form-panel">
       <div class="form-card animate-scale-in">
         <header class="form-header">
-          <h2 class="form-title">欢迎回来</h2>
-          <p class="form-subtitle">登录账号，继续你的创作之旅</p>
+          <h2 class="form-title">管理员登录</h2>
+          <p class="form-subtitle">登录账号，进入后台管理</p>
         </header>
 
         <el-form ref="formRef" :model="form" :rules="rules" size="large" class="login-form">
@@ -55,11 +55,6 @@
             {{ loading ? '登录中...' : '登 录' }}
           </el-button>
         </el-form>
-
-        <p class="switch-link">
-          还没有账号？
-          <router-link to="/register" class="link">立即注册</router-link>
-        </p>
       </div>
     </main>
   </div>
@@ -100,19 +95,25 @@ const rules = {
 
 /**
  * 处理登录提交
- * @description 表单校验通过后调用登录接口，成功存储 token 并跳转目标页
+ * @description 校验通过后调用登录接口，保存 token 并跳转
  */
 async function handleLogin() {
   // 校验表单，校验失败会抛出异常终止后续流程
   await formRef.value.validate();
   loading.value = true;
   try {
-    const res = await loginAPI(form);
-    // 持久化登录态：token + 用户名
-    userStore.setLogin(res.data.token, res.data.user.username);
-    ElMessage.success('登录成功，欢迎回来！');
-    // 优先跳转 redirect 参数地址，否则进入后台首页
-    router.push(route.query.redirect || '/admin');
+    const res = await loginAPI({
+      username: form.username,
+      password: form.password
+    });
+    const data = res.data || res;
+    // 保存 token 和用户信息到 store
+    userStore.setToken(data.token);
+    userStore.setUser(data.user);
+    ElMessage.success('登录成功');
+    // 跳转到 redirect 指定页面，默认 /admin
+    const redirect = route.query.redirect || '/admin';
+    router.push(redirect);
   } catch (err) {
     // 错误信息已在 request 拦截器中统一提示，此处无需重复处理
   } finally {
@@ -200,7 +201,7 @@ async function handleLogin() {
   height: 360px;
   background: #14b8a6;
   top: -80px;
-  right: -80px;
+  left: -80px;
   animation: floatBlob 18s ease-in-out infinite;
 }
 
@@ -209,7 +210,7 @@ async function handleLogin() {
   height: 280px;
   background: #5eead4;
   bottom: -60px;
-  left: -40px;
+  right: -40px;
   animation: floatBlob 22s ease-in-out infinite reverse;
 }
 
@@ -218,9 +219,23 @@ async function handleLogin() {
   height: 200px;
   background: #99f6e4;
   top: 45%;
-  right: 25%;
+  left: 25%;
   opacity: 0.35;
   animation: floatBlob 26s ease-in-out infinite;
+}
+
+/* ========== 浮动动画关键帧 ========== */
+@keyframes floatBlob {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    transform: translate(30px, -20px) scale(1.05);
+  }
+  66% {
+    transform: translate(-20px, 25px) scale(0.97);
+  }
 }
 
 /* ========== 右侧表单区 ========== */
@@ -303,39 +318,6 @@ async function handleLogin() {
 
 .submit-btn:active {
   transform: translateY(0) scale(0.98);
-}
-
-/* ========== 切换链接 ========== */
-.switch-link {
-  margin-top: 32px;
-  text-align: center;
-  font-size: 14px;
-  color: var(--text-secondary);
-}
-
-.switch-link .link {
-  color: var(--primary);
-  font-weight: 600;
-  text-decoration: none;
-  transition: opacity 0.2s ease;
-}
-
-.switch-link .link:hover {
-  opacity: 0.75;
-}
-
-/* ========== 浮动动画关键帧 ========== */
-@keyframes floatBlob {
-  0%,
-  100% {
-    transform: translate(0, 0) scale(1);
-  }
-  33% {
-    transform: translate(30px, -20px) scale(1.05);
-  }
-  66% {
-    transform: translate(-20px, 25px) scale(0.97);
-  }
 }
 
 /* ========== 响应式：移动端隐藏左侧品牌区 ========== */

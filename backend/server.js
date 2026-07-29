@@ -12,7 +12,7 @@
  *
  * 路由：
  * 【公开接口】（无需登录）
- * - /api/auth       用户认证（注册/登录）
+ * - /api/auth       用户认证（登录）
  * - /api/articles/public  博客文章浏览（含归档）
  * - /api/categories  分类列表
  * - /api/tags        标签列表

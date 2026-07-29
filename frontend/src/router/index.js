@@ -24,8 +24,7 @@
  * - /admin/settings    系统设置
  *
  * 【认证路由】
- * - /login                 登录
- * - /register              注册
+ * - /login                 管理员登录
  */
 
 import { createRouter, createWebHashHistory } from 'vue-router';
@@ -37,13 +36,7 @@ const routes = [
     path: '/login',
     name: 'Login',
     component: () => import('../views/Login.vue'),
-    meta: { title: '登录', requiresAuth: false }
-  },
-  {
-    path: '/register',
-    name: 'Register',
-    component: () => import('../views/Register.vue'),
-    meta: { title: '注册', requiresAuth: false }
+    meta: { title: '管理员登录', requiresAuth: false }
   },
 
   // ========== 前台路由 ==========
@@ -214,8 +207,8 @@ router.beforeEach((to, from, next) => {
   // 需要认证的路由，未登录则跳转登录页
   if (to.meta.requiresAuth && !store.isLoggedIn) {
     next({ path: '/login', query: { redirect: to.fullPath } });
-  } else if ((to.path === '/login' || to.path === '/register') && store.isLoggedIn) {
-    // 已登录用户访问登录/注册页，跳转后台首页
+  } else if (to.path === '/login' && store.isLoggedIn) {
+    // 已登录用户访问登录页，跳转后台首页
     next('/admin');
   } else {
     next();

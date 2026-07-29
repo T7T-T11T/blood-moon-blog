@@ -1,17 +1,9 @@
 /**
  * 认证相关 API
- * 作用：封装用户注册、登录接口请求
+ * 作用：封装用户登录接口请求
+ * 注意：个人博客无公开注册接口，管理员通过种子脚本初始化
  */
 import request from './request';
-
-/**
- * 用户注册
- * @param {Object} data - { username, password, email }
- * @returns {Promise} 接口响应
- */
-export function registerAPI(data) {
-  return request.post('/auth/register', data);
-}
 
 /**
  * 用户登录
