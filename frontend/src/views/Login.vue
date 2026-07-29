@@ -95,27 +95,30 @@ const rules = {
 
 /**
  * 处理登录提交
- * @description 校验通过后调用登录接口，保存 token 并跳转
+ * @description 校验表单后调用登录接口，成功后保存 token 并跳转
  */
 async function handleLogin() {
-  // 校验表单，校验失败会抛出异常终止后续流程
-  await formRef.value.validate();
   loading.value = true;
   try {
+    // 校验表单，失败会抛出校验错误对象
+    await formRef.value.validate();
+
     const res = await loginAPI({
       username: form.username,
       password: form.password
     });
     const data = res.data || res;
-    // 保存 token 和用户信息到 store
-    userStore.setToken(data.token);
-    userStore.setUser(data.user);
+
+    // 保存 token 和用户名到 store（同时写入 localStorage）
+    userStore.setLogin(data.token, data.user?.username || form.username);
     ElMessage.success('登录成功');
+
     // 跳转到 redirect 指定页面，默认 /admin
     const redirect = route.query.redirect || '/admin';
     router.push(redirect);
   } catch (err) {
-    // 错误信息已在 request 拦截器中统一提示，此处无需重复处理
+    // 表单校验错误：Element Plus 已自动显示提示，无需处理
+    // API 错误：request 拦截器已统一提示
   } finally {
     loading.value = false;
   }

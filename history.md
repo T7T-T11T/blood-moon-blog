@@ -1,5 +1,12 @@
 # 版本历史
 
+## v1.4.3 (2026-07-30)
+
+- fix(login): 修复登录按钮无反应 bug
+  - 将 `formRef.value.validate()` 移入 try 块，避免表单校验异常未被捕获导致事件处理器崩溃
+  - 将 `userStore.setToken()` / `setUser()` 改为实际存在的 `userStore.setLogin()`
+- 前后端版本号统一升级至 1.4.3
+
 ## v1.4.2 (2026-07-30)
 
 - fix(auth): 修复注册接口 confirm 字段缺失导致"两次密码不一致"的 bug
