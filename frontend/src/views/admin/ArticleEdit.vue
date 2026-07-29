@@ -36,6 +36,7 @@
                 :toolbars="toolbars"
                 placeholder="开始写作..."
                 class="md-editor"
+                theme="dark"
               />
             </div>
           </el-form-item>

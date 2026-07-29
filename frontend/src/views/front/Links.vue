@@ -15,6 +15,8 @@ avatar_url, category, sort_order }] * - 兼容返回 { list } 或数组两种结
       </div>
       <!-- 装饰光斑（纯视觉） -->
       <div class="hero-orb" aria-hidden="true"></div>
+      <!-- 蝙蝠装饰（右下角淡入） -->
+      <div class="bats-decoration" aria-hidden="true"></div>
     </section>
 
     <!-- ============ 主体：分类分组列表 ============ -->
@@ -212,14 +214,7 @@ onUnmounted(() => {
 .hero {
   position: relative;
   padding: 120px 32px 80px;
-  background:
-    linear-gradient(
-      180deg,
-      rgba(6, 9, 18, 0.88) 0%,
-      rgba(10, 14, 26, 0.8) 40%,
-      rgba(18, 24, 40, 0.92) 100%
-    ),
-    url('@/assets/bats-decoration.jpg') center/cover no-repeat fixed;
+  background: linear-gradient(180deg, #060912 0%, #0a0e1a 40%, #121828 100%);
   overflow: hidden;
   color: #fff;
   isolation: isolate;
@@ -253,6 +248,21 @@ onUnmounted(() => {
   max-width: 960px;
   margin: 0 auto;
   text-align: center;
+}
+
+/* 蝙蝠装饰：右下角淡入 */
+.bats-decoration {
+  position: absolute;
+  right: -40px;
+  bottom: -40px;
+  width: 320px;
+  height: 220px;
+  background: url('@/assets/bats-decoration.jpg') no-repeat center/contain;
+  opacity: 0.15;
+  pointer-events: none;
+  z-index: 1;
+  mask-image: linear-gradient(to top left, rgba(0, 0, 0, 1) 30%, transparent 80%);
+  -webkit-mask-image: linear-gradient(to top left, rgba(0, 0, 0, 1) 30%, transparent 80%);
 }
 
 .hero-eyebrow {
