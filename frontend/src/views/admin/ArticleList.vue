@@ -109,7 +109,7 @@
 import { ref, computed, onMounted, markRaw } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { Search, Plus, Document, View, EditPen } from '@element-plus/icons-vue';
+import { Search, Plus, Document, View } from '@element-plus/icons-vue';
 
 const router = useRouter();
 

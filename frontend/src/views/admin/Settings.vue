@@ -1,134 +1,213 @@
 <template>
   <div class="settings-page">
-    <div class="settings-container">
-      <!-- 基本设置 -->
-      <div class="settings-section">
-        <h2 class="section-title">基本设置</h2>
-        <div class="settings-card">
-          <div class="setting-item">
-            <div class="setting-info">
-              <h3>站点名称</h3>
-              <p>显示在网站顶部和浏览器标签页</p>
-            </div>
-            <el-input v-model="settings.siteName" class="setting-input" />
-          </div>
-          <div class="setting-item">
-            <div class="setting-info">
-              <h3>站点描述</h3>
-              <p>用于SEO和分享预览</p>
-            </div>
-            <el-input
-              v-model="settings.siteDescription"
-              type="textarea"
-              :rows="3"
-              class="setting-input"
-            />
-          </div>
-        </div>
+    <!-- 页面头部 -->
+    <div class="page-header">
+      <h2 class="page-title">网站设置</h2>
+      <div class="header-actions">
+        <el-button :loading="loading" @click="loadSettings">刷新</el-button>
+        <el-button type="primary" :loading="saving" @click="handleSave">保存设置</el-button>
       </div>
+    </div>
 
-      <!-- 个人信息 -->
-      <div class="settings-section">
-        <h2 class="section-title">个人信息</h2>
-        <div class="settings-card">
-          <div class="setting-item">
-            <div class="setting-info">
-              <h3>显示名称</h3>
-              <p>在文章作者信息中显示</p>
-            </div>
-            <el-input v-model="settings.authorName" class="setting-input" />
-          </div>
-          <div class="setting-item">
-            <div class="setting-info">
-              <h3>个人简介</h3>
-              <p>在关于页面展示</p>
-            </div>
-            <el-input
-              v-model="settings.authorBio"
-              type="textarea"
-              :rows="3"
-              class="setting-input"
-            />
-          </div>
-        </div>
-      </div>
+    <!-- 设置表单（分组 Tab） -->
+    <div v-loading="loading" class="settings-container">
+      <el-tabs v-model="activeTab" class="settings-tabs">
+        <!-- Tab1：站点信息 -->
+        <el-tab-pane label="站点信息" name="site">
+          <el-form :model="settings" label-position="top" class="settings-form">
+            <el-form-item v-for="field in siteFields" :key="field.key" :label="field.label">
+              <el-input
+                v-model="settings[field.key]"
+                :type="field.type || 'text'"
+                :rows="field.rows || 2"
+                :placeholder="field.placeholder"
+                :input-style="field.type === 'textarea' ? textareaStyle : null"
+              />
+              <p class="field-tip">{{ field.tip }}</p>
+            </el-form-item>
+          </el-form>
+        </el-tab-pane>
 
-      <!-- 社交链接 -->
-      <div class="settings-section">
-        <h2 class="section-title">社交链接</h2>
-        <div class="settings-card">
-          <div class="setting-item">
-            <div class="setting-info">
-              <h3>GitHub</h3>
-              <p>你的 GitHub 主页链接</p>
-            </div>
-            <el-input
-              v-model="settings.githubUrl"
-              class="setting-input"
-              placeholder="https://github.com/username"
-            />
-          </div>
-          <div class="setting-item">
-            <div class="setting-info">
-              <h3>邮箱</h3>
-              <p>联系邮箱</p>
-            </div>
-            <el-input v-model="settings.email" class="setting-input" placeholder="your@email.com" />
-          </div>
-        </div>
-      </div>
-
-      <!-- 保存按钮 -->
-      <div class="actions-section">
-        <el-button type="primary" size="large" :loading="saving" @click="handleSave">
-          保存设置
-        </el-button>
-        <el-button size="large" @click="loadSettings">重置</el-button>
-      </div>
+        <!-- Tab2：个人信息 -->
+        <el-tab-pane label="个人信息" name="author">
+          <el-form :model="settings" label-position="top" class="settings-form">
+            <el-form-item v-for="field in authorFields" :key="field.key" :label="field.label">
+              <el-input
+                v-model="settings[field.key]"
+                :type="field.type || 'text'"
+                :rows="field.rows || 2"
+                :placeholder="field.placeholder"
+                :input-style="field.type === 'textarea' ? textareaStyle : null"
+              />
+              <p class="field-tip">{{ field.tip }}</p>
+            </el-form-item>
+          </el-form>
+        </el-tab-pane>
+      </el-tabs>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+/**
+ * @file Settings.vue
+ * @description 网站设置页面（管理端）
+ * 作用：分组展示网站设置项（站点信息 / 个人信息），通过 ElTabs 切换分组，
+ *       页面加载时调用 getSettings() 拉取全部设置，保存时调用
+ *       updateSettings() 批量更新。
+ * 依赖 API：getSettings / updateSettings
+ */
+import { ref, reactive, onMounted } from 'vue';
 import { ElMessage } from 'element-plus';
+import { getSettings, updateSettings } from '../../api/settings';
 
-/** 保存中 */
+/** 当前激活的 Tab（site=站点信息，author=个人信息） */
+const activeTab = ref('site');
+
+/** 加载状态 */
+const loading = ref(false);
+
+/** 保存状态 */
 const saving = ref(false);
 
-/** 设置数据 */
-const settings = ref({
-  siteName: '个人博客',
-  siteDescription: '分享技术，记录成长',
-  authorName: '全栈开发者',
-  authorBio: '热爱技术，喜欢分享',
-  githubUrl: 'https://github.com',
-  email: 'example@email.com'
-});
+/** 多行文本框的统一样式 */
+const textareaStyle = { minHeight: '80px' };
 
-/** 加载设置 */
-function loadSettings() {
-  // 从本地存储加载设置
-  const saved = localStorage.getItem('blog_settings');
-  if (saved) {
-    try {
-      settings.value = { ...settings.value, ...JSON.parse(saved) };
-    } catch (e) {
-      console.error('加载设置失败:', e);
-    }
+/**
+ * 站点信息字段配置
+ * @type {Array<{key:string,label:string,type?:string,rows?:number,placeholder?:string,tip:string}>}
+ */
+const siteFields = [
+  {
+    key: 'site_name',
+    label: '站点名称',
+    placeholder: '请输入站点名称',
+    tip: '显示在网站顶部和浏览器标签页'
+  },
+  {
+    key: 'site_description',
+    label: '站点描述',
+    type: 'textarea',
+    rows: 3,
+    placeholder: '请输入站点描述',
+    tip: '用于 SEO 和分享预览'
+  },
+  {
+    key: 'site_keywords',
+    label: '站点关键词',
+    placeholder: '多个关键词用英文逗号分隔',
+    tip: '用于 SEO，多个关键词用逗号分隔'
+  },
+  { key: 'site_icp', label: '备案号', placeholder: '如：京ICP备12345678号', tip: '显示在网站底部' },
+  {
+    key: 'footer_text',
+    label: '底部文案',
+    type: 'textarea',
+    rows: 3,
+    placeholder: '请输入底部自定义文案',
+    tip: '网站底部的自定义版权或说明文字'
+  }
+];
+
+/**
+ * 个人信息字段配置
+ * @type {Array<{key:string,label:string,type?:string,rows?:number,placeholder?:string,tip:string}>}
+ */
+const authorFields = [
+  {
+    key: 'author_name',
+    label: '作者名称',
+    placeholder: '请输入作者名称',
+    tip: '在文章作者信息中显示'
+  },
+  {
+    key: 'author_bio',
+    label: '个人简介',
+    type: 'textarea',
+    rows: 3,
+    placeholder: '请输入个人简介',
+    tip: '在关于页面展示'
+  },
+  {
+    key: 'author_avatar',
+    label: '头像 URL',
+    placeholder: 'https://example.com/avatar.png',
+    tip: '作者头像的图片地址'
+  },
+  {
+    key: 'author_email',
+    label: '联系邮箱',
+    placeholder: 'your@email.com',
+    tip: '用于读者联系作者'
+  },
+  {
+    key: 'author_github',
+    label: 'GitHub',
+    placeholder: 'https://github.com/username',
+    tip: 'GitHub 主页链接'
+  },
+  { key: 'author_qq', label: 'QQ 号', placeholder: '请输入 QQ 号', tip: '用于读者联系作者' },
+  { key: 'author_wechat', label: '微信号', placeholder: '请输入微信号', tip: '用于读者联系作者' }
+];
+
+/**
+ * 所有设置项的键集合，用于初始化空值与提交时过滤
+ * 通过合并两个分组的 key 计算得出
+ */
+const allKeys = [...siteFields, ...authorFields].map((f) => f.key);
+
+/**
+ * 设置数据（响应式对象）
+ * 初始化为空字符串，加载后用后端数据覆盖
+ */
+const settings = reactive(
+  allKeys.reduce((acc, key) => {
+    acc[key] = '';
+    return acc;
+  }, {})
+);
+
+/**
+ * 加载所有设置项
+ * 调用 getSettings() 获取后端键值对，逐项写入响应式对象
+ */
+async function loadSettings() {
+  loading.value = true;
+  try {
+    const { data } = await getSettings();
+    // 后端返回 { key: value } 键值对，仅写入已声明的 key，避免注入未知字段
+    allKeys.forEach((key) => {
+      // 仅当后端返回了该 key 时才赋值，否则保留空字符串
+      if (data && Object.prototype.hasOwnProperty.call(data, key)) {
+        settings[key] = data[key] ?? '';
+      }
+    });
+  } catch (e) {
+    // 响应拦截器已统一提示错误，这里仅兜底日志
+    console.error('加载设置失败:', e);
+  } finally {
+    loading.value = false;
   }
 }
 
-/** 保存设置 */
+/**
+ * 保存设置
+ * 调用 updateSettings() 批量提交所有设置项
+ */
 async function handleSave() {
   saving.value = true;
   try {
-    // 保存到本地存储
-    localStorage.setItem('blog_settings', JSON.stringify(settings.value));
+    // 组装当前所有设置项提交给后端
+    const payload = {};
+    allKeys.forEach((key) => {
+      payload[key] = settings[key];
+    });
+
+    await updateSettings(payload);
     ElMessage.success('保存成功');
   } catch (e) {
+    // 响应拦截器已统一提示错误，这里仅兜底日志
     console.error('保存设置失败:', e);
-    ElMessage.error('保存失败');
   } finally {
     saving.value = false;
   }
@@ -153,81 +232,71 @@ onMounted(() => {
   }
 }
 
-.settings-container {
-  max-width: 800px;
+/* 页面头部 */
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 16px;
 }
 
-.settings-section {
-  margin-bottom: 32px;
-}
-
-.section-title {
-  font-size: 20px;
+.page-title {
+  font-size: 24px;
   font-weight: 700;
   color: #0f172a;
-  margin: 0 0 16px;
-}
-
-.settings-card {
-  background: #fff;
-  border-radius: 16px;
-  padding: 8px 24px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-}
-
-.setting-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 24px 0;
-  border-bottom: 1px solid #f1f5f9;
-  gap: 24px;
-}
-
-.setting-item:last-child {
-  border-bottom: none;
-}
-
-.setting-info {
-  flex: 1;
-}
-
-.setting-info h3 {
-  font-size: 15px;
-  font-weight: 600;
-  color: #0f172a;
-  margin: 0 0 4px;
-}
-
-.setting-info p {
-  font-size: 13px;
-  color: #64748b;
   margin: 0;
 }
 
-.setting-input {
-  width: 320px;
-}
-
-.setting-input :deep(.el-input__wrapper) {
-  border-radius: 8px;
-}
-
-.actions-section {
+.header-actions {
   display: flex;
-  gap: 16px;
-  justify-content: flex-end;
+  gap: 12px;
+}
+
+/* 设置容器 */
+.settings-container {
+  background: #fff;
+  border-radius: 16px;
+  padding: 24px 32px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+/* 设置表单 */
+.settings-form {
+  max-width: 640px;
+  padding-top: 8px;
+}
+
+.field-tip {
+  font-size: 12px;
+  color: #94a3b8;
+  margin: 4px 0 0;
+  line-height: 1.5;
+}
+
+/* 覆盖 Element Plus 主题色为青绿色 */
+.settings-tabs :deep(.el-tabs__item.is-active) {
+  color: #0d9488;
+}
+
+.settings-tabs :deep(.el-tabs__active-bar) {
+  background-color: #0d9488;
+}
+
+.settings-tabs :deep(.el-tabs__item:hover) {
+  color: #0d9488;
 }
 
 /* 响应式 */
 @media (max-width: 768px) {
-  .setting-item {
+  .page-header {
     flex-direction: column;
-    align-items: stretch;
+    align-items: flex-start;
   }
 
-  .setting-input {
-    width: 100%;
+  .settings-container {
+    padding: 16px;
   }
 }
 </style>

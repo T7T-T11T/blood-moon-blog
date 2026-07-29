@@ -345,6 +345,52 @@ router.get('/public/tag/:slug', async (req, res) => {
 });
 
 /**
+ * GET /api/articles/public/archives - 获取文章归档列表
+ * 公开接口，无需登录
+ * 按年月分组返回已发布文章（仅id、title、created_at）
+ */
+router.get('/public/archives', async (req, res) => {
+  try {
+    // 查询所有已发布文章的归档信息
+    const [rows] = await pool.execute(
+      `SELECT id, title, created_at
+       FROM articles
+       WHERE status = '已发布'
+       ORDER BY created_at DESC`
+    );
+
+    // 按年月分组
+    const archives = {};
+    rows.forEach(article => {
+      const date = new Date(article.created_at);
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const key = `${year}-${month}`;
+
+      if (!archives[key]) {
+        archives[key] = {
+          year,
+          month: parseInt(month),
+          label: `${year}年${parseInt(month)}月`,
+          articles: []
+        };
+      }
+      archives[key].articles.push(article);
+    });
+
+    // 转为数组并按时间倒序
+    const archiveList = Object.values(archives).sort((a, b) => {
+      return b.year - a.year || b.month - a.month;
+    });
+
+    res.json({ code: 200, data: archiveList });
+  } catch (e) {
+    console.error('获取文章归档失败：', e);
+    res.status(500).json({ code: 500, message: '服务器错误' });
+  }
+});
+
+/**
  * GET /api/articles/public/:id - 获取文章详情
  * 公开接口，无需登录
  * 自动增加浏览量

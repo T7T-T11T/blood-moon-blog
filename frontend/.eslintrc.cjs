@@ -24,18 +24,8 @@ module.exports = {
     'no-console': 'off',
     // 允许未使用变量（以 _ 开头的除外）
     'no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
-    // 分号
-    'semi': ['error', 'always'],
-    // 单引号
-    'quotes': ['error', 'single', { avoidEscape: true }],
-    // 缩进 2 空格
-    'indent': ['error', 2],
-    // 逗号末尾
-    'comma-dangle': ['error', 'never'],
-    // 大括号风格
-    'brace-style': ['error', '1tbs', { allowSingleLine: true }],
-    // 关键字前后空格
-    'keyword-spacing': ['error', { before: true, after: true }],
+    // 格式化规则（缩进/分号/引号/逗号/大括号/空格）交由 Prettier 统一管理，
+    // eslint-config-prettier 会自动关闭与之冲突的样式规则，此处不再显式声明
     // Vue 模板多根元素（Vue 3 支持，关闭警告）
     'vue/no-multiple-template-root': 'off',
     // 单单词组件名（页面级组件允许单单词）

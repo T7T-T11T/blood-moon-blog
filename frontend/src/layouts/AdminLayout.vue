@@ -108,7 +108,7 @@
 </template>
 
 <script setup>
-import { computed, markRaw } from 'vue';
+import { markRaw } from 'vue';
 import { useRouter } from 'vue-router';
 import { useUserStore } from '../stores/user';
 import { ElMessage, ElMessageBox } from 'element-plus';
@@ -125,7 +125,9 @@ import {
   House,
   User,
   SwitchButton,
-  ArrowDown
+  ArrowDown,
+  ChatDotRound,
+  Link
 } from '@element-plus/icons-vue';
 
 const userStore = useUserStore();
@@ -136,7 +138,9 @@ const contentMenu = [
   { path: '/admin/dashboard', label: '仪表盘', icon: markRaw(Monitor) },
   { path: '/admin/articles', label: '文章管理', icon: markRaw(Document) },
   { path: '/admin/categories', label: '分类管理', icon: markRaw(Folder) },
-  { path: '/admin/tags', label: '标签管理', icon: markRaw(PriceTag) }
+  { path: '/admin/tags', label: '标签管理', icon: markRaw(PriceTag) },
+  { path: '/admin/comments', label: '评论管理', icon: markRaw(ChatDotRound) },
+  { path: '/admin/links', label: '友链管理', icon: markRaw(Link) }
 ];
 
 /** 个人工具菜单 */

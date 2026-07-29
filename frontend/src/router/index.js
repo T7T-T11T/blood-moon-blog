@@ -4,17 +4,22 @@
  *
  * 路由结构：
  * 【前台路由】（无需登录）
- * - /                      博客首页
- * - /article/:id           文章详情
+ * - /                      博客首页（杂志风）
+ * - /article/:id           文章详情（含评论）
  * - /category/:slug        分类归档
  * - /tag/:slug             标签归档
+ * - /archive               文章归档时间线
+ * - /links                 友情链接
  * - /about                 关于我
+ * - /search                搜索结果
  *
  * 【后台路由】（需要登录）
  * - /admin                 仪表盘
  * - /admin/articles        文章管理
  * - /admin/categories      分类管理
  * - /admin/tags            标签管理
+ * - /admin/comments        评论管理
+ * - /admin/links           友链管理
  * - /admin/tasks           任务管理
  * - /admin/pomodoro        番茄钟
  * - /admin/statistics      数据统计
@@ -73,10 +78,28 @@ const routes = [
         meta: { title: '标签归档' }
       },
       {
+        path: 'archive',
+        name: 'Archive',
+        component: () => import('../views/front/Archive.vue'),
+        meta: { title: '文章归档' }
+      },
+      {
+        path: 'links',
+        name: 'Links',
+        component: () => import('../views/front/Links.vue'),
+        meta: { title: '友情链接' }
+      },
+      {
         path: 'about',
         name: 'About',
         component: () => import('../views/front/About.vue'),
         meta: { title: '关于我' }
+      },
+      {
+        path: 'search',
+        name: 'Search',
+        component: () => import('../views/front/Search.vue'),
+        meta: { title: '搜索结果' }
       }
     ]
   },
@@ -123,6 +146,18 @@ const routes = [
         name: 'TagListAdmin',
         component: () => import('../views/admin/TagList.vue'),
         meta: { title: '标签管理', requiresAuth: true }
+      },
+      {
+        path: 'comments',
+        name: 'CommentList',
+        component: () => import('../views/admin/CommentList.vue'),
+        meta: { title: '评论管理', requiresAuth: true }
+      },
+      {
+        path: 'links',
+        name: 'LinkList',
+        component: () => import('../views/admin/LinkList.vue'),
+        meta: { title: '友链管理', requiresAuth: true }
       },
       {
         path: 'tasks',

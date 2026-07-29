@@ -1,5 +1,16 @@
 # 版本历史
 
+## v1.3.0 (2026-07-29)
+
+- feat: 重构为个人博客系统，参考 GitHub 热门开源博客项目进行模仿创新
+- feat(db): 新增 comments(树形评论)、links(友链)、site_settings(网站设置) 表，扩展 users/articles 字段
+- feat(api): 新增评论管理、友链管理、网站设置后端接口，支持树形评论与审核流程
+- feat(front): 重构前台为杂志风布局，新增首页 Hero 区、文章归档、友链、关于我、搜索结果页
+- feat(admin): 后台新增评论管理、友链管理、网站设置页面，扩展侧边栏菜单
+- fix(api): 移除前端 API 调用中重复的 /api 前缀，与 request.js baseURL 统一
+- chore(lint): 修复 ESLint 与 Prettier 的 indent 规则冲突，格式化规则统一交由 Prettier 管理
+- 前后端版本号统一升级至 1.3.0
+
 ## v1.2.2 (2026-07-29)
 
 - fix(router): 将路由模式从 history 改为 hash，彻底解决刷新页面 404 问题

@@ -13,14 +13,20 @@
  * 路由：
  * 【公开接口】（无需登录）
  * - /api/auth       用户认证（注册/登录）
- * - /api/articles/public  博客文章浏览
+ * - /api/articles/public  博客文章浏览（含归档）
  * - /api/categories  分类列表
  * - /api/tags        标签列表
+ * - /api/comments/:articleId  文章评论浏览
+ * - /api/links       友情链接浏览
+ * - /api/settings    网站设置读取
  *
  * 【管理接口】（需要登录）
  * - /api/articles    博客文章管理
  * - /api/categories  分类管理
  * - /api/tags        标签管理
+ * - /api/comments    评论管理（审核/删除）
+ * - /api/links       友链管理（增删改查）
+ * - /api/settings    网站设置管理（批量更新）
  * - /api/tasks       任务管理
  * - /api/pomodoro    番茄钟记录
  * - /api/dashboard   仪表盘统计
@@ -42,6 +48,9 @@ const tagRoutes = require('./routes/tags')
 const pomodoroRoutes = require('./routes/pomodoro')
 const dashboardRoutes = require('./routes/dashboard')
 const uploadRoutes = require('./routes/upload')
+const commentRoutes = require('./routes/comments')
+const linkRoutes = require('./routes/links')
+const settingRoutes = require('./routes/settings')
 
 const path = require('path')
 const fs = require('fs')
@@ -68,6 +77,9 @@ app.use('/api/auth', authRoutes)           // 认证
 app.use('/api/categories', categoryRoutes) // 分类（公开 + 管理）
 app.use('/api/tags', tagRoutes)            // 标签（公开 + 管理）
 app.use('/api/articles', articleRoutes)    // 博客（包含公开和管理接口）
+app.use('/api/comments', commentRoutes)    // 评论（公开浏览 + 管理）
+app.use('/api/links', linkRoutes)          // 友链（公开浏览 + 管理）
+app.use('/api/settings', settingRoutes)    // 网站设置（公开读取 + 管理）
 
 // 需要登录的接口
 app.use('/api/tasks', taskRoutes)          // 任务

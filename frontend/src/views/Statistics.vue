@@ -135,7 +135,7 @@
  */
 import { ref, onMounted, onUnmounted, computed, nextTick } from 'vue';
 import { getDashboardStatsAPI } from '../api/dashboard';
-import { getArticlesAPI } from '../api/articles';
+import { getArticles as getArticlesAPI } from '../api/articles';
 import { getPomodoroAPI } from '../api/pomodoro';
 import { CircleCheck, Timer, View, Document } from '@element-plus/icons-vue';
 import * as echarts from 'echarts';
