@@ -67,7 +67,7 @@
 ```
 task_manager_vue/
 ├── database/
-│   └── upgrade.sql              # 建表脚本
+│   └── init.sql                 # 建表脚本（全量初始化）
 ├── backend/
 │   ├── config/
 │   │   └── db.js                # MySQL 连接池配置
@@ -104,8 +104,7 @@ task_manager_vue/
 │   └── package.json
 ├── .gitignore
 ├── .prettierrc                  # Prettier 配置
-├── README.md
-└── DEVELOPMENT.md               # 详细开发文档
+└── README.md
 ```
 
 ## 快速开始
@@ -127,13 +126,13 @@ CREATE DATABASE IF NOT EXISTS task_manager DEFAULT CHARSET utf8mb4;
 USE task_manager;
 
 # 执行建表脚本
-source /path/to/database/upgrade.sql
+source /path/to/database/init.sql
 ```
 
 或手动执行 SQL：
 
 ```sql
--- 建表脚本内容请参考 DEVELOPMENT.md 第四章
+-- 建表脚本内容请参考 database/init.sql
 ```
 
 ### 3. 配置环境变量
@@ -179,7 +178,7 @@ npm run dev
 
 ## API 接口
 
-详细的 API 接口文档请参考 [DEVELOPMENT.md](./DEVELOPMENT.md) 第五章。
+详细的 API 接口请参考 `backend/server.js` 中注册的路由模块及各 `backend/routes/*.js` 文件头注释。
 
 ### 认证接口
 | 方法 | 路径 | 说明 |

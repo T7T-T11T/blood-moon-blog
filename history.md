@@ -1,5 +1,13 @@
 # 版本历史
 
+## v1.3.1 (2026-07-29)
+
+- chore: 删除冗余文档和文件，清理项目结构
+- 删除 DEVELOPMENT.md（内容严重过时且与 README.md 重复）
+- 删除 database/upgrade.sql 和 upgrade_v2.sql（init.sql 已是全量最新建表脚本）
+- 更新 README.md 中对已删除文件的引用，避免断链
+- 前后端版本号统一升级至 1.3.1
+
 ## v1.3.0 (2026-07-29)
 
 - feat: 重构为个人博客系统，参考 GitHub 热门开源博客项目进行模仿创新
