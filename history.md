@@ -1,0 +1,27 @@
+# 版本历史
+
+## v1.2.0 (2026-07-29)
+
+- 修复 backend `dotenv` 版本号错误（^17.4.2 -> ^16.4.5），解决 npm install 失败问题
+- 补充数据库升级脚本，增加 `categories` / `tags` / `article_tags` 表及 `articles.category_id` 字段
+- 清理前端废弃文件（BlogList / BlogEdit / BlogDetail / Dashboard / TaskForm / RichEditor.vue）
+- 前端补全 ESLint + Prettier 工具链，增加 lint / format 脚本
+- Vite 构建优化：配置 manualChunks 代码分割，减小单文件体积
+- 增加生产环境 API 配置（.env.production / .env.development）
+- 前后端版本号统一升级至 1.2.0
+
+## v1.1.0 (2026-07-28)
+
+- 新增仪表盘、博客、番茄钟、数据统计四大模块
+- 前端 UI 全面美化，建立设计令牌体系
+- 集成全局动画系统（路由过渡、页面入场、悬浮效果）
+- 博客编辑器升级为全屏沉浸式布局
+- 登录页增加 Canvas 粒子动效
+- 番茄钟状态持久化（pinia-plugin-persistedstate）
+- 项目整体配色改为青绿色系
+
+## v1.0.0 (2026-07-28)
+
+- 初始版本：任务管理 + 用户认证
+- 技术栈：Vue 3 + Vite + Element Plus + Express + MySQL
+- 功能：用户注册/登录、JWT 认证、任务增删改查

@@ -1,0 +1,200 @@
+/**
+ * 路由配置文件
+ * 作用：定义前端所有页面路由和路由守卫
+ *
+ * 路由结构：
+ * 【前台路由】（无需登录）
+ * - /                      博客首页
+ * - /article/:id           文章详情
+ * - /category/:slug        分类归档
+ * - /tag/:slug             标签归档
+ * - /about                 关于我
+ *
+ * 【后台路由】（需要登录）
+ * - /admin                 仪表盘
+ * - /admin/articles        文章管理
+ * - /admin/categories      分类管理
+ * - /admin/tags            标签管理
+ * - /admin/tasks           任务管理
+ * - /admin/pomodoro        番茄钟
+ * - /admin/statistics      数据统计
+ * - /admin/settings        系统设置
+ *
+ * 【认证路由】
+ * - /login                 登录
+ * - /register              注册
+ */
+
+import { createRouter, createWebHistory } from 'vue-router';
+import { useUserStore } from '../stores/user';
+
+const routes = [
+  // ========== 认证路由 ==========
+  {
+    path: '/login',
+    name: 'Login',
+    component: () => import('../views/Login.vue'),
+    meta: { title: '登录', requiresAuth: false }
+  },
+  {
+    path: '/register',
+    name: 'Register',
+    component: () => import('../views/Register.vue'),
+    meta: { title: '注册', requiresAuth: false }
+  },
+
+  // ========== 前台路由 ==========
+  {
+    path: '/',
+    component: () => import('../layouts/FrontLayout.vue'),
+    children: [
+      {
+        path: '',
+        name: 'Home',
+        component: () => import('../views/front/Home.vue'),
+        meta: { title: '首页' }
+      },
+      {
+        path: 'article/:id',
+        name: 'ArticleDetail',
+        component: () => import('../views/front/ArticleDetail.vue'),
+        meta: { title: '文章详情' }
+      },
+      {
+        path: 'category/:slug',
+        name: 'CategoryList',
+        component: () => import('../views/front/CategoryList.vue'),
+        meta: { title: '分类归档' }
+      },
+      {
+        path: 'tag/:slug',
+        name: 'TagList',
+        component: () => import('../views/front/TagList.vue'),
+        meta: { title: '标签归档' }
+      },
+      {
+        path: 'about',
+        name: 'About',
+        component: () => import('../views/front/About.vue'),
+        meta: { title: '关于我' }
+      }
+    ]
+  },
+
+  // ========== 后台路由 ==========
+  {
+    path: '/admin',
+    component: () => import('../layouts/AdminLayout.vue'),
+    meta: { requiresAuth: true },
+    redirect: '/admin/dashboard',
+    children: [
+      {
+        path: 'dashboard',
+        name: 'Dashboard',
+        component: () => import('../views/admin/Dashboard.vue'),
+        meta: { title: '仪表盘', requiresAuth: true }
+      },
+      {
+        path: 'articles',
+        name: 'ArticleList',
+        component: () => import('../views/admin/ArticleList.vue'),
+        meta: { title: '文章管理', requiresAuth: true }
+      },
+      {
+        path: 'articles/add',
+        name: 'ArticleAdd',
+        component: () => import('../views/admin/ArticleEdit.vue'),
+        meta: { title: '写文章', requiresAuth: true }
+      },
+      {
+        path: 'articles/edit/:id',
+        name: 'ArticleEdit',
+        component: () => import('../views/admin/ArticleEdit.vue'),
+        meta: { title: '编辑文章', requiresAuth: true }
+      },
+      {
+        path: 'categories',
+        name: 'CategoryListAdmin',
+        component: () => import('../views/admin/CategoryList.vue'),
+        meta: { title: '分类管理', requiresAuth: true }
+      },
+      {
+        path: 'tags',
+        name: 'TagListAdmin',
+        component: () => import('../views/admin/TagList.vue'),
+        meta: { title: '标签管理', requiresAuth: true }
+      },
+      {
+        path: 'tasks',
+        name: 'TaskList',
+        component: () => import('../views/TaskList.vue'),
+        meta: { title: '任务管理', requiresAuth: true }
+      },
+      {
+        path: 'pomodoro',
+        name: 'Pomodoro',
+        component: () => import('../views/Pomodoro.vue'),
+        meta: { title: '番茄钟', requiresAuth: true }
+      },
+      {
+        path: 'statistics',
+        name: 'Statistics',
+        component: () => import('../views/Statistics.vue'),
+        meta: { title: '数据统计', requiresAuth: true }
+      },
+      {
+        path: 'settings',
+        name: 'Settings',
+        component: () => import('../views/admin/Settings.vue'),
+        meta: { title: '系统设置', requiresAuth: true }
+      }
+    ]
+  },
+
+  // ========== 404 页面 ==========
+  {
+    path: '/:pathMatch(.*)*',
+    name: 'NotFound',
+    component: () => import('../views/NotFound.vue'),
+    meta: { title: '页面不存在' }
+  }
+];
+
+const router = createRouter({
+  history: createWebHistory(),
+  routes,
+  scrollBehavior(to, from, savedPosition) {
+    if (savedPosition) {
+      return savedPosition;
+    }
+    if (to.hash) {
+      return { el: to.hash, behavior: 'smooth' };
+    }
+    return { top: 0 };
+  }
+});
+
+/**
+ * 全局前置守卫
+ * - 动态设置页面标题
+ * - 检查登录状态
+ */
+router.beforeEach((to, from, next) => {
+  // 动态设置页面标题
+  const title = to.meta.title ? `${to.meta.title} - 个人博客` : '个人博客';
+  document.title = title;
+
+  const store = useUserStore();
+
+  // 需要认证的路由，未登录则跳转登录页
+  if (to.meta.requiresAuth && !store.isLoggedIn) {
+    next({ path: '/login', query: { redirect: to.fullPath } });
+  } else if ((to.path === '/login' || to.path === '/register') && store.isLoggedIn) {
+    // 已登录用户访问登录/注册页，跳转后台首页
+    next('/admin');
+  } else {
+    next();
+  }
+});
+
+export default router;
