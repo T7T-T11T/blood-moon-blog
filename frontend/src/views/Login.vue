@@ -1,20 +1,19 @@
 <!--
   登录页面
   作用：管理员登录入口，提交后获取 token 存入 store 并跳转目标页
-  设计：左右分栏 —— 左侧血月暗黑品牌展示区（深黑渐变 + 血色光晕 + 血月Logo），右侧暗色登录表单
-  主题：统一黑红血月主题，与全站风格一致
+  设计：左右分栏 —— 左侧黑猫血月背景图 + 暗色渐变遮罩 + 品牌文字，右侧暗色登录表单
+  主题：统一黑红血月主题，与全站暗黑哥特风一致
 -->
 <template>
   <div class="login-page">
-    <!-- 左侧品牌展示区 -->
+    <!-- 左侧品牌展示区（黑猫血月背景） -->
     <aside class="brand-panel">
-      <!-- 血色光晕装饰 -->
-      <div class="glow glow-1"></div>
-      <div class="glow glow-2"></div>
-      <div class="glow glow-3"></div>
-
-      <!-- 血月装饰 -->
-      <div class="blood-moon"></div>
+      <!-- 背景图 -->
+      <div class="brand-bg"></div>
+      <!-- 渐变遮罩（确保文字可读性） -->
+      <div class="brand-overlay"></div>
+      <!-- 右侧血月红光延伸 -->
+      <div class="brand-glow"></div>
 
       <div class="brand-inner">
         <div class="brand-mark">
@@ -156,70 +155,60 @@ async function handleLogin() {
 /* ========== 左侧品牌展示区 ========== */
 .brand-panel {
   position: relative;
-  flex: 1;
+  flex: 1.2;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 64px;
   overflow: hidden;
   color: #f1f5f9;
-  background: linear-gradient(160deg, #060912 0%, #0a0e1a 50%, #121828 100%);
 }
 
-/* 血色光晕 */
-.glow {
+/* 黑猫背景图 */
+.brand-bg {
   position: absolute;
-  border-radius: 50%;
-  filter: blur(80px);
+  inset: 0;
+  background: url('@/assets/login-black-cat.jpg') center/cover no-repeat;
   z-index: 0;
 }
 
-.glow-1 {
-  width: 400px;
-  height: 400px;
-  background: rgba(220, 38, 38, 0.18);
-  top: -100px;
-  left: -80px;
+/* 渐变遮罩：左上深黑 → 右下透，确保文字可读 */
+.brand-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(6, 9, 18, 0.92) 0%,
+    rgba(10, 14, 26, 0.78) 35%,
+    rgba(18, 24, 40, 0.45) 70%,
+    rgba(18, 24, 40, 0.15) 100%
+  );
+  z-index: 1;
 }
 
-.glow-2 {
-  width: 320px;
-  height: 320px;
-  background: rgba(239, 68, 68, 0.12);
-  bottom: -80px;
-  right: -60px;
-}
-
-.glow-3 {
-  width: 240px;
-  height: 240px;
-  background: rgba(185, 28, 28, 0.1);
-  top: 50%;
-  right: 15%;
-}
-
-/* 血月装饰 */
-.blood-moon {
+/* 血月红光延伸（从右侧边缘渗入） */
+.brand-glow {
   position: absolute;
   top: 50%;
-  right: -60px;
+  right: -40px;
   transform: translateY(-50%);
-  width: 260px;
-  height: 260px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 35% 35%, #fca5a5, #dc2626 45%, #7f1d1d 80%);
-  box-shadow:
-    0 0 60px rgba(220, 38, 38, 0.4),
-    0 0 120px rgba(220, 38, 38, 0.2),
-    0 0 200px rgba(185, 28, 28, 0.12);
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(
+    circle,
+    rgba(220, 38, 38, 0.2) 0%,
+    rgba(220, 38, 38, 0.08) 40%,
+    transparent 70%
+  );
   z-index: 1;
+  pointer-events: none;
 }
 
 /* 品牌内容层 */
 .brand-inner {
   position: relative;
   z-index: 2;
-  max-width: 420px;
+  max-width: 440px;
 }
 
 .brand-mark {
@@ -261,7 +250,7 @@ async function handleLogin() {
 .brand-tagline {
   font-size: 16px;
   line-height: 1.7;
-  color: #94a3b8;
+  color: #cbd5e1;
   margin: 0;
 }
 
@@ -272,19 +261,20 @@ async function handleLogin() {
   align-items: center;
   justify-content: center;
   padding: 40px 24px;
-  background: #0a0e1a;
+  background: linear-gradient(180deg, #0a0e1a 0%, #060912 100%);
 }
 
 .form-card {
   width: 100%;
   max-width: 400px;
   padding: 48px 40px;
-  background: linear-gradient(180deg, #121828 0%, #0e1424 100%);
-  border: 1px solid #1e293b;
+  background: linear-gradient(180deg, rgba(18, 24, 40, 0.9) 0%, rgba(14, 20, 36, 0.9) 100%);
+  border: 1px solid rgba(226, 232, 240, 0.08);
   border-radius: 16px;
+  backdrop-filter: blur(12px);
   box-shadow:
-    0 0 40px rgba(220, 38, 38, 0.08),
-    0 20px 60px rgba(0, 0, 0, 0.5);
+    0 0 40px rgba(220, 38, 38, 0.06),
+    0 20px 60px rgba(0, 0, 0, 0.6);
 }
 
 .form-header {
@@ -306,43 +296,69 @@ async function handleLogin() {
   margin: 0;
 }
 
-/* ========== 表单输入样式（暗色主题） ========== */
+/* ========== 表单输入样式（暗色主题 - 修复白色背景问题） ========== */
+
+/* 关键：强制覆盖 Element Plus 默认亮色样式 */
+.login-form :deep(.el-input) {
+  --el-input-bg-color: #0f1624;
+  --el-input-text-color: #f1f5f9;
+  --el-input-placeholder-text-color: #475569;
+  --el-input-border-color: #1e293b;
+  --el-input-hover-border-color: #475569;
+  --el-input-focus-border-color: #dc2626;
+}
+
+/* 输入框容器：强制暗色背景 */
 .login-form :deep(.el-input__wrapper) {
   padding: 8px 16px;
-  background: #0a0e1a;
+  background-color: #0f1624 !important;
+  background-image: none !important;
   border-radius: 10px;
-  box-shadow: none;
+  box-shadow: none !important;
   border: 1px solid #1e293b;
   transition: all 0.3s ease;
 }
 
 .login-form :deep(.el-input__wrapper:hover) {
   border-color: #475569;
+  background-color: #0f1624 !important;
 }
 
 .login-form :deep(.el-input__wrapper.is-focus) {
-  background: #0a0e1a;
+  background-color: #0f1624 !important;
   border-color: #dc2626;
-  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.15);
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.15) !important;
 }
 
+/* 输入框内部文字：强制亮色 */
 .login-form :deep(.el-input__inner) {
   height: 42px;
   font-size: 15px;
-  color: #f1f5f9;
+  color: #f1f5f9 !important;
+  background: transparent !important;
+  -webkit-text-fill-color: #f1f5f9;
 }
 
 .login-form :deep(.el-input__inner::placeholder) {
-  color: #475569;
+  color: #475569 !important;
+  -webkit-text-fill-color: #475569;
 }
 
-.login-form :deep(.el-input__prefix .el-icon) {
-  color: #475569;
-}
-
+/* 前缀/后缀图标 */
+.login-form :deep(.el-input__prefix .el-icon),
 .login-form :deep(.el-input__suffix .el-icon),
 .login-form :deep(.el-input__suffix-icon) {
-  color: #475569;
+  color: #475569 !important;
+}
+
+/* 清除按钮 */
+.login-form :deep(.el-input__clear) {
+  color: #64748b !important;
+}
+
+/* 密码可见切换图标 */
+.login-form :deep(.el-input__password) {
+  color: #475569 !important;
 }
 
 .login-form :deep(.el-form-item) {
