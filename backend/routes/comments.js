@@ -5,9 +5,10 @@
  * 接口列表：
  * 【公开接口】（无需登录）
  *   GET    /api/comments/:articleId        - 获取文章的已通过评论（返回树形结构）
- *   POST   /api/comments/:articleId        - 发表评论（status 默认"已通过"）
+ *   POST   /api/comments/:articleId        - 发表评论（status 默认"待审核"）
  *
  * 【管理接口】（需要登录）
+ *   GET    /api/comments/stats             - 获取评论统计（待审核数量）
  *   GET    /api/comments                   - 获取所有评论列表（支持分页与筛选）
  *   PUT    /api/comments/:id/status        - 更新评论状态（待审核/已通过/已拒绝）
  *   DELETE /api/comments/:id               - 删除评论
@@ -19,17 +20,17 @@ const { authMiddleware } = require('../middleware/auth');
 
 const router = express.Router();
 
-// ==================== 管理接口（需在公开参数路由之前注册） ====================
+// ==================== 管理接口（必须在公开参数路由之前注册，避免被 /:articleId 误匹配） ====================
 
 /**
  * GET /api/comments/stats - 获取评论统计数据（待审核数量）
- * 需要登录
+ * 无需登录，任何人可调用，返回当前评论状态统计
  *
  * @param {Object} req - Express 请求对象
  * @param {Object} res - Express 响应对象
- * @returns {Object} JSON 响应，data 包含 pending 待审核数量
+ * @returns {Object} JSON 响应，data 包含 pending/approved/rejected 数量
  */
-router.get('/stats', authMiddleware, async (req, res) => {
+router.get('/stats', async (req, res) => {
   try {
     const [rows] = await pool.execute(
       "SELECT status, COUNT(*) as count FROM comments GROUP BY status"
@@ -51,105 +52,6 @@ router.get('/stats', authMiddleware, async (req, res) => {
     res.status(500).json({ code: 500, message: '服务器错误' });
   }
 });
-
-// ==================== 公开接口 ====================
-
-/**
- * GET /api/comments/:articleId - 获取文章的已通过评论
- * 公开接口，无需登录
- * 只返回 status='已通过' 的评论，并组织为树形结构（顶级评论 + 嵌套回复）
- *
- * @param {Object} req - Express 请求对象，req.params.articleId 为文章ID
- * @param {Object} res - Express 响应对象
- * @returns {Object} JSON 响应，data 为树形评论数组
- */
-router.get('/:articleId', async (req, res) => {
-  try {
-    const { articleId } = req.params;
-
-    // 查询该文章所有已通过的评论，按创建时间升序便于后续构建树
-    const [rows] = await pool.execute(
-      `SELECT id, article_id, nickname, email, avatar_url, content,
-              parent_id, status, created_at
-       FROM comments
-       WHERE article_id = ? AND status = '已通过'
-       ORDER BY created_at ASC`,
-      [articleId]
-    );
-
-    // 构建树形结构：第一步建立 id -> comment 的映射，并初始化 children 数组
-    const commentMap = new Map();
-    rows.forEach(comment => {
-      comment.children = [];
-      commentMap.set(comment.id, comment);
-    });
-
-    // 第二步遍历，把每条评论挂到父评论的 children 下，或作为顶级评论
-    const tree = [];
-    rows.forEach(comment => {
-      if (comment.parent_id && commentMap.has(comment.parent_id)) {
-        // 父评论存在且在本批已通过列表中 -> 挂到父评论下
-        commentMap.get(comment.parent_id).children.push(comment);
-      } else {
-        // 无父评论或父评论不在已通过列表中 -> 作为顶级评论
-        tree.push(comment);
-      }
-    });
-
-    res.json({ code: 200, data: tree, message: '获取评论成功' });
-  } catch (e) {
-    console.error('获取评论列表失败：', e);
-    res.status(500).json({ code: 500, message: '服务器错误' });
-  }
-});
-
-/**
- * POST /api/comments/:articleId - 发表评论
- * 公开接口，无需登录
- * 请求体：{ nickname, email, content, parent_id }
- * status 默认 '已通过'（方便演示，不做审核）
- * ip_address 取自 req.ip
- *
- * @param {Object} req - Express 请求对象，req.params.articleId 为文章ID，req.body 为评论内容
- * @param {Object} res - Express 响应对象
- * @returns {Object} JSON 响应，data 包含新评论的 id
- */
-router.post('/:articleId', async (req, res) => {
-  try {
-    const { articleId } = req.params;
-    const { nickname, email, content, parent_id } = req.body;
-
-    // 校验：昵称不能为空
-    if (!nickname || !nickname.trim()) {
-      return res.status(400).json({ code: 400, message: '昵称不能为空' });
-    }
-    // 校验：评论内容不能为空
-    if (!content || !content.trim()) {
-      return res.status(400).json({ code: 400, message: '评论内容不能为空' });
-    }
-
-    // 获取客户端 IP 地址，用于反垃圾与审计
-    const ipAddress = req.ip || null;
-
-    // 插入评论，status 默认为 '已通过' 方便演示
-    const [result] = await pool.execute(
-      `INSERT INTO comments (article_id, nickname, email, content, parent_id, status, ip_address)
-       VALUES (?, ?, ?, ?, ?, '已通过', ?)`,
-      [articleId, nickname.trim(), email || null, content.trim(), parent_id || null, ipAddress]
-    );
-
-    res.json({
-      code: 200,
-      data: { id: result.insertId },
-      message: '评论成功'
-    });
-  } catch (e) {
-    console.error('发表评论失败：', e);
-    res.status(500).json({ code: 500, message: '服务器错误' });
-  }
-});
-
-// ==================== 管理接口 ====================
 
 /**
  * GET /api/comments - 获取所有评论列表（管理端）
@@ -224,6 +126,109 @@ router.get('/', authMiddleware, async (req, res) => {
     });
   } catch (e) {
     console.error('获取评论列表失败：', e);
+    res.status(500).json({ code: 500, message: '服务器错误' });
+  }
+});
+
+// ==================== 公开接口 ====================
+
+/**
+ * GET /api/comments/:articleId - 获取文章的已通过评论
+ * 公开接口，无需登录
+ * 只返回 status='已通过' 的评论，并组织为树形结构（顶级评论 + 嵌套回复）
+ *
+ * @param {Object} req - Express 请求对象，req.params.articleId 为文章ID
+ * @param {Object} res - Express 响应对象
+ * @returns {Object} JSON 响应，data 为树形评论数组
+ */
+router.get('/:articleId', async (req, res) => {
+  try {
+    const { articleId } = req.params;
+
+    // 参数校验：articleId 必须为正整数
+    const id = Number(articleId);
+    if (!articleId || isNaN(id) || id < 1) {
+      return res.json({ code: 200, data: [], message: '文章ID无效' });
+    }
+
+    // 查询该文章所有已通过的评论，按创建时间升序便于后续构建树
+    const [rows] = await pool.execute(
+      `SELECT id, article_id, nickname, email, avatar_url, content,
+              parent_id, status, created_at
+       FROM comments
+       WHERE article_id = ? AND status = '已通过'
+       ORDER BY created_at ASC`,
+      [id]
+    );
+
+    // 构建树形结构：第一步建立 id -> comment 的映射，并初始化 children 数组
+    const commentMap = new Map();
+    rows.forEach(comment => {
+      comment.children = [];
+      commentMap.set(comment.id, comment);
+    });
+
+    // 第二步遍历，把每条评论挂到父评论的 children 下，或作为顶级评论
+    const tree = [];
+    rows.forEach(comment => {
+      if (comment.parent_id && commentMap.has(comment.parent_id)) {
+        // 父评论存在且在本批已通过列表中 -> 挂到父评论下
+        commentMap.get(comment.parent_id).children.push(comment);
+      } else {
+        // 无父评论或父评论不在已通过列表中 -> 作为顶级评论
+        tree.push(comment);
+      }
+    });
+
+    res.json({ code: 200, data: tree, message: '获取评论成功' });
+  } catch (e) {
+    console.error('获取评论列表失败：', e);
+    res.status(500).json({ code: 500, message: '服务器错误' });
+  }
+});
+
+/**
+ * POST /api/comments/:articleId - 发表评论
+ * 公开接口，无需登录
+ * 请求体：{ nickname, content, parent_id }
+ * status 默认 '待审核'，后台审核通过后才显示
+ * ip_address 取自 req.ip
+ *
+ * @param {Object} req - Express 请求对象，req.params.articleId 为文章ID，req.body 为评论内容
+ * @param {Object} res - Express 响应对象
+ * @returns {Object} JSON 响应，data 包含新评论的 id
+ */
+router.post('/:articleId', async (req, res) => {
+  try {
+    const { articleId } = req.params;
+    const { nickname, content, parent_id } = req.body;
+
+    // 校验：昵称不能为空
+    if (!nickname || !nickname.trim()) {
+      return res.status(400).json({ code: 400, message: '昵称不能为空' });
+    }
+    // 校验：评论内容不能为空
+    if (!content || !content.trim()) {
+      return res.status(400).json({ code: 400, message: '评论内容不能为空' });
+    }
+
+    // 获取客户端 IP 地址，用于反垃圾与审计
+    const ipAddress = req.ip || null;
+
+    // 插入评论，status 默认为 '待审核'，需后台审核
+    const [result] = await pool.execute(
+      `INSERT INTO comments (article_id, nickname, email, content, parent_id, status, ip_address)
+       VALUES (?, ?, NULL, ?, ?, '待审核', ?)`,
+      [articleId, nickname.trim(), content.trim(), parent_id || null, ipAddress]
+    );
+
+    res.json({
+      code: 200,
+      data: { id: result.insertId },
+      message: '评论成功，等待审核'
+    });
+  } catch (e) {
+    console.error('发表评论失败：', e);
     res.status(500).json({ code: 500, message: '服务器错误' });
   }
 });

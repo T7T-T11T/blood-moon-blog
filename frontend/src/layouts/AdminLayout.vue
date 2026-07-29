@@ -13,6 +13,16 @@
           <el-icon :size="22" color="#fff"><DataLine /></el-icon>
         </div>
         <span class="logo-text">博客管理</span>
+        <!-- 刷新按钮：点击手动刷新评论统计等数据 -->
+        <div
+          class="sidebar-refresh"
+          :title="statsLoading ? '正在刷新...' : '刷新数据'"
+          @click="refreshStats"
+        >
+          <el-icon :size="16" :class="{ rotating: statsLoading }">
+            <RefreshRight />
+          </el-icon>
+        </div>
       </div>
 
       <!-- 导航菜单 -->
@@ -30,9 +40,16 @@
           >
             <el-icon><component :is="item.icon" /></el-icon>
             <span>{{ item.label }}</span>
-            <!-- 评论管理：显示待审核数量徽章 -->
-            <span v-if="item.label === '评论管理' && pendingComments > 0" class="nav-badge">
-              {{ pendingComments > 99 ? '99+' : pendingComments }}
+            <!-- 评论管理：显示待审核数量徽章（有待审核或加载中时显示） -->
+            <span
+              v-if="item.label === '评论管理' && (pendingComments > 0 || statsLoading)"
+              class="nav-badge"
+              :class="{ 'is-loading': statsLoading && pendingComments === 0 }"
+            >
+              <span v-if="pendingComments > 0">{{
+                pendingComments > 99 ? '99+' : pendingComments
+              }}</span>
+              <span v-else>!</span>
             </span>
           </router-link>
         </div>
@@ -122,10 +139,10 @@
  *       支持移动端侧边栏折叠展开，路由切换带淡入淡出过渡动画。
  * 依赖：useUserStore（用户信息）、vue-router（路由导航）
  */
-import { ref, markRaw, onMounted } from 'vue';
+import { ref, markRaw, onMounted, onUnmounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useUserStore } from '../stores/user';
-import { ElMessage, ElMessageBox } from 'element-plus';
+import { ElMessage, ElMessageBox, ElNotification } from 'element-plus';
 import { getCommentStats } from '../api/comments';
 import {
   DataLine,
@@ -141,7 +158,9 @@ import {
   ArrowDown,
   ChatDotRound,
   Link,
-  Expand
+  Expand,
+  RefreshRight,
+  Headset
 } from '@element-plus/icons-vue';
 
 const userStore = useUserStore();
@@ -154,22 +173,99 @@ const sidebarOpen = ref(false);
 /** 待审核评论数量 */
 const pendingComments = ref(0);
 
+/** 评论总数（含各状态） */
+const totalComments = ref(0);
+
+/** 统计加载中状态 */
+const statsLoading = ref(false);
+
+/** 定时刷新定时器ID */
+let statsTimer = null;
+
+/** 上次待审核数量（用于检测变化并弹窗通知） */
+let lastPendingCount = -1;
+
 /**
  * 获取评论统计数据
+ * 立即获取一次，之后每30秒自动刷新
+ * 增强错误处理：接口失败时显示调试日志，便于排查
  */
 async function fetchCommentStats() {
+  statsLoading.value = true;
   try {
     const res = await getCommentStats();
-    if (res.code === 200) {
-      pendingComments.value = res.data.pending || 0;
+    console.log('[评论统计] 接口响应:', res);
+
+    if (res.code === 200 && res.data) {
+      const newPending = res.data.pending || 0;
+      const newTotal =
+        (res.data.pending || 0) + (res.data.approved || 0) + (res.data.rejected || 0);
+
+      // 待审核数量变化时更新徽章
+      pendingComments.value = newPending;
+      totalComments.value = newTotal;
+
+      console.log(
+        `[评论统计] 待审核: ${newPending}, 已通过: ${res.data.approved}, 已拒绝: ${res.data.rejected}`
+      );
+
+      // 首次加载：如果有待审核评论，显示欢迎通知
+      if (lastPendingCount === -1 && newPending > 0) {
+        ElNotification({
+          title: '📬 评论待审核',
+          message: `当前有 ${newPending} 条评论等待审核，请到评论管理处理`,
+          type: 'warning',
+          duration: 6000,
+          dangerouslyUseHTMLString: false,
+          onClick: () => {
+            router.push('/admin/comments');
+          }
+        });
+      } else if (newPending > lastPendingCount && lastPendingCount >= 0) {
+        // 新增评论时弹窗通知
+        const diff = newPending - lastPendingCount;
+        ElNotification({
+          title: '📬 新评论待审核',
+          message: `有 ${diff} 条新评论等待审核，请及时处理`,
+          type: 'warning',
+          duration: 5000,
+          onClick: () => {
+            router.push('/admin/comments');
+          }
+        });
+      }
+      lastPendingCount = newPending;
+    } else {
+      console.warn('[评论统计] 接口返回异常:', res?.message || '未知错误');
     }
-  } catch {
-    // 静默失败
+  } catch (e) {
+    console.error('[评论统计] 获取失败:', e?.message);
+    // 网络错误不更新徽章，保持上次状态
+  } finally {
+    statsLoading.value = false;
   }
+}
+
+/**
+ * 手动刷新评论统计
+ * 用于用户主动检查新评论
+ */
+function refreshStats() {
+  fetchCommentStats();
+  ElMessage.success('正在刷新评论统计...');
 }
 
 onMounted(() => {
   fetchCommentStats();
+  // 定时刷新：每15秒获取一次待审核评论数（更频繁以便及时发现新评论）
+  statsTimer = setInterval(fetchCommentStats, 15000);
+});
+
+onUnmounted(() => {
+  if (statsTimer) {
+    clearInterval(statsTimer);
+    statsTimer = null;
+  }
 });
 
 /** 内容管理菜单项（markRaw 避免图标组件被转为响应式） */
@@ -179,7 +275,8 @@ const contentMenu = [
   { path: '/admin/categories', label: '分类管理', icon: markRaw(Folder) },
   { path: '/admin/tags', label: '标签管理', icon: markRaw(PriceTag) },
   { path: '/admin/comments', label: '评论管理', icon: markRaw(ChatDotRound) },
-  { path: '/admin/links', label: '友链管理', icon: markRaw(Link) }
+  { path: '/admin/links', label: '友链管理', icon: markRaw(Link) },
+  { path: '/admin/music', label: '音乐管理', icon: markRaw(Headset) }
 ];
 
 /** 系统菜单项 */
@@ -353,6 +450,52 @@ async function handleCommand(command) {
   text-align: center;
   border-radius: 9px;
   box-shadow: 0 0 8px rgba(220, 38, 38, 0.4);
+  transition: all 0.3s var(--ease-out);
+}
+
+/* 加载中状态：脉冲动画 */
+.nav-badge.is-loading {
+  background: linear-gradient(135deg, #64748b, #94a3b8);
+  animation: badge-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes badge-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* 侧边栏刷新按钮 */
+.sidebar-refresh {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  margin-left: auto;
+  color: #64748b;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s var(--ease-out);
+}
+
+.sidebar-refresh:hover {
+  color: var(--primary-light);
+  background: rgba(220, 38, 38, 0.1);
+}
+
+.sidebar-refresh .rotating {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .sidebar-footer {

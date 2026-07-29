@@ -197,11 +197,13 @@ onUnmounted(() => {
 .hero {
   position: relative;
   padding: 140px 32px 100px;
-  background: linear-gradient(180deg, #060912 0%, #0a0e1a 40%, #121828 100%);
+  background: linear-gradient(180deg, rgba(6, 9, 18, 0.55) 0%, rgba(10, 14, 26, 0.45) 50%, rgba(18, 24, 40, 0.65) 100%);
+  backdrop-filter: blur(2px);
   overflow: hidden;
   color: #fff;
   isolation: isolate;
   border-bottom: 1px solid var(--border);
+  transition: opacity 0.8s ease-out;
 }
 
 /* 血月背景光晕 */
@@ -281,6 +283,7 @@ onUnmounted(() => {
   max-width: 760px;
   margin: 0 auto;
   padding: 88px 32px 96px;
+  background: rgba(10, 14, 26, 0.3);
 }
 
 /* 内容分区：使用分隔线 + 大留白，舍弃卡片 */

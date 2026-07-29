@@ -151,6 +151,12 @@ const routes = [
         meta: { title: '友链管理', requiresAuth: true }
       },
       {
+        path: 'music',
+        name: 'MusicList',
+        component: () => import('../views/admin/MusicList.vue'),
+        meta: { title: '音乐管理', requiresAuth: true }
+      },
+      {
         path: 'statistics',
         name: 'Statistics',
         component: () => import('../views/admin/Statistics.vue'),

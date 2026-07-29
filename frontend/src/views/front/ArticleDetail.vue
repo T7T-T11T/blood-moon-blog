@@ -127,22 +127,13 @@
           <button class="cancel-btn" @click="cancelReply">取消</button>
         </div>
         <div class="comment-form">
-          <div class="form-row">
-            <input
-              v-model="commentForm.nickname"
-              type="text"
-              class="form-input"
-              placeholder="昵称 *"
-              maxlength="30"
-            />
-            <input
-              v-model="commentForm.email"
-              type="email"
-              class="form-input"
-              placeholder="邮箱 *（不会公开）"
-              maxlength="100"
-            />
-          </div>
+          <input
+            v-model="commentForm.nickname"
+            type="text"
+            class="form-input"
+            placeholder="昵称 *"
+            maxlength="30"
+          />
           <textarea
             v-model="commentForm.content"
             class="form-textarea"
@@ -281,7 +272,6 @@ let observer = null;
 /** 评论表单 */
 const commentForm = ref({
   nickname: '',
-  email: '',
   content: ''
 });
 
@@ -316,7 +306,6 @@ const commentCount = computed(() => {
 const canSubmit = computed(() => {
   return (
     commentForm.value.nickname.trim() !== '' &&
-    commentForm.value.email.trim() !== '' &&
     commentForm.value.content.trim() !== ''
   );
 });
@@ -436,7 +425,7 @@ function cancelReply() {
  */
 async function submitComment() {
   if (!canSubmit.value) {
-    ElMessage.warning('请填写完整的评论信息');
+    ElMessage.warning('请填写昵称和评论内容');
     return;
   }
   submitting.value = true;
@@ -444,14 +433,14 @@ async function submitComment() {
     const id = route.params.id;
     const payload = {
       nickname: commentForm.value.nickname.trim(),
-      email: commentForm.value.email.trim(),
       content: commentForm.value.content.trim()
     };
     if (replyTo.value) {
       payload.parent_id = replyTo.value.id;
     }
     await postComment(id, payload);
-    ElMessage.success('评论发表成功');
+    ElMessage.success('评论发表成功，等待审核');
+    commentForm.value.nickname = '';
     commentForm.value.content = '';
     replyTo.value = null;
     await loadComments();
@@ -1013,16 +1002,11 @@ onUnmounted(() => {
   text-decoration: underline;
 }
 
-.comment-form .form-row {
-  display: flex;
-  gap: 12px;
-  margin-bottom: 12px;
-}
-
 .form-input {
-  flex: 1;
+  width: 100%;
   height: 42px;
   padding: 0 14px;
+  margin-bottom: 12px;
   border: 1px solid var(--border);
   border-radius: 10px;
   font-size: 14px;
@@ -1313,10 +1297,6 @@ onUnmounted(() => {
   }
   .nav-card.next .nav-direction {
     flex-direction: row;
-  }
-  .comment-form .form-row {
-    flex-direction: column;
-    gap: 12px;
   }
   .comment-children {
     margin-left: 12px;

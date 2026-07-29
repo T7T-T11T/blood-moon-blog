@@ -5,6 +5,11 @@
 + 悬浮微动效 + 路由过渡 共三组动效 */
 <template>
   <div class="front-layout">
+    <!-- ============ 固定背景层（所有前台页面共享，不随滚动） ============ -->
+    <div class="fixed-bg" :style="{ backgroundImage: `url(${heroBg})` }" aria-hidden="true"></div>
+    <div class="fixed-bg-overlay" aria-hidden="true"></div>
+    <div class="fixed-bg-glow" aria-hidden="true"></div>
+
     <!-- 顶部固定毛玻璃导航栏 -->
     <header class="navbar" :class="{ scrolled: isScrolled }">
       <div class="navbar-inner">
@@ -103,6 +108,9 @@
         <span v-if="siteDescription" class="footer-desc">{{ siteDescription }}</span>
       </div>
     </footer>
+
+    <!-- 全局浮动音乐播放器 -->
+    <MusicPlayer />
   </div>
 </template>
 
@@ -111,6 +119,8 @@ import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { Search, Setting } from '@element-plus/icons-vue';
 import { getSettings } from '../api/settings';
+import heroBg from '../assets/hero-bg.jpg';
+import MusicPlayer from '../components/MusicPlayer.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -223,6 +233,55 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+/* ========== 固定背景层（全局共享，不随滚动） ========== */
+.fixed-bg {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 0;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+}
+
+.fixed-bg-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 1;
+  background: linear-gradient(
+    180deg,
+    rgba(6, 9, 18, 0.55) 0%,
+    rgba(10, 14, 26, 0.45) 30%,
+    rgba(10, 14, 26, 0.65) 70%,
+    rgba(6, 9, 18, 0.92) 100%
+  );
+  pointer-events: none;
+}
+
+.fixed-bg-glow {
+  position: fixed;
+  top: 12%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 380px;
+  height: 380px;
+  z-index: 2;
+  background: radial-gradient(
+    circle,
+    rgba(220, 38, 38, 0.14) 0%,
+    rgba(220, 38, 38, 0.05) 40%,
+    transparent 70%
+  );
+  border-radius: 50%;
+  pointer-events: none;
+}
+
 /* ========== 布局骨架 ========== */
 .front-layout {
   display: flex;
@@ -230,8 +289,24 @@ onUnmounted(() => {
   min-height: 100vh;
   background: var(--bg-body);
   color: var(--text-primary);
-  /* 平滑滚动 */
   scroll-behavior: smooth;
+  isolation: isolate;
+}
+
+/* 确保导航栏在背景之上 */
+.navbar {
+  z-index: 100;
+}
+
+/* 确保主内容和页脚在背景之上 */
+.main-content {
+  position: relative;
+  z-index: 10;
+}
+
+.footer {
+  position: relative;
+  z-index: 10;
 }
 
 /* ========== 顶部毛玻璃导航 ========== */

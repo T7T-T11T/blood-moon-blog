@@ -3,11 +3,6 @@
 内容：深色编辑风格文章列表 + 极简侧边栏 * - 动效：滚动揭示 / 悬浮微交互（无闪烁效果） */
 <template>
   <div class="home-page">
-    <!-- ============ 固定背景层（全局唯一，不随滚动） ============ -->
-    <div class="hero-bg" :style="{ backgroundImage: `url(${heroBg})` }" aria-hidden="true"></div>
-    <div class="hero-overlay" aria-hidden="true"></div>
-    <div class="moon-glow" aria-hidden="true"></div>
-
     <!-- ============ Hero 全屏区域 ============ -->
     <section class="hero">
       <!-- Hero 文案 -->

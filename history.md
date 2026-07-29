@@ -1,5 +1,19 @@
 # 版本历史
 
+## v1.6.0 (2026-07-30)
+
+- feat(music): 新增音乐管理功能，支持后台上传、编辑、删除音乐
+- feat(music): 前台新增全局浮动音乐播放器，自动循环播放，支持播放/暂停/上下首/进度跳转
+- feat(music): 新增音乐数据库表（music）及完整后端CRUD API
+- feat(music): 新增前端音乐管理页面（/admin/music）及音乐API模块
+- fix(comments): 增强后台评论消息提示机制，添加手动刷新按钮、加载状态指示器、调试日志
+- fix(comments): 评论默认状态改为"待审核"，需后台审核发布
+- fix(comments): 移除评论表单中的邮箱字段，简化用户评论流程
+- fix(ui): 所有前台页面（Archive/About/Links/Search/CategoryList/TagList）背景图半透明化，共享固定血月背景
+- fix(ui): 前台页面添加毛玻璃效果与淡入过渡动画
+- style: AdminLayout导航添加音乐管理入口及图标
+- 前后端版本号统一升级至 1.6.0
+
 ## v1.5.2 (2026-07-30)
 
 - fix(ui): 彻底移除所有页面闪烁效果（粒子动画、发光动画、shimmer骨架屏动画）

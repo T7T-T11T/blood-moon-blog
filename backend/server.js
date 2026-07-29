@@ -47,6 +47,7 @@ const uploadRoutes = require('./routes/upload')
 const commentRoutes = require('./routes/comments')
 const linkRoutes = require('./routes/links')
 const settingRoutes = require('./routes/settings')
+const musicRoutes = require('./routes/music')
 
 const path = require('path')
 const fs = require('fs')
@@ -76,6 +77,7 @@ app.use('/api/articles', articleRoutes)    // 博客（包含公开和管理接�
 app.use('/api/comments', commentRoutes)    // 评论（公开浏览 + 管理）
 app.use('/api/links', linkRoutes)          // 友链（公开浏览 + 管理）
 app.use('/api/settings', settingRoutes)    // 网站设置（公开读取 + 管理）
+app.use('/api/music', musicRoutes)         // 音乐（公开播放 + 管理）
 
 // 需要登录的接口
 app.use('/api/dashboard', dashboardRoutes) // 仪表盘
