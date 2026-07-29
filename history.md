@@ -1,5 +1,9 @@
 # 版本历史
 
+## v1.2.2 (2026-07-29)
+
+- fix(router): 将路由模式从 history 改为 hash，彻底解决刷新页面 404 问题
+
 ## v1.2.1 (2026-07-29)
 
 - fix(db): 给 articles 表增加 cover_image 字段，补充 upgrade.sql 升级脚本
