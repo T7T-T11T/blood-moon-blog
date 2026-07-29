@@ -108,9 +108,6 @@
         <span v-if="siteDescription" class="footer-desc">{{ siteDescription }}</span>
       </div>
     </footer>
-
-    <!-- 全局浮动音乐播放器 -->
-    <MusicPlayer />
   </div>
 </template>
 
@@ -120,7 +117,6 @@ import { useRoute, useRouter } from 'vue-router';
 import { Search, Setting } from '@element-plus/icons-vue';
 import { getSettings } from '../api/settings';
 import heroBg from '../assets/hero-bg.jpg';
-import MusicPlayer from '../components/MusicPlayer.vue';
 
 const route = useRoute();
 const router = useRouter();

@@ -88,21 +88,30 @@
       title="上传音乐"
       width="480px"
       :close-on-click-modal="false"
+      class="music-upload-dialog"
+      align-center
     >
       <el-form ref="uploadFormRef" :model="uploadForm" :rules="uploadRules" label-width="80px">
         <el-form-item label="音乐文件" prop="file">
-          <input
-            ref="fileInputRef"
-            type="file"
-            accept="audio/*"
-            style="display: none"
-            @change="handleFileChange"
-          />
-          <el-button @click="$refs.fileInputRef.click()">
-            <el-icon><FolderOpened /></el-icon>
-            <span>{{ uploadForm.fileName || '选择音频文件' }}</span>
-          </el-button>
-          <div class="file-hint">支持 MP3/WAV/OGG/AAC 格式，最大50MB</div>
+          <div class="file-picker-wrapper">
+            <input
+              ref="fileInputRef"
+              type="file"
+              accept="audio/*"
+              style="display: none"
+              @change="handleFileChange"
+            />
+            <el-button
+              type="primary"
+              plain
+              class="file-picker-btn"
+              @click="$refs.fileInputRef.click()"
+            >
+              <el-icon><FolderOpened /></el-icon>
+              <span>{{ uploadForm.fileName || '选择音频文件' }}</span>
+            </el-button>
+            <div class="file-hint">支持 MP3/WAV/OGG/AAC 格式，最大50MB</div>
+          </div>
         </el-form-item>
         <el-form-item label="标题">
           <el-input v-model="uploadForm.title" placeholder="留空则使用文件名" />
@@ -115,8 +124,13 @@
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="uploadDialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="uploading" @click="submitUpload"> 上传 </el-button>
+        <div class="dialog-footer">
+          <el-button @click="uploadDialogVisible = false">取消</el-button>
+          <el-button type="primary" :loading="uploading" @click="submitUpload">
+            <el-icon><Upload /></el-icon>
+            <span>{{ uploading ? '上传中...' : '确认上传' }}</span>
+          </el-button>
+        </div>
       </template>
     </el-dialog>
 
@@ -521,5 +535,48 @@ onMounted(fetchList);
 
 :deep(.el-table td.el-table__cell) {
   background: transparent;
+}
+
+/* ========== 上传对话框样式 ========== */
+:deep(.music-upload-dialog) {
+  /* 确保对话框不超出视口高度 */
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+
+:deep(.music-upload-dialog .el-dialog__body) {
+  /* 表单区域可滚动 */
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+:deep(.music-upload-dialog .el-dialog__footer) {
+  /* 底部按钮始终可见 */
+  flex-shrink: 0;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  margin-top: 0;
+}
+
+/* 文件选择器包装 */
+.file-picker-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.file-picker-btn {
+  width: 100%;
+  justify-content: flex-start;
+}
+
+/* 对话框底部按钮区 */
+.dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  width: 100%;
 }
 </style>
