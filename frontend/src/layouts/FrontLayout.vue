@@ -130,12 +130,12 @@ const router = useRouter();
  * @type {import('vue').Ref<Object>}
  */
 const settings = ref({
-  siteName: '个人博客',
+  siteName: '血月博客',
   siteDescription: '分享技术，记录成长'
 });
 
 /** 站点名（兜底默认值） */
-const siteName = computed(() => settings.value.siteName || '个人博客');
+const siteName = computed(() => settings.value.siteName || '血月博客');
 
 /** 站点描述（兜底默认值） */
 const siteDescription = computed(() => settings.value.siteDescription || '');

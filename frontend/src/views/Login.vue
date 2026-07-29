@@ -1,31 +1,37 @@
 <!--
   登录页面
   作用：管理员登录入口，提交后获取 token 存入 store 并跳转目标页
-  设计：左右分栏 —— 左侧深色青绿渐展示区（品牌 + 浮动装饰球），右侧登录表单
-  动画：左栏滑入、表单缩放淡入、装饰球浮动（纯 CSS 实现）
+  设计：左右分栏 —— 左侧血月暗黑品牌展示区（深黑渐变 + 血色光晕 + 血月Logo），右侧暗色登录表单
+  主题：统一黑红血月主题，与全站风格一致
 -->
 <template>
   <div class="login-page">
     <!-- 左侧品牌展示区 -->
-    <aside class="brand-panel animate-fade-in-left">
-      <!-- 浮动装饰球（纯 CSS 动画） -->
-      <div class="blob blob-1"></div>
-      <div class="blob blob-2"></div>
-      <div class="blob blob-3"></div>
+    <aside class="brand-panel">
+      <!-- 血色光晕装饰 -->
+      <div class="glow glow-1"></div>
+      <div class="glow glow-2"></div>
+      <div class="glow glow-3"></div>
+
+      <!-- 血月装饰 -->
+      <div class="blood-moon"></div>
 
       <div class="brand-inner">
         <div class="brand-mark">
-          <span class="brand-dot"></span>
-          <span class="brand-name">个人博客</span>
+          <div class="moon-icon"></div>
+          <span class="brand-name">血月博客</span>
         </div>
-        <h1 class="brand-title">思想留痕<br />文字长存</h1>
-        <p class="brand-tagline">记录生活，分享所思，让每一刻灵感都有归处</p>
+        <h1 class="brand-title">
+          暗夜之下<br />
+          笔墨不灭
+        </h1>
+        <p class="brand-tagline">在血月的光辉下，记录属于你的思考与故事</p>
       </div>
     </aside>
 
     <!-- 右侧登录表单区 -->
     <main class="form-panel">
-      <div class="form-card animate-scale-in">
+      <div class="form-card">
         <header class="form-header">
           <h2 class="form-title">管理员登录</h2>
           <p class="form-subtitle">登录账号，进入后台管理</p>
@@ -55,6 +61,8 @@
             {{ loading ? '登录中...' : '登 录' }}
           </el-button>
         </el-form>
+
+        <p class="form-footer">© 2026 血月博客 · 暗夜哥特风</p>
       </div>
     </main>
   </div>
@@ -137,11 +145,12 @@ async function handleLogin() {
 </script>
 
 <style scoped>
-/* ========== 页面容器：左右分栏 ========== */
+/* ========== 页面容器 ========== */
 .login-page {
   display: flex;
   min-height: 100vh;
-  background: var(--bg-body);
+  background: #060912;
+  color: #f1f5f9;
 }
 
 /* ========== 左侧品牌展示区 ========== */
@@ -153,11 +162,60 @@ async function handleLogin() {
   justify-content: center;
   padding: 64px;
   overflow: hidden;
-  color: #fff;
-  background: linear-gradient(135deg, #0f766e 0%, #0d9488 55%, #134e4a 100%);
+  color: #f1f5f9;
+  background: linear-gradient(160deg, #060912 0%, #0a0e1a 50%, #121828 100%);
 }
 
-/* 品牌内容层（位于装饰球之上） */
+/* 血色光晕 */
+.glow {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  z-index: 0;
+}
+
+.glow-1 {
+  width: 400px;
+  height: 400px;
+  background: rgba(220, 38, 38, 0.18);
+  top: -100px;
+  left: -80px;
+}
+
+.glow-2 {
+  width: 320px;
+  height: 320px;
+  background: rgba(239, 68, 68, 0.12);
+  bottom: -80px;
+  right: -60px;
+}
+
+.glow-3 {
+  width: 240px;
+  height: 240px;
+  background: rgba(185, 28, 28, 0.1);
+  top: 50%;
+  right: 15%;
+}
+
+/* 血月装饰 */
+.blood-moon {
+  position: absolute;
+  top: 50%;
+  right: -60px;
+  transform: translateY(-50%);
+  width: 260px;
+  height: 260px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #fca5a5, #dc2626 45%, #7f1d1d 80%);
+  box-shadow:
+    0 0 60px rgba(220, 38, 38, 0.4),
+    0 0 120px rgba(220, 38, 38, 0.2),
+    0 0 200px rgba(185, 28, 28, 0.12);
+  z-index: 1;
+}
+
+/* 品牌内容层 */
 .brand-inner {
   position: relative;
   z-index: 2;
@@ -167,23 +225,24 @@ async function handleLogin() {
 .brand-mark {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   margin-bottom: 56px;
 }
 
-.brand-dot {
-  width: 12px;
-  height: 12px;
+/* 血月图标 */
+.moon-icon {
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
-  background: #5eead4;
-  box-shadow: 0 0 16px #5eead4;
+  background: radial-gradient(circle at 35% 35%, #fca5a5, #dc2626 50%, #7f1d1d);
+  box-shadow: 0 0 20px rgba(220, 38, 38, 0.5);
 }
 
 .brand-name {
   font-size: 16px;
   font-weight: 600;
-  letter-spacing: 2px;
-  opacity: 0.9;
+  letter-spacing: 3px;
+  color: #f1f5f9;
 }
 
 .brand-title {
@@ -192,64 +251,18 @@ async function handleLogin() {
   line-height: 1.15;
   letter-spacing: -1px;
   margin: 0 0 24px;
+  background: linear-gradient(135deg, #f1f5f9 0%, #fca5a5 50%, #dc2626 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 20px rgba(220, 38, 38, 0.3));
 }
 
 .brand-tagline {
   font-size: 16px;
   line-height: 1.7;
-  opacity: 0.8;
+  color: #94a3b8;
   margin: 0;
-}
-
-/* ========== 浮动装饰球 ========== */
-.blob {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(60px);
-  opacity: 0.5;
-  z-index: 1;
-}
-
-.blob-1 {
-  width: 360px;
-  height: 360px;
-  background: #14b8a6;
-  top: -80px;
-  left: -80px;
-  animation: floatBlob 18s ease-in-out infinite;
-}
-
-.blob-2 {
-  width: 280px;
-  height: 280px;
-  background: #5eead4;
-  bottom: -60px;
-  right: -40px;
-  animation: floatBlob 22s ease-in-out infinite reverse;
-}
-
-.blob-3 {
-  width: 200px;
-  height: 200px;
-  background: #99f6e4;
-  top: 45%;
-  left: 25%;
-  opacity: 0.35;
-  animation: floatBlob 26s ease-in-out infinite;
-}
-
-/* ========== 浮动动画关键帧 ========== */
-@keyframes floatBlob {
-  0%,
-  100% {
-    transform: translate(0, 0) scale(1);
-  }
-  33% {
-    transform: translate(30px, -20px) scale(1.05);
-  }
-  66% {
-    transform: translate(-20px, 25px) scale(0.97);
-  }
 }
 
 /* ========== 右侧表单区 ========== */
@@ -259,61 +272,81 @@ async function handleLogin() {
   align-items: center;
   justify-content: center;
   padding: 40px 24px;
-  background: linear-gradient(180deg, #ffffff 0%, #f0fdfa 100%);
+  background: #0a0e1a;
 }
 
 .form-card {
   width: 100%;
   max-width: 400px;
+  padding: 48px 40px;
+  background: linear-gradient(180deg, #121828 0%, #0e1424 100%);
+  border: 1px solid #1e293b;
+  border-radius: 16px;
+  box-shadow:
+    0 0 40px rgba(220, 38, 38, 0.08),
+    0 20px 60px rgba(0, 0, 0, 0.5);
 }
 
 .form-header {
   margin-bottom: 36px;
+  text-align: center;
 }
 
 .form-title {
-  font-size: 30px;
+  font-size: 28px;
   font-weight: 700;
-  color: var(--text-primary);
-  margin: 0 0 10px;
+  color: #f1f5f9;
+  margin: 0 0 8px;
   letter-spacing: -0.5px;
 }
 
 .form-subtitle {
-  font-size: 15px;
-  color: var(--text-secondary);
+  font-size: 14px;
+  color: #64748b;
   margin: 0;
 }
 
-/* ========== 表单输入样式覆盖（暗色主题适配） ========== */
+/* ========== 表单输入样式（暗色主题） ========== */
 .login-form :deep(.el-input__wrapper) {
-  padding: 10px 16px;
-  background: var(--bg-hover);
-  border-radius: 12px;
+  padding: 8px 16px;
+  background: #0a0e1a;
+  border-radius: 10px;
   box-shadow: none;
-  border: 1.5px solid var(--border);
-  transition: all 0.3s var(--ease-out);
+  border: 1px solid #1e293b;
+  transition: all 0.3s ease;
 }
 
 .login-form :deep(.el-input__wrapper:hover) {
-  border-color: var(--primary);
-  background: var(--bg-hover);
+  border-color: #475569;
 }
 
 .login-form :deep(.el-input__wrapper.is-focus) {
-  background: var(--bg-hover);
-  border-color: var(--primary);
-  box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.15);
+  background: #0a0e1a;
+  border-color: #dc2626;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.15);
 }
 
 .login-form :deep(.el-input__inner) {
-  height: 44px;
+  height: 42px;
   font-size: 15px;
-  color: var(--text-primary);
+  color: #f1f5f9;
 }
 
 .login-form :deep(.el-input__inner::placeholder) {
-  color: var(--text-tertiary);
+  color: #475569;
+}
+
+.login-form :deep(.el-input__prefix .el-icon) {
+  color: #475569;
+}
+
+.login-form :deep(.el-input__suffix .el-icon),
+.login-form :deep(.el-input__suffix-icon) {
+  color: #475569;
+}
+
+.login-form :deep(.el-form-item) {
+  margin-bottom: 20px;
 }
 
 /* ========== 提交按钮 ========== */
@@ -324,19 +357,29 @@ async function handleLogin() {
   font-size: 16px;
   font-weight: 600;
   letter-spacing: 4px;
-  background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%);
+  background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
   border: none;
-  border-radius: 12px;
-  transition: all 0.3s var(--ease-out);
+  border-radius: 10px;
+  color: #fff;
+  transition: all 0.3s ease;
 }
 
 .submit-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 12px 28px rgba(13, 148, 136, 0.35);
+  box-shadow: 0 12px 28px rgba(220, 38, 38, 0.35);
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
 }
 
 .submit-btn:active {
   transform: translateY(0) scale(0.98);
+}
+
+/* ========== 页脚 ========== */
+.form-footer {
+  margin-top: 32px;
+  font-size: 12px;
+  color: #334155;
+  text-align: center;
 }
 
 /* ========== 响应式：移动端隐藏左侧品牌区 ========== */
@@ -349,8 +392,12 @@ async function handleLogin() {
     padding: 32px 20px;
   }
 
+  .form-card {
+    padding: 36px 28px;
+  }
+
   .form-title {
-    font-size: 26px;
+    font-size: 24px;
   }
 }
 </style>
