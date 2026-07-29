@@ -491,9 +491,7 @@ onUnmounted(() => {
   height: 48px;
   border-radius: 50%;
   flex-shrink: 0;
-  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.4s infinite;
+  background: #1a2035;
 }
 
 .skeleton-lines {
@@ -504,9 +502,7 @@ onUnmounted(() => {
   height: 12px;
   margin-bottom: 8px;
   border-radius: 6px;
-  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.4s infinite;
+  background: #1a2035;
 }
 
 .skeleton-line:last-child {
@@ -518,15 +514,6 @@ onUnmounted(() => {
 }
 .w-80 {
   width: 80%;
-}
-
-@keyframes shimmer {
-  0% {
-    background-position: 200% 0;
-  }
-  100% {
-    background-position: -200% 0;
-  }
 }
 
 /* ========== 空状态 ========== */

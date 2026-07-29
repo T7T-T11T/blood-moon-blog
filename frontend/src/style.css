@@ -939,7 +939,7 @@ body {
 }
 
 .animate-glow {
-  animation: glow 2s ease-in-out infinite;
+  animation: glow 2s ease-out 1;
 }
 
 .animate-card-enter {
@@ -1105,9 +1105,7 @@ body {
 
 /* ========== 骨架屏 / Shimmer ========== */
 .shimmer {
-  background: linear-gradient(90deg, var(--bg-hover) 0%, #1e2a3e 50%, var(--bg-hover) 100%);
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
+  background: #1a2035;
 }
 
 /* ========== 列表项微动画 ========== */

@@ -1,5 +1,15 @@
 # 版本历史
 
+## v1.5.2 (2026-07-30)
+
+- fix(ui): 彻底移除所有页面闪烁效果（粒子动画、发光动画、shimmer骨架屏动画）
+- fix(ui): 首页背景层提升至全局层级，使用fixed固定定位确保滚动时背景完全不动
+- fix(ui): 替换Logo为黑色血月风格图片，提升暗色主题视觉一致性
+- fix(ui): 移除FrontLayout.vue中未使用的brandInitial变量
+- fix(animation): 全局animate-glow改为单次播放，shimmer改为静态显示
+- fix(theme): 所有前台页面（Search/TagList/CategoryList/Archive/Links）骨架屏移除闪烁动画
+- 前后端版本号统一升级至 1.5.2
+
 ## v1.5.1 (2026-07-30)
 
 - fix(ui): 移除所有页面 Hero 区域的 moonPulse 动画，彻底消除闪烁效果

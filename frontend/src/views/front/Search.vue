@@ -537,9 +537,7 @@ onUnmounted(() => {
 .skeleton-line {
   height: 14px;
   border-radius: 6px;
-  background: linear-gradient(90deg, #1a2035 25%, #252d44 50%, #1a2035 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.4s infinite;
+  background: #1a2035;
 }
 
 .w-40 {
@@ -550,15 +548,6 @@ onUnmounted(() => {
 }
 .w-90 {
   width: 90%;
-}
-
-@keyframes shimmer {
-  0% {
-    background-position: 200% 0;
-  }
-  100% {
-    background-position: -200% 0;
-  }
 }
 
 /* ========== 空状态 ========== */
@@ -572,20 +561,6 @@ onUnmounted(() => {
   justify-content: center;
   margin-bottom: 20px;
   color: var(--text-tertiary);
-  /* 轻微呼吸动画 */
-  animation: pulse-soft 2.4s ease-in-out infinite;
-}
-
-@keyframes pulse-soft {
-  0%,
-  100% {
-    opacity: 0.5;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1.05);
-  }
 }
 
 .empty-title {

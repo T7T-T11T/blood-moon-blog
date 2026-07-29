@@ -1,40 +1,29 @@
 /** * @file Home.vue * @description 博客首页 - 暗夜哥特风格 * * 设计： * - 主题：暗夜血色（Deep Navy
-+ Ember Red） * - Hero：全屏血月背景图 + 遮罩层 + Canvas 火星粒子动画（全页面） * -
-内容：深色编辑风格文章列表 + 极简侧边栏 * - 动效：Hero 入场 / 火星飘动 / 滚动揭示 / 悬浮微交互 */
++ Ember Red） * - Hero：全屏血月背景图（固定不随滚动） + 遮罩层 + 血月光晕 * -
+内容：深色编辑风格文章列表 + 极简侧边栏 * - 动效：滚动揭示 / 悬浮微交互（无闪烁效果） */
 <template>
   <div class="home-page">
-    <!-- ============ 全页面背景：火星粒子层 ============ -->
-    <canvas ref="emberCanvasRef" class="ember-canvas-full" aria-hidden="true"></canvas>
+    <!-- ============ 固定背景层（全局唯一，不随滚动） ============ -->
+    <div class="hero-bg" :style="{ backgroundImage: `url(${heroBg})` }" aria-hidden="true"></div>
+    <div class="hero-overlay" aria-hidden="true"></div>
+    <div class="moon-glow" aria-hidden="true"></div>
 
     <!-- ============ Hero 全屏区域 ============ -->
     <section class="hero">
-      <!-- 背景图 -->
-      <div class="hero-bg" :style="{ backgroundImage: `url(${heroBg})` }" aria-hidden="true"></div>
-      <!-- 暗色渐变遮罩 -->
-      <div class="hero-overlay" aria-hidden="true"></div>
-      <!-- 血月光晕 -->
-      <div class="moon-glow" aria-hidden="true"></div>
-
       <!-- Hero 文案 -->
       <div class="hero-inner">
-        <p class="hero-eyebrow animate-fade-in-down">BLOG</p>
+        <p class="hero-eyebrow">BLOG</p>
         <h1 class="hero-title">
-          <span class="title-text animate-glow">{{ siteDisplayName }}</span>
+          <span class="title-text">{{ siteDisplayName }}</span>
         </h1>
-        <p class="hero-tagline animate-fade-in-up delay-200">{{ siteDescription }}</p>
-        <div class="hero-actions animate-fade-in-up delay-400">
+        <p class="hero-tagline">{{ siteDescription }}</p>
+        <div class="hero-actions">
           <router-link to="/archive" class="hero-btn primary">
             <span>浏览归档</span>
             <span class="btn-glow" aria-hidden="true"></span>
           </router-link>
           <router-link to="/about" class="hero-btn ghost">关于本站</router-link>
         </div>
-      </div>
-
-      <!-- 滚动提示 -->
-      <div class="scroll-hint" aria-hidden="true">
-        <span class="scroll-text">SCROLL</span>
-        <span class="scroll-line"></span>
       </div>
     </section>
 
@@ -196,12 +185,6 @@ let observer = null;
 /** 区块标题引用（用于初始化观察） */
 const sectionHeaderRef = ref(null);
 
-/** 火星粒子 Canvas 引用 */
-const emberCanvasRef = ref(null);
-
-/** 火星粒子动画帧 ID */
-let emberAnimId = null;
-
 /** 站点配置 */
 const settings = ref({
   siteName: '个人博客',
@@ -308,219 +291,6 @@ async function loadSettings() {
 }
 
 /**
- * 初始化火星粒子动画（Canvas 实现）
- * 多层粒子系统：前景火花 + 中景火星 + 背景微光
- * 带轨迹拖尾、风力漂移、闪烁爆发效果
- * 覆盖整个页面（包含 Hero 区域和内容区域）
- */
-function initEmberParticles() {
-  const canvas = emberCanvasRef.value;
-  if (!canvas) return;
-
-  const ctx = canvas.getContext('2d');
-  let width = (canvas.width = window.innerWidth);
-  let height = (canvas.height = document.body.scrollHeight);
-
-  /**
-   * 粒子类（支持多层、轨迹、闪烁）
-   */
-  class Particle {
-    /**
-     * @param {string} layer - 层级 'front' | 'mid' | 'back'
-     */
-    constructor(layer) {
-      this.layer = layer;
-      this.reset(true);
-    }
-
-    /**
-     * 重置粒子状态
-     * @param {boolean} initial - 是否为初始随机分布
-     */
-    reset(initial) {
-      this.x = Math.random() * width;
-      this.y = initial ? Math.random() * height : height + Math.random() * 50;
-
-      // 根据层级设置基础属性
-      if (this.layer === 'front') {
-        this.baseSize = Math.random() * 2.5 + 1.2;
-        this.speedY = -(Math.random() * 1.2 + 0.6);
-        this.speedX = (Math.random() - 0.5) * 1.0;
-        this.baseOpacity = Math.random() * 0.5 + 0.5;
-        this.fadeSpeed = Math.random() * 0.012 + 0.004;
-        this.hue = Math.random() * 40 + 5; // 红到橙黄
-      } else if (this.layer === 'mid') {
-        this.baseSize = Math.random() * 1.8 + 0.6;
-        this.speedY = -(Math.random() * 0.7 + 0.3);
-        this.speedX = (Math.random() - 0.5) * 0.5;
-        this.baseOpacity = Math.random() * 0.4 + 0.3;
-        this.fadeSpeed = Math.random() * 0.008 + 0.002;
-        this.hue = Math.random() * 30 + 10;
-      } else {
-        // back
-        this.baseSize = Math.random() * 1.0 + 0.3;
-        this.speedY = -(Math.random() * 0.4 + 0.15);
-        this.speedX = (Math.random() - 0.5) * 0.3;
-        this.baseOpacity = Math.random() * 0.25 + 0.15;
-        this.fadeSpeed = Math.random() * 0.005 + 0.001;
-        this.hue = Math.random() * 20 + 15;
-      }
-
-      this.size = this.baseSize;
-      this.opacity = this.baseOpacity;
-
-      // 轨迹历史点
-      this.trail = [];
-      this.trailLength = this.layer === 'front' ? 6 : this.layer === 'mid' ? 4 : 2;
-
-      // 风力漂移：正弦波动
-      this.windPhase = Math.random() * Math.PI * 2;
-      this.windSpeed = Math.random() * 0.02 + 0.01;
-      this.windAmp = this.layer === 'front' ? 1.5 : 0.8;
-
-      // 偶尔爆发的火花粒子
-      this.isSpark = Math.random() < 0.03;
-      if (this.isSpark) {
-        this.speedY *= 2.5;
-        this.speedX *= 3;
-        this.hue = Math.random() * 15 + 45; // 金黄火花
-        this.baseSize *= 0.6;
-        this.fadeSpeed *= 3;
-      }
-    }
-
-    /**
-     * 更新粒子位置与状态
-     */
-    update() {
-      // 记录轨迹
-      this.trail.push({ x: this.x, y: this.y, size: this.size, opacity: this.opacity });
-      if (this.trail.length > this.trailLength) {
-        this.trail.shift();
-      }
-
-      // 风力漂移
-      this.windPhase += this.windSpeed;
-      const windOffset = Math.sin(this.windPhase) * this.windAmp;
-
-      // 更新位置
-      this.y += this.speedY;
-      this.x += this.speedX + windOffset * 0.02;
-
-      // 渐隐
-      this.opacity -= this.fadeSpeed;
-
-      // 边界回收
-      if (this.opacity <= 0 || this.y < -20 || this.x < -20 || this.x > width + 20) {
-        this.reset(false);
-      }
-    }
-
-    /**
-     * 绘制粒子（含轨迹拖尾）
-     * @param {CanvasRenderingContext2D} ctx
-     */
-    draw(ctx) {
-      // 绘制轨迹拖尾
-      for (let i = 0; i < this.trail.length; i++) {
-        const t = this.trail[i];
-        const trailRatio = (i + 1) / this.trail.length;
-        const trailOpacity = t.opacity * trailRatio * 0.4;
-        const trailSize = t.size * trailRatio * 0.6;
-
-        if (trailOpacity > 0.01 && trailSize > 0.1) {
-          ctx.beginPath();
-          ctx.arc(t.x, t.y, trailSize, 0, Math.PI * 2);
-          ctx.fillStyle = `hsla(${this.hue}, 100%, 65%, ${trailOpacity})`;
-          ctx.shadowBlur = 4 * trailRatio;
-          ctx.shadowColor = `hsla(${this.hue}, 100%, 50%, ${trailOpacity})`;
-          ctx.fill();
-        }
-      }
-
-      // 绘制主粒子（使用固定大小，无闪烁）
-      ctx.beginPath();
-      ctx.arc(this.x, this.y, Math.max(this.baseSize, 0.1), 0, Math.PI * 2);
-      const alpha = Math.max(this.opacity, 0);
-      ctx.fillStyle = `hsla(${this.hue}, 100%, ${this.isSpark ? 75 : 60}%, ${alpha})`;
-      ctx.shadowBlur = this.layer === 'front' ? 12 : this.layer === 'mid' ? 8 : 5;
-      ctx.shadowColor = `hsla(${this.hue}, 100%, 50%, ${alpha * 0.8})`;
-      ctx.fill();
-
-      // 火花额外高光核心
-      if (this.isSpark && alpha > 0.3) {
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.size * 0.4, 0, Math.PI * 2);
-        ctx.fillStyle = `hsla(${this.hue}, 80%, 90%, ${alpha * 0.9})`;
-        ctx.shadowBlur = 6;
-        ctx.shadowColor = `hsla(${this.hue}, 100%, 80%, ${alpha})`;
-        ctx.fill();
-      }
-    }
-  }
-
-  /** 粒子数组（三层） */
-  const particles = [];
-  const LAYERS = [
-    { name: 'back', count: 40 },
-    { name: 'mid', count: 60 },
-    { name: 'front', count: 30 }
-  ];
-
-  for (const layer of LAYERS) {
-    for (let i = 0; i < layer.count; i++) {
-      particles.push(new Particle(layer.name));
-    }
-  }
-
-  // 按层级排序，背景先画，前景后画
-  particles.sort((a, b) => {
-    const order = { back: 0, mid: 1, front: 2 };
-    return order[a.layer] - order[b.layer];
-  });
-
-  /**
-   * 动画循环
-   */
-  function animate() {
-    // 使用半透明清除产生拖影残影效果
-    ctx.fillStyle = 'rgba(10, 14, 26, 0.25)';
-    ctx.fillRect(0, 0, width, height);
-
-    for (const p of particles) {
-      p.update();
-      p.draw(ctx);
-    }
-    emberAnimId = requestAnimationFrame(animate);
-  }
-
-  // 响应窗口 resize
-  const handleResize = () => {
-    width = canvas.width = window.innerWidth;
-    height = canvas.height = document.body.scrollHeight;
-  };
-  window.addEventListener('resize', handleResize);
-
-  // 页面滚动时更新高度
-  const handleScroll = () => {
-    height = canvas.height = document.body.scrollHeight;
-  };
-  window.addEventListener('scroll', handleScroll, { passive: true });
-
-  animate();
-}
-
-/**
- * 停止火星粒子动画
- */
-function stopEmberParticles() {
-  if (emberAnimId) {
-    cancelAnimationFrame(emberAnimId);
-    emberAnimId = null;
-  }
-}
-
-/**
  * 初始化 Intersection Observer
  */
 function initObserver() {
@@ -550,62 +320,47 @@ function handlePageChange(page) {
 }
 
 onMounted(async () => {
-  // 等待 DOM 渲染后启动粒子动画
   await nextTick();
-  initEmberParticles();
-
   loadArticles(1);
   loadHotArticles();
   loadSettings();
 });
 
 onUnmounted(() => {
-  stopEmberParticles();
   if (observer) observer.disconnect();
 });
 </script>
 
 <style scoped>
-/* ========== 全页面火星粒子层 ========== */
-.ember-canvas-full {
+/* ========== 页面容器 ========== */
+.home-page {
+  position: relative;
+  min-height: 100vh;
+  isolation: isolate;
+}
+
+/* ========== 固定背景层（全局唯一，不随滚动） ========== */
+.hero-bg {
   position: fixed;
   top: 0;
   left: 0;
-  width: 100%;
-  height: 100%;
+  width: 100vw;
+  height: 100vh;
   z-index: 0;
-  pointer-events: none;
-}
-
-/* ========== Hero 全屏区域 ========== */
-.hero {
-  position: relative;
-  min-height: 100vh;
-  min-height: 100svh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  color: #fff;
-  isolation: isolate;
-  z-index: 1;
-}
-
-/* 背景图 */
-.hero-bg {
-  position: absolute;
-  inset: 0;
-  z-index: -3;
   background-size: cover;
   background-position: center;
+  background-repeat: no-repeat;
   background-attachment: fixed;
 }
 
-/* 暗色渐变遮罩 */
+/* 暗色渐变遮罩（固定不随滚动） */
 .hero-overlay {
-  position: absolute;
-  inset: 0;
-  z-index: -2;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 1;
   background: linear-gradient(
     180deg,
     rgba(10, 14, 26, 0.55) 0%,
@@ -613,11 +368,12 @@ onUnmounted(() => {
     rgba(10, 14, 26, 0.55) 70%,
     rgba(10, 14, 26, 0.95) 100%
   );
+  pointer-events: none;
 }
 
-/* 血月光晕（纯装饰） */
+/* 血月光晕（固定不闪烁） */
 .moon-glow {
-  position: absolute;
+  position: fixed;
   top: 18%;
   left: 50%;
   transform: translateX(-50%);
@@ -630,14 +386,26 @@ onUnmounted(() => {
     transparent 70%
   );
   border-radius: 50%;
-  z-index: -1;
+  z-index: 2;
   pointer-events: none;
+}
+
+/* ========== Hero 全屏区域 ========== */
+.hero {
+  position: relative;
+  min-height: 100vh;
+  min-height: 100svh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  z-index: 10;
 }
 
 /* Hero 文案容器 */
 .hero-inner {
   position: relative;
-  z-index: 1;
+  z-index: 11;
   max-width: 800px;
   padding: 0 32px;
   text-align: center;
@@ -659,7 +427,7 @@ onUnmounted(() => {
   line-height: 1;
 }
 
-/* 发光文字效果 */
+/* 发光文字效果（固定，不闪烁） */
 .title-text {
   display: inline-block;
   background: linear-gradient(180deg, #ffffff 0%, #fca5a5 50%, #dc2626 100%);
@@ -667,17 +435,6 @@ onUnmounted(() => {
   background-clip: text;
   -webkit-text-fill-color: transparent;
   filter: drop-shadow(0 0 30px rgba(220, 38, 38, 0.4));
-  animation: titleGlow 4s ease-in-out infinite;
-}
-
-@keyframes titleGlow {
-  0%,
-  100% {
-    filter: drop-shadow(0 0 30px rgba(220, 38, 38, 0.4));
-  }
-  50% {
-    filter: drop-shadow(0 0 50px rgba(220, 38, 38, 0.7));
-  }
 }
 
 .hero-tagline {
@@ -752,63 +509,10 @@ onUnmounted(() => {
   transform: translateY(-3px);
 }
 
-/* 滚动提示 */
-.scroll-hint {
-  position: absolute;
-  bottom: 32px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  z-index: 1;
-}
-
-.scroll-text {
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 4px;
-  color: rgba(241, 245, 249, 0.5);
-}
-
-.scroll-line {
-  width: 1px;
-  height: 50px;
-  background: linear-gradient(to bottom, rgba(248, 113, 113, 0.6), transparent);
-  position: relative;
-  overflow: hidden;
-}
-
-.scroll-line::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 20px;
-  background: rgba(248, 113, 113, 0.8);
-  animation: scrollDown 2s ease-in-out infinite;
-}
-
-@keyframes scrollDown {
-  0% {
-    transform: translateY(-100%);
-    opacity: 0;
-  }
-  50% {
-    opacity: 1;
-  }
-  100% {
-    transform: translateY(150%);
-    opacity: 0;
-  }
-}
-
 /* ========== 主体内容包装 ========== */
 .content-wrapper {
   position: relative;
-  z-index: 1;
+  z-index: 10;
   max-width: 1200px;
   margin: 0 auto;
   padding: 96px 32px 80px;
@@ -982,9 +686,7 @@ onUnmounted(() => {
 .skeleton-line {
   height: 14px;
   border-radius: 6px;
-  background: linear-gradient(90deg, #1a2035 25%, #252d44 50%, #1a2035 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.4s infinite;
+  background: #1a2035;
 }
 
 .w-40 {
@@ -995,15 +697,6 @@ onUnmounted(() => {
 }
 .w-90 {
   width: 90%;
-}
-
-@keyframes shimmer {
-  0% {
-    background-position: 200% 0;
-  }
-  100% {
-    background-position: -200% 0;
-  }
 }
 
 /* ========== 空状态 ========== */

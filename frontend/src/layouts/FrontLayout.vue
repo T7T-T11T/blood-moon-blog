@@ -130,9 +130,6 @@ const siteName = computed(() => settings.value.siteName || '个人博客');
 /** 站点描述（兜底默认值） */
 const siteDescription = computed(() => settings.value.siteDescription || '');
 
-/** 品牌首字母（用于 Logo） */
-const brandInitial = computed(() => siteName.value.charAt(0) || 'B');
-
 /** 当前年份 */
 const currentYear = new Date().getFullYear();
 
@@ -283,15 +280,16 @@ onUnmounted(() => {
 
 .brand-mark {
   display: block;
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   object-fit: cover;
   box-shadow:
-    0 0 0 2px rgba(220, 38, 38, 0.4),
-    0 0 12px rgba(220, 38, 38, 0.3),
-    inset 0 0 8px rgba(220, 38, 38, 0.15);
-  transition: transform 0.3s var(--ease-spring);
+    0 0 0 1px rgba(220, 38, 38, 0.3),
+    0 0 16px rgba(220, 38, 38, 0.35);
+  transition:
+    transform 0.3s var(--ease-spring),
+    box-shadow 0.3s var(--ease-out);
 }
 
 /* 品牌悬浮：Logo 轻微旋转放大 */
