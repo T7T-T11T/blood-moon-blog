@@ -208,14 +208,36 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-/* ========== Hero 区域 ========== */
+/* ========== Hero 区域：黑红血月主题 ========== */
 .hero {
   position: relative;
-  padding: 88px 32px 72px;
-  background: linear-gradient(135deg, #0f766e 0%, #0d9488 45%, #14b8a6 100%);
+  padding: 120px 32px 80px;
+  background: linear-gradient(180deg, #060912 0%, #0a0e1a 40%, #121828 100%);
   overflow: hidden;
   color: #fff;
   isolation: isolate;
+  border-bottom: 1px solid var(--border);
+}
+
+/* 血月背景光晕 */
+.hero::before {
+  content: '';
+  position: absolute;
+  top: 10%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(
+    circle,
+    rgba(220, 38, 38, 0.12) 0%,
+    rgba(153, 27, 27, 0.05) 40%,
+    transparent 70%
+  );
+  border-radius: 50%;
+  z-index: 0;
+  pointer-events: none;
+  animation: moonPulse 8s ease-in-out infinite;
 }
 
 .hero-inner {
@@ -227,39 +249,50 @@ onUnmounted(() => {
 }
 
 .hero-eyebrow {
-  margin: 0 0 14px;
+  margin: 0 0 16px;
   font-size: 13px;
   font-weight: 600;
-  letter-spacing: 5px;
-  color: rgba(255, 255, 255, 0.78);
+  letter-spacing: 6px;
+  color: rgba(248, 113, 113, 0.8);
 }
 
 .hero-title {
-  margin: 0 0 16px;
-  font-size: clamp(40px, 6vw, 56px);
+  margin: 0 0 20px;
+  font-size: clamp(40px, 6vw, 64px);
   font-weight: 800;
-  letter-spacing: -1.5px;
-  text-shadow: 0 2px 20px rgba(0, 0, 0, 0.15);
+  letter-spacing: -2px;
+  background: linear-gradient(180deg, #ffffff 0%, #fca5a5 60%, #dc2626 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 20px rgba(220, 38, 38, 0.3));
 }
 
 .hero-subtitle {
   margin: 0;
   font-size: 16px;
-  color: rgba(255, 255, 255, 0.9);
-  letter-spacing: 0.5px;
+  color: rgba(241, 245, 249, 0.7);
+  letter-spacing: 1px;
 }
 
-/* Hero 装饰光斑 */
+/* Hero 装饰光斑（暗红调） */
 .hero-orb {
   position: absolute;
-  top: -120px;
-  right: -80px;
-  width: 360px;
-  height: 360px;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.18) 0%, transparent 70%);
+  top: -100px;
+  right: -60px;
+  width: 320px;
+  height: 320px;
+  background: radial-gradient(circle, rgba(220, 38, 38, 0.08) 0%, transparent 70%);
   border-radius: 50%;
   z-index: 1;
   pointer-events: none;
+}
+
+/* 骨架屏适配暗色 */
+.skeleton-avatar,
+.skeleton-line {
+  background: linear-gradient(90deg, #1a2035 25%, #252d44 50%, #1a2035 75%);
+  background-size: 200% 100%;
 }
 
 /* ========== 内容区 ========== */

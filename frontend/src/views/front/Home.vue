@@ -309,7 +309,8 @@ async function loadSettings() {
 
 /**
  * 初始化火星粒子动画（Canvas 实现）
- * 粒子从底部向上飘动，带红色发光效果
+ * 多层粒子系统：前景火花 + 中景火星 + 背景微光
+ * 带轨迹拖尾、风力漂移、闪烁爆发效果
  * 覆盖整个页面（包含 Hero 区域和内容区域）
  */
 function initEmberParticles() {
@@ -320,67 +321,181 @@ function initEmberParticles() {
   let width = (canvas.width = window.innerWidth);
   let height = (canvas.height = document.body.scrollHeight);
 
-  /** 粒子数组 */
-  const particles = [];
-  const PARTICLE_COUNT = 80;
-
   /**
-   * 粒子类
+   * 粒子类（支持多层、轨迹、闪烁）
    */
   class Particle {
-    constructor() {
+    /**
+     * @param {string} layer - 层级 'front' | 'mid' | 'back'
+     */
+    constructor(layer) {
+      this.layer = layer;
       this.reset(true);
     }
+
     /**
      * 重置粒子状态
      * @param {boolean} initial - 是否为初始随机分布
      */
     reset(initial) {
       this.x = Math.random() * width;
-      this.y = initial ? Math.random() * height : height + 10;
-      this.size = Math.random() * 2.5 + 0.5;
-      this.speedY = -(Math.random() * 0.6 + 0.2);
-      this.speedX = (Math.random() - 0.5) * 0.3;
-      this.opacity = Math.random() * 0.6 + 0.4;
-      this.fadeSpeed = Math.random() * 0.008 + 0.002;
-      // 颜色从红到橙
-      this.hue = Math.random() * 30 + 5;
+      this.y = initial ? Math.random() * height : height + Math.random() * 50;
+
+      // 根据层级设置基础属性
+      if (this.layer === 'front') {
+        this.baseSize = Math.random() * 2.5 + 1.2;
+        this.speedY = -(Math.random() * 1.2 + 0.6);
+        this.speedX = (Math.random() - 0.5) * 1.0;
+        this.baseOpacity = Math.random() * 0.5 + 0.5;
+        this.fadeSpeed = Math.random() * 0.012 + 0.004;
+        this.hue = Math.random() * 40 + 5; // 红到橙黄
+      } else if (this.layer === 'mid') {
+        this.baseSize = Math.random() * 1.8 + 0.6;
+        this.speedY = -(Math.random() * 0.7 + 0.3);
+        this.speedX = (Math.random() - 0.5) * 0.5;
+        this.baseOpacity = Math.random() * 0.4 + 0.3;
+        this.fadeSpeed = Math.random() * 0.008 + 0.002;
+        this.hue = Math.random() * 30 + 10;
+      } else {
+        // back
+        this.baseSize = Math.random() * 1.0 + 0.3;
+        this.speedY = -(Math.random() * 0.4 + 0.15);
+        this.speedX = (Math.random() - 0.5) * 0.3;
+        this.baseOpacity = Math.random() * 0.25 + 0.15;
+        this.fadeSpeed = Math.random() * 0.005 + 0.001;
+        this.hue = Math.random() * 20 + 15;
+      }
+
+      this.size = this.baseSize;
+      this.opacity = this.baseOpacity;
+
+      // 轨迹历史点
+      this.trail = [];
+      this.trailLength = this.layer === 'front' ? 6 : this.layer === 'mid' ? 4 : 2;
+
+      // 风力漂移：正弦波动
+      this.windPhase = Math.random() * Math.PI * 2;
+      this.windSpeed = Math.random() * 0.02 + 0.01;
+      this.windAmp = this.layer === 'front' ? 1.5 : 0.8;
+
+      // 闪烁
+      this.flickerPhase = Math.random() * Math.PI * 2;
+      this.flickerSpeed = Math.random() * 0.1 + 0.05;
+
+      // 偶尔爆发的火花粒子
+      this.isSpark = Math.random() < 0.03;
+      if (this.isSpark) {
+        this.speedY *= 2.5;
+        this.speedX *= 3;
+        this.hue = Math.random() * 15 + 45; // 金黄火花
+        this.baseSize *= 0.6;
+        this.fadeSpeed *= 3;
+      }
     }
+
     /**
-     * 更新粒子位置
+     * 更新粒子位置与状态
      */
     update() {
+      // 记录轨迹
+      this.trail.push({ x: this.x, y: this.y, size: this.size, opacity: this.opacity });
+      if (this.trail.length > this.trailLength) {
+        this.trail.shift();
+      }
+
+      // 风力漂移
+      this.windPhase += this.windSpeed;
+      const windOffset = Math.sin(this.windPhase) * this.windAmp;
+
+      // 更新位置
       this.y += this.speedY;
-      this.x += this.speedX;
+      this.x += this.speedX + windOffset * 0.02;
+
+      // 闪烁效果
+      this.flickerPhase += this.flickerSpeed;
+      const flicker = Math.sin(this.flickerPhase) * 0.3 + 0.7; // 0.4 ~ 1.0
+      this.size = this.baseSize * flicker;
+
+      // 渐隐
       this.opacity -= this.fadeSpeed;
-      if (this.opacity <= 0 || this.y < -10) {
+
+      // 边界回收
+      if (this.opacity <= 0 || this.y < -20 || this.x < -20 || this.x > width + 20) {
         this.reset(false);
       }
     }
+
     /**
-     * 绘制粒子
+     * 绘制粒子（含轨迹拖尾）
+     * @param {CanvasRenderingContext2D} ctx
      */
     draw(ctx) {
+      // 绘制轨迹拖尾
+      for (let i = 0; i < this.trail.length; i++) {
+        const t = this.trail[i];
+        const trailRatio = (i + 1) / this.trail.length;
+        const trailOpacity = t.opacity * trailRatio * 0.4;
+        const trailSize = t.size * trailRatio * 0.6;
+
+        if (trailOpacity > 0.01 && trailSize > 0.1) {
+          ctx.beginPath();
+          ctx.arc(t.x, t.y, trailSize, 0, Math.PI * 2);
+          ctx.fillStyle = `hsla(${this.hue}, 100%, 65%, ${trailOpacity})`;
+          ctx.shadowBlur = 4 * trailRatio;
+          ctx.shadowColor = `hsla(${this.hue}, 100%, 50%, ${trailOpacity})`;
+          ctx.fill();
+        }
+      }
+
+      // 绘制主粒子
       ctx.beginPath();
-      ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-      ctx.fillStyle = `hsla(${this.hue}, 100%, 60%, ${this.opacity})`;
-      ctx.shadowBlur = 8;
-      ctx.shadowColor = `hsla(${this.hue}, 100%, 50%, ${this.opacity})`;
+      ctx.arc(this.x, this.y, Math.max(this.size, 0.1), 0, Math.PI * 2);
+      const alpha = Math.max(this.opacity, 0);
+      ctx.fillStyle = `hsla(${this.hue}, 100%, ${this.isSpark ? 75 : 60}%, ${alpha})`;
+      ctx.shadowBlur = this.layer === 'front' ? 12 : this.layer === 'mid' ? 8 : 5;
+      ctx.shadowColor = `hsla(${this.hue}, 100%, 50%, ${alpha * 0.8})`;
       ctx.fill();
+
+      // 火花额外高光核心
+      if (this.isSpark && alpha > 0.3) {
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size * 0.4, 0, Math.PI * 2);
+        ctx.fillStyle = `hsla(${this.hue}, 80%, 90%, ${alpha * 0.9})`;
+        ctx.shadowBlur = 6;
+        ctx.shadowColor = `hsla(${this.hue}, 100%, 80%, ${alpha})`;
+        ctx.fill();
+      }
     }
   }
 
-  // 初始化粒子
-  for (let i = 0; i < PARTICLE_COUNT; i++) {
-    particles.push(new Particle());
+  /** 粒子数组（三层） */
+  const particles = [];
+  const LAYERS = [
+    { name: 'back', count: 40 },
+    { name: 'mid', count: 60 },
+    { name: 'front', count: 30 }
+  ];
+
+  for (const layer of LAYERS) {
+    for (let i = 0; i < layer.count; i++) {
+      particles.push(new Particle(layer.name));
+    }
   }
+
+  // 按层级排序，背景先画，前景后画
+  particles.sort((a, b) => {
+    const order = { back: 0, mid: 1, front: 2 };
+    return order[a.layer] - order[b.layer];
+  });
 
   /**
    * 动画循环
    */
   function animate() {
-    ctx.clearRect(0, 0, width, height);
-    ctx.shadowBlur = 0;
+    // 使用半透明清除产生拖影残影效果
+    ctx.fillStyle = 'rgba(10, 14, 26, 0.25)';
+    ctx.fillRect(0, 0, width, height);
+
     for (const p of particles) {
       p.update();
       p.draw(ctx);

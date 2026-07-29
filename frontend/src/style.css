@@ -124,8 +124,14 @@
 .el-table {
   --el-table-border-color: var(--border-light);
   --el-table-header-bg-color: var(--bg-hover);
+  --el-table-row-hover-bg-color: var(--bg-hover);
+  --el-table-text-color: var(--text-primary);
+  --el-table-header-text-color: var(--text-primary);
+  --el-table-bg-color: var(--bg-card);
+  --el-table-tr-bg-color: var(--bg-card);
   border-radius: var(--radius-md) !important;
   overflow: hidden;
+  background: var(--bg-card);
 }
 
 .el-table th.el-table__cell {
@@ -137,6 +143,21 @@
 
 .el-table td.el-table__cell {
   font-size: 14px !important;
+  color: var(--text-secondary) !important;
+  background: transparent !important;
+}
+
+.el-table .el-table__row:hover > td.el-table__cell {
+  background: var(--bg-hover) !important;
+  color: var(--text-primary) !important;
+}
+
+.el-table__empty-block {
+  background: var(--bg-card);
+}
+
+.el-table__empty-text {
+  color: var(--text-tertiary);
 }
 
 .el-dialog {

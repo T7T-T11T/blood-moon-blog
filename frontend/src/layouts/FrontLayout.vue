@@ -8,10 +8,9 @@
     <!-- 顶部固定毛玻璃导航栏 -->
     <header class="navbar" :class="{ scrolled: isScrolled }">
       <div class="navbar-inner">
-        <!-- 品牌：Logo 字母 + 站点名 -->
+        <!-- 品牌：仅 Logo 字母图标 -->
         <router-link to="/" class="brand" @click="closeMobileMenu">
           <span class="brand-mark">{{ brandInitial }}</span>
-          <span class="brand-name">{{ siteName }}</span>
         </router-link>
 
         <!-- 桌面端导航 -->

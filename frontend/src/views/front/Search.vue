@@ -307,42 +307,58 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-/* ========== 搜索头部 ========== */
+/* ========== 搜索头部：黑红血月主题 ========== */
 .search-header {
+  position: relative;
   max-width: 960px;
   margin: 0 auto;
-  padding: 72px 32px 48px;
+  padding: 120px 32px 64px;
   text-align: center;
+  overflow: hidden;
+}
+
+/* 血月光晕背景 */
+.search-header::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(220, 38, 38, 0.08) 0%, transparent 60%);
+  border-radius: 50%;
+  z-index: 0;
+  pointer-events: none;
 }
 
 .eyebrow {
-  margin: 0 0 14px;
+  position: relative;
+  z-index: 1;
+  margin: 0 0 16px;
   font-size: 13px;
   font-weight: 600;
-  letter-spacing: 5px;
-  color: var(--text-tertiary);
+  letter-spacing: 6px;
+  color: rgba(248, 113, 113, 0.8);
 }
 
 /* 关键词突出展示：超大字号 */
 .keyword-title {
-  margin: 0 0 16px;
-  font-size: clamp(40px, 7vw, 64px);
+  position: relative;
+  z-index: 1;
+  margin: 0 0 20px;
+  font-size: clamp(40px, 7vw, 72px);
   font-weight: 800;
   letter-spacing: -2px;
   line-height: 1.1;
-  color: var(--text-primary);
 }
 
 .keyword-text {
-  background: linear-gradient(
-    135deg,
-    var(--primary-dark) 0%,
-    var(--primary) 50%,
-    var(--primary-light) 100%
-  );
+  background: linear-gradient(180deg, #ffffff 0%, #fca5a5 60%, #dc2626 100%);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 20px rgba(220, 38, 38, 0.3));
 }
 
 .keyword-empty {
@@ -350,13 +366,15 @@ onUnmounted(() => {
 }
 
 .result-stats {
+  position: relative;
+  z-index: 1;
   margin: 0;
   font-size: 15px;
-  color: var(--text-secondary);
+  color: rgba(241, 245, 249, 0.7);
 }
 
 .stats-count {
-  color: var(--primary);
+  color: var(--primary-light);
   font-weight: 700;
   font-size: 18px;
   margin: 0 4px;
@@ -515,11 +533,11 @@ onUnmounted(() => {
   padding: 24px 0;
   border-bottom: 1px solid var(--border);
 }
-
+/* 骨架屏适配暗色 */
 .skeleton-line {
   height: 14px;
   border-radius: 6px;
-  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background: linear-gradient(90deg, #1a2035 25%, #252d44 50%, #1a2035 75%);
   background-size: 200% 100%;
   animation: shimmer 1.4s infinite;
 }

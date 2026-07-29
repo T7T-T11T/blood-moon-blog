@@ -188,19 +188,19 @@ async function handleCommand(command) {
 </script>
 
 <style scoped>
-/* ========== 管理后台独立浅色主题 ========== */
+/* ========== 管理后台黑红暗色主题 ========== */
 .admin-layout {
-  --admin-bg: #f8fafc;
-  --admin-card: #ffffff;
-  --admin-hover: #f1f5f9;
-  --admin-border: #e2e8f0;
-  --admin-text: #1f2937;
-  --admin-text-secondary: #6b7280;
-  --admin-text-tertiary: #9ca3af;
-  --admin-primary: #0d9488;
-  --admin-primary-light: #14b8a6;
-  --admin-primary-dark: #0f766e;
-  --admin-shadow: rgba(0, 0, 0, 0.04);
+  --admin-bg: #0a0e1a;
+  --admin-card: #121828;
+  --admin-hover: #1a2035;
+  --admin-border: #1e293b;
+  --admin-text: #f1f5f9;
+  --admin-text-secondary: #94a3b8;
+  --admin-text-tertiary: #64748b;
+  --admin-primary: #dc2626;
+  --admin-primary-light: #f87171;
+  --admin-primary-dark: #991b1b;
+  --admin-shadow: rgba(0, 0, 0, 0.3);
 }
 
 /* ========== 布局主容器 ========== */
@@ -214,14 +214,14 @@ async function handleCommand(command) {
 .sidebar-mask {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.4);
+  background: rgba(0, 0, 0, 0.6);
   z-index: 99;
 }
 
 /* ========== 左侧导航栏 ========== */
 .admin-sidebar {
   width: 220px;
-  background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+  background: linear-gradient(180deg, #0c1220 0%, #060912 100%);
   display: flex;
   flex-direction: column;
   position: fixed;
@@ -230,6 +230,7 @@ async function handleCommand(command) {
   bottom: 0;
   z-index: 100;
   transition: transform 0.3s var(--ease-out);
+  border-right: 1px solid var(--admin-border);
 }
 
 .sidebar-header {
@@ -237,18 +238,18 @@ async function handleCommand(command) {
   align-items: center;
   gap: 12px;
   padding: 20px 24px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .logo-wrapper {
   width: 38px;
   height: 38px;
-  background: linear-gradient(135deg, var(--admin-primary) 0%, #0891b2 100%);
+  background: linear-gradient(135deg, var(--admin-primary) 0%, #991b1b 100%);
   border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 12px rgba(13, 148, 136, 0.4);
+  box-shadow: 0 4px 14px rgba(220, 38, 38, 0.35);
 }
 
 .logo-text {
@@ -270,7 +271,7 @@ async function handleCommand(command) {
 .nav-group-title {
   font-size: 11px;
   font-weight: 600;
-  color: #64748b;
+  color: #475569;
   text-transform: uppercase;
   letter-spacing: 1px;
   padding: 0 12px 8px;
@@ -292,14 +293,14 @@ async function handleCommand(command) {
 }
 
 .nav-item:hover {
-  color: #fff;
-  background: rgba(255, 255, 255, 0.06);
+  color: #f1f5f9;
+  background: rgba(220, 38, 38, 0.08);
 }
 
 .nav-item.active {
   color: #fff;
-  background: linear-gradient(135deg, rgba(13, 148, 136, 0.3), rgba(8, 145, 178, 0.2));
-  box-shadow: 0 4px 12px rgba(13, 148, 136, 0.3);
+  background: linear-gradient(135deg, rgba(220, 38, 38, 0.25), rgba(153, 27, 27, 0.15));
+  box-shadow: 0 4px 14px rgba(220, 38, 38, 0.2);
 }
 
 /* 激活态左侧指示条 */
@@ -307,14 +308,14 @@ async function handleCommand(command) {
   content: '';
   width: 3px;
   height: 16px;
-  background: linear-gradient(180deg, var(--admin-primary), #0891b2);
+  background: linear-gradient(180deg, var(--admin-primary), #f87171);
   border-radius: 2px;
   margin-right: -6px;
 }
 
 .sidebar-footer {
   padding: 16px 12px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .back-to-site {
@@ -331,7 +332,7 @@ async function handleCommand(command) {
 
 .back-to-site:hover {
   color: var(--admin-primary-light);
-  background: rgba(13, 148, 136, 0.1);
+  background: rgba(220, 38, 38, 0.1);
 }
 
 /* ========== 右侧主区域 ========== */
@@ -351,7 +352,7 @@ async function handleCommand(command) {
   padding: 0 32px;
   height: 60px;
   border-bottom: 1px solid var(--admin-border);
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
   position: sticky;
   top: 0;
   z-index: 50;
@@ -361,6 +362,23 @@ async function handleCommand(command) {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+/* 面包屑文字颜色 */
+:deep(.el-breadcrumb__item) {
+  color: var(--admin-text-secondary);
+}
+
+:deep(.el-breadcrumb__inner) {
+  color: var(--admin-text-secondary) !important;
+}
+
+:deep(.el-breadcrumb__inner.is-link:hover) {
+  color: var(--admin-primary-light) !important;
+}
+
+:deep(.el-breadcrumb__separator) {
+  color: var(--admin-text-tertiary) !important;
 }
 
 /* 移动端菜单按钮（默认隐藏） */
@@ -403,7 +421,7 @@ async function handleCommand(command) {
 }
 
 .avatar {
-  background: linear-gradient(135deg, var(--admin-primary) 0%, #0891b2 100%);
+  background: linear-gradient(135deg, var(--admin-primary) 0%, #991b1b 100%);
   display: flex;
   align-items: center;
   justify-content: center;
