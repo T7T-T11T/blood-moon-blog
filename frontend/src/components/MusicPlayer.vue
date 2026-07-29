@@ -1,61 +1,67 @@
 <template>
-  <!-- 全局音乐播放器：浮动控件，自动循环播放 -->
-  <div class="music-player" :class="{ collapsed: collapsed }">
-    <!-- 展开状态：显示完整播放器 -->
+  <!-- 全局音乐播放器：底部浮动条，自动循环播放 -->
+  <div v-if="musicList.length > 0" class="music-player" :class="{ collapsed: collapsed }">
+    <!-- 展开状态：底部播放条 -->
     <template v-if="!collapsed">
-      <!-- 封面 + 动画 -->
-      <div class="player-cover" :class="{ spinning: isPlaying }" @click="togglePlay">
-        <div class="cover-ring"></div>
-        <div class="cover-inner">
-          <el-icon :size="24" color="#fff"><Headset /></el-icon>
-        </div>
-        <div v-if="isPlaying" class="playing-bar"><span></span><span></span><span></span></div>
-      </div>
-
-      <!-- 音乐信息 -->
-      <div class="player-info">
-        <div class="player-title" :title="currentMusic?.title">
-          {{ currentMusic?.title || '暂无音乐' }}
-        </div>
-        <div class="player-artist">{{ currentMusic?.artist || '' }}</div>
-      </div>
-
-      <!-- 控制按钮 -->
+      <!-- 播放控制按钮组 -->
       <div class="player-controls">
-        <button class="ctrl-btn" :disabled="!musicList.length" @click="prevTrack">
+        <button class="ctrl-btn" :disabled="!musicList.length" title="上一首" @click="prevTrack">
           <el-icon :size="14"><RefreshLeft /></el-icon>
         </button>
-        <button class="ctrl-btn play-btn" :disabled="!musicList.length" @click="togglePlay">
-          <el-icon :size="18">
+        <button
+          class="ctrl-btn play-btn"
+          :disabled="!musicList.length"
+          :title="isPlaying ? '暂停' : '播放'"
+          @click="togglePlay"
+        >
+          <el-icon :size="16">
             <VideoPause v-if="isPlaying" />
             <VideoPlay v-else />
           </el-icon>
         </button>
-        <button class="ctrl-btn" :disabled="!musicList.length" @click="nextTrack">
+        <button class="ctrl-btn" :disabled="!musicList.length" title="下一首" @click="nextTrack">
           <el-icon :size="14"><RefreshRight /></el-icon>
-        </button>
-        <button class="ctrl-btn collapse-btn" title="收起" @click="collapsed = true">
-          <el-icon :size="12"><ArrowDown /></el-icon>
         </button>
       </div>
 
-      <!-- 进度条 -->
-      <div v-if="currentMusic" class="player-progress">
+      <!-- 音乐信息 + 音频跳动指示器 -->
+      <div class="player-info">
+        <div v-if="isPlaying" class="audio-bars"><span></span><span></span><span></span></div>
+        <div class="info-text">
+          <span class="player-title" :title="currentMusic?.title">
+            {{ currentMusic?.title || '暂无音乐' }}
+          </span>
+          <span v-if="currentMusic?.artist" class="player-artist">— {{ currentMusic.artist }}</span>
+        </div>
+      </div>
+
+      <!-- 进度条 + 时间 -->
+      <div class="player-progress">
+        <span class="progress-time">{{ formatTime(currentTime) }}</span>
         <div class="progress-bar" @click="seek">
           <div class="progress-fill" :style="{ width: progressPercent + '%' }"></div>
         </div>
-        <span class="progress-time">{{ formatTime(currentTime) }}</span>
+        <span class="progress-time">{{ formatTime(duration) }}</span>
       </div>
+
+      <!-- 收起按钮 -->
+      <button class="ctrl-btn collapse-btn" title="收起" @click="collapsed = true">
+        <el-icon :size="12"><ArrowDown /></el-icon>
+      </button>
     </template>
 
-    <!-- 收起状态：只显示小图标 -->
+    <!-- 收起状态：小播放按钮 -->
     <template v-else>
-      <div class="mini-toggle" @click="collapsed = false">
-        <div class="mini-cover" :class="{ spinning: isPlaying }">
-          <el-icon :size="16" color="#fff"><Headset /></el-icon>
-          <div v-if="isPlaying" class="playing-bar"><span></span><span></span><span></span></div>
-        </div>
-      </div>
+      <button
+        class="ctrl-btn play-btn mini-play"
+        :title="isPlaying ? '暂停' : '展开播放器'"
+        @click="collapsed = false"
+      >
+        <el-icon :size="16">
+          <VideoPause v-if="isPlaying" />
+          <VideoPlay v-else />
+        </el-icon>
+      </button>
     </template>
 
     <!-- 隐藏的音频元素 -->
@@ -74,20 +80,18 @@
 <script setup>
 /**
  * 全局音乐播放器组件
- * 作用：前台页面固定浮动播放器，自动循环播放
+ * 作用：前台页面底部浮动播放条，自动循环播放
  *
  * 功能特性：
- *   - 自动播放（用户首次交互后生效）
+ *   - 自动播放（用户首次交互后生效，解决浏览器自动播放限制）
  *   - 循环播放列表
- *   - 播放/暂停控制
- *   - 上一首/下一首
- *   - 进度条显示
+ *   - 播放/暂停/上一首/下一首控制
+ *   - 进度条显示与跳转
  *   - 收起/展开状态
- *   - 旋转封面动画
+ *   - 音频跳动指示器动画
  */
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue';
 import {
-  Headset,
   VideoPause,
   VideoPlay,
   RefreshLeft,
@@ -102,7 +106,7 @@ const musicList = ref([]);
 /** 当前播放索引 */
 const currentIndex = ref(-1);
 
-/** 当前播放音乐 */
+/** 当前播放音乐对象 */
 const currentMusic = computed(() => {
   if (currentIndex.value >= 0 && currentIndex.value < musicList.value.length) {
     return musicList.value[currentIndex.value];
@@ -110,7 +114,7 @@ const currentMusic = computed(() => {
   return null;
 });
 
-/** 当前音乐URL */
+/** 当前音乐文件URL */
 const audioUrl = computed(() => {
   if (currentMusic.value) {
     return currentMusic.value.file_path;
@@ -124,10 +128,10 @@ const audioRef = ref(null);
 /** 是否正在播放 */
 const isPlaying = ref(false);
 
-/** 当前播放时间 */
+/** 当前播放时间（秒） */
 const currentTime = ref(0);
 
-/** 音频总时长 */
+/** 音频总时长（秒） */
 const duration = ref(0);
 
 /** 进度百分比 */
@@ -138,14 +142,14 @@ const progressPercent = computed(() => {
   return 0;
 });
 
-/** 是否收起 */
+/** 是否收起为迷你模式 */
 const collapsed = ref(false);
 
-/** 用户是否已交互过 */
+/** 用户是否已交互过（用于解决浏览器自动播放限制） */
 const hasUserInteracted = ref(false);
 
 /**
- * 格式化时间（秒 -> mm:ss）
+ * 格式化时间为 mm:ss 格式
  * @param {number} sec - 秒数
  * @returns {string} 格式化后的时间字符串
  */
@@ -158,16 +162,17 @@ function formatTime(sec) {
 
 /**
  * 获取音乐列表
+ * 从后端拉取已启用的音乐，初始化播放索引
  */
 async function fetchMusicList() {
   try {
     const res = await getMusicList();
     if (res.code === 200 && res.data?.length > 0) {
       musicList.value = res.data;
-      // 自动播放第一首
+      // 设置第一首为当前曲目
       if (currentIndex.value === -1 && musicList.value.length > 0) {
         currentIndex.value = 0;
-        // 用户已交互后自动播放
+        // 用户已交互过则自动播放
         if (hasUserInteracted.value) {
           nextTick(() => {
             playCurrent();
@@ -182,19 +187,19 @@ async function fetchMusicList() {
 
 /**
  * 播放当前音乐
+ * 浏览器自动播放限制可能导致 play() 失败
  */
 async function playCurrent() {
   if (!audioRef.value) return;
   try {
     await audioRef.value.play();
   } catch (e) {
-    // 自动播放被浏览器阻止时的处理
-    console.warn('自动播放被阻止，需要用户交互', e);
+    console.warn('自动播放被阻止，等待用户交互', e);
   }
 }
 
 /**
- * 切换播放/暂停
+ * 切换播放/暂停状态
  */
 function togglePlay() {
   if (!audioRef.value) return;
@@ -207,7 +212,7 @@ function togglePlay() {
 }
 
 /**
- * 上一首
+ * 切换到上一首
  */
 function prevTrack() {
   if (!musicList.value.length) return;
@@ -219,7 +224,7 @@ function prevTrack() {
 }
 
 /**
- * 下一首
+ * 切换到下一首
  */
 function nextTrack() {
   if (!musicList.value.length) return;
@@ -231,8 +236,8 @@ function nextTrack() {
 }
 
 /**
- * 跳转到指定位置
- * @param {MouseEvent} e - 点击事件
+ * 点击进度条跳转到指定位置
+ * @param {MouseEvent} e - 鼠标点击事件
  */
 function seek(e) {
   if (!audioRef.value || !duration.value) return;
@@ -244,7 +249,7 @@ function seek(e) {
 }
 
 /**
- * 时间更新回调
+ * 音频时间更新回调
  */
 function onTimeUpdate() {
   if (audioRef.value) {
@@ -253,14 +258,14 @@ function onTimeUpdate() {
 }
 
 /**
- * 播放结束回调（自动播放下一首）
+ * 播放结束回调，自动播放下一首
  */
 function onEnded() {
   nextTrack();
 }
 
 /**
- * 加载元数据回调
+ * 音频元数据加载完成回调
  */
 function onLoadedMetadata() {
   if (audioRef.value) {
@@ -280,13 +285,12 @@ watch(audioUrl, () => {
 });
 
 /**
- * 用户首次交互检测：监听全局点击事件
- * 解决浏览器自动播放限制
+ * 用户首次交互检测
+ * 浏览器要求用户必须先与页面交互才能自动播放音频
  */
 function handleFirstInteraction() {
   if (!hasUserInteracted.value && musicList.value.length > 0) {
     hasUserInteracted.value = true;
-    // 尝试自动播放
     if (currentIndex.value === -1) {
       currentIndex.value = 0;
     }
@@ -302,7 +306,7 @@ function handleFirstInteraction() {
 
 onMounted(() => {
   fetchMusicList();
-  // 添加用户交互监听（解决自动播放限制）
+  // 添加用户交互监听（解决浏览器自动播放限制）
   document.addEventListener('click', handleFirstInteraction);
   document.addEventListener('keydown', handleFirstInteraction);
   document.addEventListener('touchstart', handleFirstInteraction);
@@ -320,183 +324,64 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-/* 播放器容器 */
+/* ========== 播放器容器 ========== */
 .music-player {
   position: fixed;
-  bottom: 24px;
-  right: 24px;
+  bottom: 0;
+  left: 0;
+  right: 0;
   z-index: 9999;
   display: flex;
   align-items: center;
   gap: 16px;
-  padding: 14px 18px;
-  background: linear-gradient(135deg, rgba(30, 10, 15, 0.92), rgba(15, 20, 35, 0.92));
-  border: 1px solid rgba(220, 38, 38, 0.25);
-  border-radius: 50px;
-  backdrop-filter: blur(12px);
-  box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.5),
-    0 0 20px rgba(220, 38, 38, 0.15);
-  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-  animation: player-float-in 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
-  min-width: 280px;
+  padding: 10px 24px;
+  background: linear-gradient(180deg, rgba(10, 5, 8, 0.85), rgba(15, 8, 12, 0.95));
+  border-top: 1px solid rgba(220, 38, 38, 0.2);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.4);
+  transition: all 0.3s ease;
+  animation: player-slide-up 0.5s ease-out;
 }
 
-/* 展开状态动画 */
-@keyframes player-float-in {
+@keyframes player-slide-up {
   from {
     opacity: 0;
-    transform: translateY(30px) scale(0.9);
+    transform: translateY(100%);
   }
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: translateY(0);
   }
 }
 
-/* 收起状态 */
+/* 收起状态：右下角小圆按钮 */
 .music-player.collapsed {
-  padding: 8px;
-  min-width: unset;
-  gap: 0;
-  cursor: pointer;
-}
-
-/* 封面区域 */
-.player-cover {
-  position: relative;
-  width: 44px;
-  height: 44px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-}
-
-.cover-ring {
-  position: absolute;
-  inset: 0;
+  left: auto;
+  right: 24px;
+  bottom: 24px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  backdrop-filter: none;
+  box-shadow: none;
   border-radius: 50%;
-  border: 2px solid rgba(220, 38, 38, 0.4);
-  animation: ring-rotate 3s linear infinite;
 }
 
-.cover-inner {
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #7f1d1d, #dc2626);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 0 12px rgba(220, 38, 38, 0.5);
-  transition: transform 0.3s ease;
-}
-
-/* 封面旋转动画 */
-.player-cover.spinning .cover-inner {
-  animation: cover-spin 4s linear infinite;
-}
-
-@keyframes cover-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@keyframes ring-rotate {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-/* 播放中的音频条动画 */
-.playing-bar {
-  position: absolute;
-  bottom: -6px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  gap: 3px;
-  align-items: flex-end;
-}
-
-.playing-bar span {
-  width: 3px;
-  height: 4px;
-  background: #fca5a5;
-  border-radius: 2px;
-  animation: bar-bounce 0.8s ease-in-out infinite;
-}
-
-.playing-bar span:nth-child(1) {
-  animation-delay: 0s;
-  height: 6px;
-}
-.playing-bar span:nth-child(2) {
-  animation-delay: 0.2s;
-  height: 10px;
-}
-.playing-bar span:nth-child(3) {
-  animation-delay: 0.4s;
-  height: 8px;
-}
-
-@keyframes bar-bounce {
-  0%,
-  100% {
-    transform: scaleY(0.4);
-  }
-  50% {
-    transform: scaleY(1);
-  }
-}
-
-/* 音乐信息 */
-.player-info {
-  display: flex;
-  flex-direction: column;
-  min-width: 120px;
-  max-width: 160px;
-}
-
-.player-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: #fff;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.player-artist {
-  font-size: 11px;
-  color: #94a3b8;
-  margin-top: 2px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* 控制按钮组 */
+/* ========== 控制按钮组 ========== */
 .player-controls {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
+  flex-shrink: 0;
 }
 
+/* 通用按钮样式 */
 .ctrl-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 30px;
+  height: 30px;
   border: none;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.08);
@@ -516,36 +401,116 @@ onUnmounted(() => {
   cursor: not-allowed;
 }
 
+/* 播放按钮：红色主色 */
 .play-btn {
-  width: 38px;
-  height: 38px;
+  width: 36px;
+  height: 36px;
   background: linear-gradient(135deg, #dc2626, #991b1b) !important;
   color: #fff !important;
-  box-shadow: 0 0 12px rgba(220, 38, 38, 0.4);
+  box-shadow: 0 0 10px rgba(220, 38, 38, 0.4);
 }
 
 .play-btn:hover:not(:disabled) {
-  box-shadow: 0 0 18px rgba(220, 38, 38, 0.6);
+  box-shadow: 0 0 16px rgba(220, 38, 38, 0.6);
 }
 
-/* 进度条 */
-.player-progress {
-  position: absolute;
-  bottom: 4px;
-  left: 20px;
-  right: 20px;
+/* 收起状态的迷你播放按钮 */
+.mini-play {
+  width: 44px;
+  height: 44px;
+  box-shadow: 0 4px 16px rgba(220, 38, 38, 0.4);
+}
+
+/* ========== 音乐信息区 ========== */
+.player-info {
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
+  flex-shrink: 1;
+  overflow: hidden;
+}
+
+.info-text {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.player-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: #fff;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.player-artist {
+  font-size: 11px;
+  color: #94a3b8;
+  flex-shrink: 0;
+}
+
+/* 音频跳动指示器 */
+.audio-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.audio-bars span {
+  width: 3px;
+  background: #f87171;
+  border-radius: 2px;
+  animation: audio-bar 0.8s ease-in-out infinite;
+}
+
+.audio-bars span:nth-child(1) {
+  animation-delay: 0s;
+}
+.audio-bars span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+.audio-bars span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes audio-bar {
+  0%,
+  100% {
+    height: 4px;
+  }
+  50% {
+    height: 14px;
+  }
+}
+
+/* ========== 进度条区 ========== */
+.player-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+  max-width: 300px;
 }
 
 .progress-bar {
   flex: 1;
-  height: 3px;
+  height: 4px;
   background: rgba(255, 255, 255, 0.1);
   border-radius: 2px;
   cursor: pointer;
   overflow: hidden;
+  transition: height 0.2s ease;
+}
+
+.progress-bar:hover {
+  height: 6px;
 }
 
 .progress-fill {
@@ -556,53 +521,46 @@ onUnmounted(() => {
 }
 
 .progress-time {
-  font-size: 10px;
+  font-size: 11px;
   color: #64748b;
-  min-width: 32px;
-  text-align: right;
+  min-width: 36px;
+  text-align: center;
+  flex-shrink: 0;
 }
 
-/* 收起状态 */
-.mini-toggle {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+/* 收起按钮 */
+.collapse-btn {
+  flex-shrink: 0;
 }
 
-.mini-cover {
-  position: relative;
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #7f1d1d, #dc2626);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  box-shadow: 0 0 16px rgba(220, 38, 38, 0.4);
-  transition: transform 0.3s ease;
-}
-
-.mini-cover.spinning {
-  animation: cover-spin 4s linear infinite;
-}
-
-/* 响应式：移动端调整 */
-@media (max-width: 640px) {
+/* ========== 响应式：移动端 ========== */
+@media (max-width: 768px) {
   .music-player {
-    bottom: 16px;
-    right: 16px;
-    padding: 10px 14px;
-    min-width: 240px;
-    gap: 12px;
+    padding: 8px 12px;
+    gap: 10px;
   }
 
-  .player-info {
-    max-width: 100px;
+  .player-progress {
+    max-width: 120px;
+  }
+
+  .player-artist {
+    display: none;
   }
 
   .progress-time {
+    font-size: 10px;
+    min-width: 30px;
+  }
+}
+
+@media (max-width: 480px) {
+  .player-progress {
     display: none;
+  }
+
+  .player-info {
+    flex: 1;
   }
 }
 </style>

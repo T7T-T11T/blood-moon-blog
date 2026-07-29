@@ -108,6 +108,9 @@
         <span v-if="siteDescription" class="footer-desc">{{ siteDescription }}</span>
       </div>
     </footer>
+
+    <!-- 全局底部音乐播放器 -->
+    <MusicPlayer />
   </div>
 </template>
 
@@ -117,6 +120,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { Search, Setting } from '@element-plus/icons-vue';
 import { getSettings } from '../api/settings';
 import heroBg from '../assets/hero-bg.jpg';
+import MusicPlayer from '../components/MusicPlayer.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -593,6 +597,7 @@ onUnmounted(() => {
 .footer {
   border-top: 1px solid var(--border);
   background: var(--bg-sidebar);
+  padding-bottom: 60px; /* 为底部音乐播放器留出空间 */
 }
 
 .footer-inner {
