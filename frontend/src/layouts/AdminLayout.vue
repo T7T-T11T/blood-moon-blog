@@ -182,32 +182,30 @@ const statsLoading = ref(false);
 /** 定时刷新定时器ID */
 let statsTimer = null;
 
+/** 自动刷新是否已暂停（因限流等原因） */
+let autoRefreshPaused = false;
+
 /** 上次待审核数量（用于检测变化并弹窗通知） */
 let lastPendingCount = -1;
 
 /**
  * 获取评论统计数据
- * 立即获取一次，之后每30秒自动刷新
- * 增强错误处理：接口失败时显示调试日志，便于排查
+ * 立即获取一次，之后每15秒自动刷新
+ * 遇到 429 限流时自动停止定时器，避免持续报错
  */
 async function fetchCommentStats() {
   statsLoading.value = true;
   try {
     const res = await getCommentStats();
-    console.log('[评论统计] 接口响应:', res);
+    autoRefreshPaused = false;
 
     if (res.code === 200 && res.data) {
       const newPending = res.data.pending || 0;
       const newTotal =
         (res.data.pending || 0) + (res.data.approved || 0) + (res.data.rejected || 0);
 
-      // 待审核数量变化时更新徽章
       pendingComments.value = newPending;
       totalComments.value = newTotal;
-
-      console.log(
-        `[评论统计] 待审核: ${newPending}, 已通过: ${res.data.approved}, 已拒绝: ${res.data.rejected}`
-      );
 
       // 首次加载：如果有待审核评论，显示欢迎通知
       if (lastPendingCount === -1 && newPending > 0) {
@@ -216,7 +214,6 @@ async function fetchCommentStats() {
           message: `当前有 ${newPending} 条评论等待审核，请到评论管理处理`,
           type: 'warning',
           duration: 6000,
-          dangerouslyUseHTMLString: false,
           onClick: () => {
             router.push('/admin/comments');
           }
@@ -239,33 +236,69 @@ async function fetchCommentStats() {
       console.warn('[评论统计] 接口返回异常:', res?.message || '未知错误');
     }
   } catch (e) {
-    console.error('[评论统计] 获取失败:', e?.message);
-    // 网络错误不更新徽章，保持上次状态
+    // 429 限流：停止自动刷新，提示用户
+    if (e?.response?.status === 429) {
+      if (!autoRefreshPaused) {
+        autoRefreshPaused = true;
+        stopStatsTimer();
+        ElNotification({
+          title: '⏱️ 自动刷新已暂停',
+          message: '评论统计请求过于频繁，已自动暂停轮询。点击刷新按钮可手动刷新。',
+          type: 'info',
+          duration: 4000
+        });
+      }
+    } else {
+      console.error('[评论统计] 获取失败:', e?.message);
+    }
   } finally {
     statsLoading.value = false;
   }
 }
 
 /**
+ * 停止评论统计定时刷新
+ */
+function stopStatsTimer() {
+  if (statsTimer) {
+    clearInterval(statsTimer);
+    statsTimer = null;
+  }
+}
+
+/**
+ * 启动评论统计定时刷新
+ * 每 15 秒自动获取一次
+ */
+function startStatsTimer() {
+  stopStatsTimer();
+  statsTimer = setInterval(() => {
+    if (!autoRefreshPaused) {
+      fetchCommentStats();
+    }
+  }, 15000);
+}
+
+/**
  * 手动刷新评论统计
- * 用于用户主动检查新评论
+ * 同时重启自动刷新定时器（如果因限流被暂停）
  */
 function refreshStats() {
+  if (autoRefreshPaused) {
+    autoRefreshPaused = false;
+    startStatsTimer();
+  }
   fetchCommentStats();
   ElMessage.success('正在刷新评论统计...');
 }
 
 onMounted(() => {
   fetchCommentStats();
-  // 定时刷新：每15秒获取一次待审核评论数（更频繁以便及时发现新评论）
-  statsTimer = setInterval(fetchCommentStats, 15000);
+  startStatsTimer();
 });
 
 onUnmounted(() => {
-  if (statsTimer) {
-    clearInterval(statsTimer);
-    statsTimer = null;
-  }
+  stopStatsTimer();
 });
 
 /** 内容管理菜单项（markRaw 避免图标组件被转为响应式） */

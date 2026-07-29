@@ -219,7 +219,12 @@ async function loadComments() {
       }
     }
   } catch (e) {
-    console.error('加载评论列表失败:', e);
+    // 429 限流友好提示，不重复弹窗
+    if (e?.response?.status === 429) {
+      ElMessage.warning('请求过于频繁，请稍后再试');
+    } else {
+      console.error('加载评论列表失败:', e);
+    }
   } finally {
     loading.value = false;
   }

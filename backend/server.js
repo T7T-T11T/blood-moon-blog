@@ -115,13 +115,15 @@ const loginLimiter = rateLimit({
 })
 
 /**
- * 评论接口限流：3 次/分钟/IP
- * 防止垃圾评论刷屏
+ * 评论读取接口限流：30 次/分钟/IP
+ * 用于后台仪表盘自动轮询评论统计、管理端翻页浏览
+ * 宽松限流，防止频繁刷新触发误报
+ * 评论提交（POST）的严格限流在 comments.js 内部挂载
  */
-const commentLimiter = rateLimit({
+const commentReadLimiter = rateLimit({
   windowMs: 60 * 1000,
-  max: 3,
-  message: { code: 429, message: '评论提交过于频繁，请稍后再试' },
+  max: 30,
+  message: { code: 429, message: '请求过于频繁，请稍后再试' },
   standardHeaders: true,
   legacyHeaders: false
 })
@@ -153,7 +155,8 @@ app.use('/api/auth', authRoutes)                                   // 认证（�
 app.use('/api/categories', categoryRoutes)                         // 分类（公开 + 管理）
 app.use('/api/tags', tagRoutes)                                    // 标签（公开 + 管理）
 app.use('/api/articles', articleRoutes)                            // 博客（包含公开和管理接口）
-app.use('/api/comments', commentLimiter, commentRoutes)            // 评论（公开浏览 + 管理，限流防刷屏）
+// 评论统计单独注册（无限流，仅简单计数查询，供后台仪表盘 15s 轮询）
+app.use('/api/comments', commentReadLimiter, commentRoutes)       // 评论（读取用宽松限流，写入严格限流在 comments.js 内）
 app.use('/api/links', linkRoutes)                                  // 友链（公开浏览 + 管理）
 app.use('/api/settings', settingRoutes)                            // 网站设置（公开读取 + 管理）
 app.use('/api/music', musicRoutes)                                 // 音乐（公开播放 + 管理）

@@ -52,6 +52,10 @@ request.interceptors.response.use(
         localStorage.removeItem('username');
         ElMessage.error('登录已过期，请重新登录');
         router.push('/login');
+      } else if (status === 429) {
+        // 限流错误：不弹 ElMessage 打扰，交由调用方处理
+        // 后台自动刷新遇到 429 时需要自行停止定时器
+        console.warn('[429] 请求被限流:', data?.message || '请求过于频繁');
       } else {
         // 其他错误，显示错误信息
         ElMessage.error(data.message || '请求失败');

@@ -15,10 +15,23 @@
  */
 
 const express = require('express');
+const rateLimit = require('express-rate-limit');
 const pool = require('../config/db');
 const { authMiddleware } = require('../middleware/auth');
 
 const router = express.Router();
+
+/**
+ * 评论提交限流：3 次/分钟/IP（仅用于 POST 发表评论接口）
+ * 防止垃圾评论刷屏，与读取接口的宽松限流解耦
+ */
+const commentPostLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 3,
+  message: { code: 429, message: '评论提交过于频繁，请稍后再试' },
+  standardHeaders: true,
+  legacyHeaders: false
+});
 
 // ==================== 管理接口（必须在公开参数路由之前注册，避免被 /:articleId 误匹配） ====================
 
@@ -198,7 +211,7 @@ router.get('/:articleId', async (req, res) => {
  * @param {Object} res - Express 响应对象
  * @returns {Object} JSON 响应，data 包含新评论的 id
  */
-router.post('/:articleId', async (req, res) => {
+router.post('/:articleId', commentPostLimiter, async (req, res) => {
   try {
     const { articleId } = req.params;
     const { nickname, content, parent_id } = req.body;
