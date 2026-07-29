@@ -66,6 +66,23 @@
         </router-link>
       </section>
 
+      <!-- 分享栏 -->
+      <section class="share-bar reveal">
+        <span class="share-label">分享到</span>
+        <button class="share-btn wechat" @click="shareWechat">
+          <el-icon><ChatDotRound /></el-icon>
+          <span>微信</span>
+        </button>
+        <button class="share-btn weibo" @click="shareWeibo">
+          <el-icon><Share /></el-icon>
+          <span>微博</span>
+        </button>
+        <button class="share-btn copy" @click="copyLink">
+          <el-icon><Link /></el-icon>
+          <span>复制链接</span>
+        </button>
+      </section>
+
       <!-- 上一篇 / 下一篇 -->
       <footer class="article-footer reveal">
         <router-link
@@ -221,7 +238,16 @@ import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { marked } from 'marked';
 import { ElMessage } from 'element-plus';
-import { ArrowLeft, ArrowRight, Clock, View, Top } from '@element-plus/icons-vue';
+import {
+  ArrowLeft,
+  ArrowRight,
+  Clock,
+  View,
+  Top,
+  ChatDotRound,
+  Share,
+  Link
+} from '@element-plus/icons-vue';
 import { getArticleDetail } from '../../api/articles';
 import { getComments, postComment } from '../../api/comments';
 
@@ -445,6 +471,58 @@ function goBack() {
 /** 返回首页 */
 function goHome() {
   router.push('/');
+}
+
+/**
+ * 获取当前文章完整链接
+ * @returns {string}
+ */
+function getArticleUrl() {
+  return window.location.href;
+}
+
+/**
+ * 获取文章标题
+ * @returns {string}
+ */
+function getArticleTitle() {
+  return article.value?.title || '';
+}
+
+/** 微信分享：复制链接并提示 */
+function shareWechat() {
+  copyToClipboard(getArticleUrl());
+  ElMessage.success('链接已复制，快去微信粘贴分享吧');
+}
+
+/** 微博分享：跳转到微博分享页 */
+function shareWeibo() {
+  const url = encodeURIComponent(getArticleUrl());
+  const title = encodeURIComponent(getArticleTitle());
+  window.open(`https://service.weibo.com/share/share.php?url=${url}&title=${title}`, '_blank');
+}
+
+/** 复制链接 */
+function copyLink() {
+  copyToClipboard(getArticleUrl());
+  ElMessage.success('链接已复制到剪贴板');
+}
+
+/**
+ * 复制文本到剪贴板
+ * @param {string} text
+ */
+function copyToClipboard(text) {
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(text);
+  } else {
+    const input = document.createElement('input');
+    input.value = text;
+    document.body.appendChild(input);
+    input.select();
+    document.execCommand('copy');
+    document.body.removeChild(input);
+  }
 }
 
 /**
@@ -743,6 +821,63 @@ onUnmounted(() => {
   background: var(--primary);
   color: #fff;
   transform: translateY(-2px);
+}
+
+/* ========== 分享栏 ========== */
+.share-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 40px;
+  padding-top: 28px;
+  border-top: 1px solid var(--border);
+}
+
+.share-label {
+  font-size: 13px;
+  color: var(--text-tertiary);
+  margin-right: 4px;
+}
+
+.share-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: #fff;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition:
+    color 0.25s var(--ease-out),
+    border-color 0.25s var(--ease-out),
+    background 0.25s var(--ease-out),
+    transform 0.25s var(--ease-out);
+}
+
+.share-btn:hover {
+  transform: translateY(-2px);
+}
+
+.share-btn.wechat:hover {
+  color: #07c160;
+  border-color: #07c160;
+  background: rgba(7, 193, 96, 0.06);
+}
+
+.share-btn.weibo:hover {
+  color: #e6162d;
+  border-color: #e6162d;
+  background: rgba(230, 22, 45, 0.06);
+}
+
+.share-btn.copy:hover {
+  color: var(--primary);
+  border-color: var(--primary);
+  background: var(--primary-bg);
 }
 
 /* ========== 上一篇 / 下一篇 ========== */
@@ -1192,6 +1327,14 @@ onUnmounted(() => {
     bottom: 20px;
     width: 44px;
     height: 44px;
+  }
+  .share-bar {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .share-btn {
+    padding: 6px 12px;
+    font-size: 12px;
   }
 }
 </style>

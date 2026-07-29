@@ -78,8 +78,13 @@
     </div>
 
     <!-- 新增/编辑对话框 -->
-    <el-dialog v-model="dialogVisible" :title="isEditing ? '编辑分类' : '新增分类'" width="500px">
-      <el-form ref="formRef" :model="form" :rules="rules" label-width="80px">
+    <el-dialog
+      v-model="dialogVisible"
+      :title="isEditing ? '编辑分类' : '新增分类'"
+      width="500px"
+      class="category-dialog"
+    >
+      <el-form ref="formRef" :model="form" :rules="rules" label-width="80px" class="category-form">
         <el-form-item label="名称" prop="name">
           <el-input v-model="form.name" placeholder="请输入分类名称" />
         </el-form-item>
@@ -322,5 +327,13 @@ onMounted(() => {
   font-size: 15px;
   color: var(--text-secondary);
   margin: 12px 0 20px;
+}
+
+/* 对话框内容滚动 */
+.category-dialog :deep(.el-dialog__body) {
+  max-height: 60vh;
+  overflow-y: auto;
+  padding-top: 20px;
+  padding-bottom: 8px;
 }
 </style>

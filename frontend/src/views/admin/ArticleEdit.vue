@@ -31,6 +31,7 @@
           <el-form-item prop="content" class="content-form-item">
             <div class="editor-wrapper">
               <MdEditor
+                ref="mdEditorRef"
                 v-model="form.content"
                 :toolbars="toolbars"
                 placeholder="开始写作..."
@@ -112,6 +113,36 @@
           </div>
         </div>
 
+        <!-- 媒体上传 -->
+        <div class="panel-section">
+          <h3 class="panel-title">媒体上传</h3>
+          <div class="media-buttons">
+            <input
+              ref="audioInputRef"
+              type="file"
+              accept="audio/*"
+              style="display: none"
+              @change="handleAudioSelected"
+            />
+            <input
+              ref="videoInputRef"
+              type="file"
+              accept="video/*"
+              style="display: none"
+              @change="handleVideoSelected"
+            />
+            <el-button size="small" :loading="uploadingAudio" @click="selectAudio">
+              <el-icon><Headset /></el-icon>
+              <span>上传音频</span>
+            </el-button>
+            <el-button size="small" :loading="uploadingVideo" @click="selectVideo">
+              <el-icon><VideoCamera /></el-icon>
+              <span>上传视频</span>
+            </el-button>
+          </div>
+          <p class="media-tip">上传后自动插入编辑器光标处</p>
+        </div>
+
         <!-- 文章信息（仅编辑模式显示） -->
         <div v-if="!isNew && article" class="panel-section">
           <h3 class="panel-title">文章信息</h3>
@@ -141,21 +172,25 @@
  *       支持保存、保存并发布、存为草稿三种操作。编辑模式下加载已有文章详情。
  * 依赖 API：getAdminArticleDetail / addArticle / updateArticle / getCategories / getTags
  */
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, nextTick } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import { MdEditor } from 'md-editor-v3';
 import 'md-editor-v3/lib/preview.css';
-import { Check, Promotion, Document } from '@element-plus/icons-vue';
+import { Check, Promotion, Document, Headset, VideoCamera } from '@element-plus/icons-vue';
 import { getAdminArticleDetail, addArticle, updateArticle } from '@/api/articles';
 import { getCategories } from '@/api/categories';
 import { getTags } from '@/api/tags';
+import { uploadAudio, uploadVideo } from '@/api/upload';
 
 const route = useRoute();
 const router = useRouter();
 
 /** 表单引用 */
 const formRef = ref(null);
+
+/** MdEditor 组件引用 */
+const mdEditorRef = ref(null);
 
 /** 是否为新建模式（无路由 id 参数） */
 const isNew = computed(() => !route.params.id);
@@ -165,6 +200,18 @@ const article = ref(null);
 
 /** 保存中状态 */
 const saving = ref(false);
+
+/** 音频上传中状态 */
+const uploadingAudio = ref(false);
+
+/** 视频上传中状态 */
+const uploadingVideo = ref(false);
+
+/** 音频文件 input 引用 */
+const audioInputRef = ref(null);
+
+/** 视频文件 input 引用 */
+const videoInputRef = ref(null);
 
 /** 分类列表 */
 const categories = ref([]);
@@ -354,6 +401,96 @@ function handleCancel() {
   router.push('/admin/articles');
 }
 
+/** 触发音频文件选择 */
+function selectAudio() {
+  audioInputRef.value?.click();
+}
+
+/** 触发视频文件选择 */
+function selectVideo() {
+  videoInputRef.value?.click();
+}
+
+/**
+ * 将文本插入编辑器光标位置
+ * @param {string} text - 要插入的文本
+ */
+function insertIntoEditor(text) {
+  // 优先尝试通过 MdEditor 内部的 textarea 插入
+  const wrapper = mdEditorRef.value?.$el;
+  const textarea = wrapper?.querySelector('textarea');
+  if (textarea) {
+    const start = textarea.selectionStart || 0;
+    const end = textarea.selectionEnd || 0;
+    const value = form.value.content || '';
+    form.value.content = value.substring(0, start) + text + value.substring(end);
+    // 恢复光标位置
+    nextTick(() => {
+      textarea.selectionStart = textarea.selectionEnd = start + text.length;
+      textarea.focus();
+    });
+  } else {
+    // 兜底：追加到末尾
+    form.value.content = (form.value.content || '') + '\n' + text + '\n';
+  }
+}
+
+/**
+ * 处理音频文件选择并上传
+ * @param {Event} e - input change 事件
+ */
+async function handleAudioSelected(e) {
+  const file = e.target.files?.[0];
+  if (!file) return;
+  uploadingAudio.value = true;
+  try {
+    const res = await uploadAudio(file);
+    if (res.code === 200) {
+      const url = res.data?.url || '';
+      const name = res.data?.originalName || '音频';
+      const tag = `\n<audio controls src="${url}" style="width:100%">${name}</audio>\n`;
+      insertIntoEditor(tag);
+      ElMessage.success('音频上传成功');
+    } else {
+      ElMessage.error(res.message || '上传失败');
+    }
+  } catch (err) {
+    console.error('音频上传失败:', err);
+    ElMessage.error('音频上传失败');
+  } finally {
+    uploadingAudio.value = false;
+    if (audioInputRef.value) audioInputRef.value.value = '';
+  }
+}
+
+/**
+ * 处理视频文件选择并上传
+ * @param {Event} e - input change 事件
+ */
+async function handleVideoSelected(e) {
+  const file = e.target.files?.[0];
+  if (!file) return;
+  uploadingVideo.value = true;
+  try {
+    const res = await uploadVideo(file);
+    if (res.code === 200) {
+      const url = res.data?.url || '';
+      const name = res.data?.originalName || '视频';
+      const tag = `\n<video controls src="${url}" style="width:100%;max-height:480px">${name}</video>\n`;
+      insertIntoEditor(tag);
+      ElMessage.success('视频上传成功');
+    } else {
+      ElMessage.error(res.message || '上传失败');
+    }
+  } catch (err) {
+    console.error('视频上传失败:', err);
+    ElMessage.error('视频上传失败');
+  } finally {
+    uploadingVideo.value = false;
+    if (videoInputRef.value) videoInputRef.value.value = '';
+  }
+}
+
 onMounted(() => {
   loadCategories();
   loadTags();
@@ -444,9 +581,19 @@ onMounted(() => {
 }
 
 .editor-wrapper :deep(.md-editor__toolbar) {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  gap: 2px;
   background: var(--bg-body);
   border-bottom: 1px solid var(--border);
   padding: 8px 12px;
+}
+
+.editor-wrapper :deep(.md-editor__toolbar > *) {
+  display: inline-flex !important;
+  flex-direction: row !important;
 }
 
 .editor-wrapper :deep(.md-editor__content) {
@@ -546,6 +693,24 @@ onMounted(() => {
 .action-buttons .el-button {
   width: 100%;
   justify-content: flex-start;
+}
+
+/* 媒体上传按钮 */
+.media-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.media-buttons .el-button {
+  width: 100%;
+  justify-content: flex-start;
+}
+
+.media-tip {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--text-tertiary);
 }
 
 /* ========== 响应式 ========== */
