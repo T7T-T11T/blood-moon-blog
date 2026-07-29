@@ -1,5 +1,11 @@
 # 版本历史
 
+## v1.2.1 (2026-07-29)
+
+- fix(db): 给 articles 表增加 cover_image 字段，补充 upgrade.sql 升级脚本
+- fix(articles): 修复 /api/articles/public 系列接口中 LIMIT/OFFSET 传 number 类型导致 ER_WRONG_ARGUMENTS 错误
+- fix(categories): 修复 ORDER BY 子句引用了 SELECT 中没有的别名 c.sort_order 导致的 500 错误
+
 ## v1.2.0 (2026-07-29)
 
 - 修复 backend `dotenv` 版本号错误（^17.4.2 -> ^16.4.5），解决 npm install 失败问题

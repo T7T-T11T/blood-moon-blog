@@ -86,7 +86,7 @@ router.get('/public', async (req, res) => {
        WHERE ${whereClause}
        ORDER BY a.created_at DESC
        LIMIT ? OFFSET ?`,
-      [...params, pageSize, offset]
+      [...params, String(pageSize), String(offset)]
     );
 
     // 为每篇文章获取标签
@@ -139,7 +139,7 @@ router.get('/public/latest', async (req, res) => {
        WHERE a.status = '已发布'
        ORDER BY a.created_at DESC
        LIMIT ?`,
-      [limit]
+      [String(limit)]
     );
 
     // 获取标签
@@ -180,7 +180,7 @@ router.get('/public/hot', async (req, res) => {
        WHERE a.status = '已发布'
        ORDER BY a.view_count DESC
        LIMIT ?`,
-      [limit]
+      [String(limit)]
     );
 
     res.json({ code: 200, data: rows });
@@ -308,7 +308,7 @@ router.get('/public/tag/:slug', async (req, res) => {
        WHERE a.status = '已发布' AND at.tag_id = ?
        ORDER BY a.created_at DESC
        LIMIT ? OFFSET ?`,
-      [tag.id, pageSize, offset]
+      [tag.id, String(pageSize), String(offset)]
     );
 
     // 获取标签

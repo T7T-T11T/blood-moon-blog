@@ -43,9 +43,13 @@ CREATE TABLE IF NOT EXISTS articles (
 
 -- 为已存在的 articles 表添加 category_id 字段
 ALTER TABLE articles
-    ADD COLUMN IF NOT EXISTS category_id INT COMMENT '分类ID（外键）' AFTER view_count,
-    ADD CONSTRAINT IF NOT EXISTS fk_article_category
+    ADD COLUMN category_id INT COMMENT '分类ID（外键）' AFTER view_count,
+    ADD CONSTRAINT fk_article_category
         FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL;
+
+-- 为已存在的 articles 表添加 cover_image 字段（封面图URL）
+ALTER TABLE articles
+    ADD COLUMN cover_image VARCHAR(500) COMMENT '封面图URL' AFTER summary;
 
 -- ============================================
 -- 4. 文章-标签关联表（多对多关系）

@@ -37,7 +37,7 @@ router.get('/', async (req, res) => {
       `;
     }
 
-    sql += ' ORDER BY c.sort_order ASC';
+    sql += ' ORDER BY sort_order ASC';
 
     const [rows] = await pool.execute(sql, params);
     res.json({ code: 200, data: rows });
