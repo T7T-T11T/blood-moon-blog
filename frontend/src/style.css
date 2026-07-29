@@ -271,6 +271,158 @@
   color: var(--text-primary) !important;
 }
 
+/* ========== 下拉选择器全局暗色适配 ========== */
+.el-select-dropdown {
+  background: var(--bg-card) !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: var(--shadow-lg) !important;
+  border-radius: var(--radius-md) !important;
+}
+
+.el-select-dropdown__item {
+  color: var(--text-primary) !important;
+  background: transparent !important;
+}
+
+.el-select-dropdown__item.is-hovering {
+  background: var(--bg-hover) !important;
+  color: var(--primary-light) !important;
+}
+
+.el-select-dropdown__item.is-selected {
+  color: var(--primary) !important;
+  font-weight: 600 !important;
+}
+
+.el-select-dropdown__item.is-disabled {
+  color: var(--text-tertiary) !important;
+}
+
+/* 多选标签暗色适配 */
+.el-select__tags-text {
+  color: var(--text-primary) !important;
+}
+
+.el-tag.el-tag--info {
+  background: var(--bg-hover) !important;
+  border-color: var(--border) !important;
+  color: var(--text-primary) !important;
+}
+
+/* ========== 按钮全局暗色适配 ========== */
+.el-button {
+  border-radius: var(--radius-sm) !important;
+  font-weight: 500 !important;
+}
+
+.el-button--default {
+  background: var(--bg-hover) !important;
+  border-color: var(--border) !important;
+  color: var(--text-primary) !important;
+}
+
+.el-button--default:hover {
+  background: var(--border) !important;
+  border-color: var(--primary) !important;
+  color: var(--primary-light) !important;
+}
+
+.el-button--primary {
+  background: linear-gradient(135deg, #dc2626, #991b1b) !important;
+  border-color: #dc2626 !important;
+}
+
+.el-button--primary:hover {
+  background: linear-gradient(135deg, #ef4444, #dc2626) !important;
+  border-color: #ef4444 !important;
+}
+
+.el-button--success {
+  background: linear-gradient(135deg, #16a34a, #15803d) !important;
+  border-color: #16a34a !important;
+}
+
+.el-button--success:hover {
+  background: linear-gradient(135deg, #22c55e, #16a34a) !important;
+  border-color: #22c55e !important;
+}
+
+.el-button--warning {
+  background: linear-gradient(135deg, #d97706, #b45309) !important;
+  border-color: #d97706 !important;
+}
+
+.el-button--warning:hover {
+  background: linear-gradient(135deg, #f59e0b, #d97706) !important;
+  border-color: #f59e0b !important;
+}
+
+.el-button--danger {
+  background: linear-gradient(135deg, #dc2626, #991b1b) !important;
+  border-color: #dc2626 !important;
+}
+
+.el-button--danger:hover {
+  background: linear-gradient(135deg, #ef4444, #dc2626) !important;
+  border-color: #ef4444 !important;
+}
+
+/* ========== 表单标签与标签样式 ========== */
+.el-form-item__label {
+  color: var(--text-secondary) !important;
+}
+
+.el-tag {
+  border-radius: var(--radius-sm) !important;
+  font-weight: 500 !important;
+}
+
+/* ========== 复选框/单选框暗色 ========== */
+.el-checkbox__inner,
+.el-radio__input {
+  background-color: var(--bg-hover) !important;
+  border-color: var(--border) !important;
+}
+
+.el-checkbox__input.is-checked .el-checkbox__inner,
+.el-radio__input.is-checked {
+  background-color: var(--primary) !important;
+  border-color: var(--primary) !important;
+}
+
+/* ========== Switch 开关暗色 ========== */
+.el-switch.is-checked .el-switch__core {
+  background-color: var(--primary) !important;
+  border-color: var(--primary) !important;
+}
+
+/* ========== 分页器暗色 ========== */
+.el-pagination {
+  --el-pagination-hover-color: var(--primary);
+  --el-pagination-bg-color: var(--bg-card);
+  --el-pagination-text-color: var(--text-primary);
+  --el-pagination-button-bg-color: var(--bg-hover);
+  --el-pagination-border-color: var(--border);
+}
+
+.el-pagination button,
+.el-pagination .el-pager li {
+  background: var(--bg-hover) !important;
+  color: var(--text-secondary) !important;
+  border-color: var(--border) !important;
+}
+
+.el-pagination button:hover,
+.el-pagination .el-pager li:hover {
+  color: var(--primary-light) !important;
+}
+
+.el-pagination .el-pager li.is-active {
+  background: var(--primary) !important;
+  color: #fff !important;
+  border-color: var(--primary) !important;
+}
+
 .el-table {
   --el-table-border-color: var(--border-light);
   --el-table-header-bg-color: var(--bg-hover);

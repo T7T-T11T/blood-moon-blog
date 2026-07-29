@@ -57,3 +57,11 @@ export function updateCommentStatus(id, status) {
 export function deleteComment(id) {
   return request.delete(`/comments/${id}`);
 }
+
+/**
+ * 获取评论统计数据（待审核数量）
+ * @returns {Promise} 统计数据 { pending, approved, rejected }
+ */
+export function getCommentStats() {
+  return request.get('/comments/stats');
+}

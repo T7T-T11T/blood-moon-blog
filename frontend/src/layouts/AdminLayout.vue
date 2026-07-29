@@ -30,6 +30,10 @@
           >
             <el-icon><component :is="item.icon" /></el-icon>
             <span>{{ item.label }}</span>
+            <!-- 评论管理：显示待审核数量徽章 -->
+            <span v-if="item.label === '评论管理' && pendingComments > 0" class="nav-badge">
+              {{ pendingComments > 99 ? '99+' : pendingComments }}
+            </span>
           </router-link>
         </div>
 
@@ -118,10 +122,11 @@
  *       支持移动端侧边栏折叠展开，路由切换带淡入淡出过渡动画。
  * 依赖：useUserStore（用户信息）、vue-router（路由导航）
  */
-import { ref, markRaw } from 'vue';
+import { ref, markRaw, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useUserStore } from '../stores/user';
 import { ElMessage, ElMessageBox } from 'element-plus';
+import { getCommentStats } from '../api/comments';
 import {
   DataLine,
   Monitor,
@@ -145,6 +150,27 @@ const route = useRoute();
 
 /** 移动端侧边栏是否展开 */
 const sidebarOpen = ref(false);
+
+/** 待审核评论数量 */
+const pendingComments = ref(0);
+
+/**
+ * 获取评论统计数据
+ */
+async function fetchCommentStats() {
+  try {
+    const res = await getCommentStats();
+    if (res.code === 200) {
+      pendingComments.value = res.data.pending || 0;
+    }
+  } catch {
+    // 静默失败
+  }
+}
+
+onMounted(() => {
+  fetchCommentStats();
+});
 
 /** 内容管理菜单项（markRaw 避免图标组件被转为响应式） */
 const contentMenu = [
@@ -311,6 +337,22 @@ async function handleCommand(command) {
   background: linear-gradient(180deg, var(--admin-primary), #f87171);
   border-radius: 2px;
   margin-right: -6px;
+}
+
+/* 待审核评论徽章 */
+.nav-badge {
+  margin-left: auto;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  background: linear-gradient(135deg, #dc2626, #f87171);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+  border-radius: 9px;
+  box-shadow: 0 0 8px rgba(220, 38, 38, 0.4);
 }
 
 .sidebar-footer {

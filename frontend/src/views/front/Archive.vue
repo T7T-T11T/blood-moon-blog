@@ -220,7 +220,6 @@ onUnmounted(() => {
   border-radius: 50%;
   z-index: 0;
   pointer-events: none;
-  animation: moonPulse 8s ease-in-out infinite;
 }
 
 .hero-inner {

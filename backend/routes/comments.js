@@ -19,6 +19,39 @@ const { authMiddleware } = require('../middleware/auth');
 
 const router = express.Router();
 
+// ==================== 管理接口（需在公开参数路由之前注册） ====================
+
+/**
+ * GET /api/comments/stats - 获取评论统计数据（待审核数量）
+ * 需要登录
+ *
+ * @param {Object} req - Express 请求对象
+ * @param {Object} res - Express 响应对象
+ * @returns {Object} JSON 响应，data 包含 pending 待审核数量
+ */
+router.get('/stats', authMiddleware, async (req, res) => {
+  try {
+    const [rows] = await pool.execute(
+      "SELECT status, COUNT(*) as count FROM comments GROUP BY status"
+    );
+    const stats = {};
+    rows.forEach((row) => {
+      stats[row.status] = Number(row.count);
+    });
+    res.json({
+      code: 200,
+      data: {
+        pending: stats['待审核'] || 0,
+        approved: stats['已通过'] || 0,
+        rejected: stats['已拒绝'] || 0
+      }
+    });
+  } catch (e) {
+    console.error('获取评论统计失败：', e);
+    res.status(500).json({ code: 500, message: '服务器错误' });
+  }
+});
+
 // ==================== 公开接口 ====================
 
 /**

@@ -632,19 +632,6 @@ onUnmounted(() => {
   border-radius: 50%;
   z-index: -1;
   pointer-events: none;
-  animation: moonPulse 8s ease-in-out infinite;
-}
-
-@keyframes moonPulse {
-  0%,
-  100% {
-    opacity: 0.6;
-    transform: translateX(-50%) scale(1);
-  }
-  50% {
-    opacity: 1;
-    transform: translateX(-50%) scale(1.1);
-  }
 }
 
 /* Hero 文案容器 */

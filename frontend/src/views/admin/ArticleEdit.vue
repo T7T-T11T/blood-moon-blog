@@ -53,7 +53,7 @@
             <span class="setting-label">状态</span>
             <el-tag
               :type="form.status === '已发布' ? 'success' : 'warning'"
-              effect="light"
+              effect="dark"
               size="small"
             >
               {{ form.status }}
@@ -572,13 +572,14 @@ onMounted(() => {
 
 .editor-wrapper:focus-within {
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.1);
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.15);
 }
 
 .editor-wrapper :deep(.md-editor) {
   border: none;
   min-height: 480px;
   font-size: 15px;
+  background: var(--bg-body);
 }
 
 .editor-wrapper :deep(.md-editor__toolbar) {
@@ -587,7 +588,7 @@ onMounted(() => {
   flex-wrap: wrap !important;
   align-items: center !important;
   gap: 2px;
-  background: var(--bg-body);
+  background: var(--bg-card);
   border-bottom: 1px solid var(--border);
   padding: 8px 12px;
 }
@@ -599,17 +600,69 @@ onMounted(() => {
 
 .editor-wrapper :deep(.md-editor__content) {
   padding: 24px 28px;
+  background: var(--bg-body);
 }
 
 .editor-wrapper :deep(.md-editor__preview) {
   padding: 24px 28px;
+  background: var(--bg-body);
+  color: var(--text-primary);
+}
+
+/* MdEditor 暗色主题覆盖 */
+.editor-wrapper :deep(.md-editor-dark) {
+  background: var(--bg-body) !important;
+  color: var(--text-primary) !important;
+}
+
+.editor-wrapper :deep(.md-editor-dark .md-editor__content) {
+  background: var(--bg-body) !important;
+  color: var(--text-primary) !important;
+}
+
+.editor-wrapper :deep(.md-editor-dark .md-editor__content textarea) {
+  background: var(--bg-body) !important;
+  color: var(--text-primary) !important;
+}
+
+.editor-wrapper :deep(.md-editor-dark .md-editor__preview) {
+  background: var(--bg-body) !important;
+  color: var(--text-primary) !important;
+}
+
+.editor-wrapper :deep(.md-editor-dark .md-editor__preview h1),
+.editor-wrapper :deep(.md-editor-dark .md-editor__preview h2),
+.editor-wrapper :deep(.md-editor-dark .md-editor__preview h3) {
+  color: var(--text-primary) !important;
+}
+
+.editor-wrapper :deep(.md-editor-dark .md-editor__preview p),
+.editor-wrapper :deep(.md-editor-dark .md-editor__preview li) {
+  color: var(--text-secondary) !important;
+}
+
+.editor-wrapper :deep(.md-editor-dark .md-editor__preview code) {
+  background: var(--bg-hover) !important;
+  color: var(--primary-light) !important;
+}
+
+.editor-wrapper :deep(.md-editor-dark .md-editor__preview blockquote) {
+  border-left-color: var(--primary) !important;
+  background: var(--bg-hover) !important;
+  color: var(--text-secondary) !important;
+}
+
+.editor-wrapper :deep(.md-editor-dark .md-editor__table) {
+  background: var(--bg-card) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border) !important;
 }
 
 /* ========== 右侧设置面板 ========== */
 .settings-panel {
   width: 280px;
   flex-shrink: 0;
-  background: var(--bg-body);
+  background: var(--bg-card);
   border-left: 1px solid var(--border);
   padding: 24px;
   overflow-y: auto;

@@ -1,5 +1,22 @@
 # 版本历史
 
+## v1.5.1 (2026-07-30)
+
+- fix(ui): 移除所有页面 Hero 区域的 moonPulse 动画，彻底消除闪烁效果
+- fix(ui): 关于页/友链页/归档页 Hero 区域改用纯 CSS 渐变背景，不再依赖图片加载
+- fix(ui): 首页背景图改为固定背景不随页面滚动移动
+- fix(ui): 前台导航 Logo 更换为血月风格图片
+- feat(admin): 评论管理侧边栏添加待审核数量红色徽章
+- feat(api): 新增 GET /api/comments/stats 评论统计接口
+- fix(theme): 全局 el-select 下拉选择器暗色主题适配（选项、悬停、选中、多选标签）
+- fix(theme): 全局 el-button 按钮暗色主题适配（default/primary/success/warning/danger）
+- fix(theme): 全局 el-checkbox/el-radio/el-switch 暗色主题适配
+- fix(theme): 全局 el-pagination 分页器暗色主题适配
+- fix(editor): 文章编辑页 Markdown 编辑器深度暗色主题覆盖（工具栏/内容区/预览区）
+- fix(editor): 文章编辑页标签状态改用 dark 效果，聚焦环改为主色调
+- fix(editor): 文章编辑页右侧面板背景色统一为暗色卡片
+- 前后端版本号统一升级至 1.5.1
+
 ## v1.5.0 (2026-07-30)
 
 - fix(theme): 全局对话框暗色主题适配
