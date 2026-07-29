@@ -567,7 +567,7 @@ onUnmounted(() => {
   background: linear-gradient(to right, var(--primary), var(--primary-light));
   z-index: 200;
   transition: width 0.1s linear;
-  box-shadow: 0 0 8px rgba(13, 148, 136, 0.4);
+  box-shadow: 0 0 8px rgba(220, 38, 38, 0.4);
 }
 
 /* ========== 返回按钮 ========== */
@@ -633,7 +633,7 @@ onUnmounted(() => {
 }
 
 .meta-category:hover {
-  background: rgba(13, 148, 136, 0.18);
+  background: rgba(220, 38, 38, 0.18);
 }
 
 .meta-item {
@@ -750,7 +750,7 @@ onUnmounted(() => {
 .article-body :deep(blockquote) {
   margin: 24px 0;
   padding: 16px 24px;
-  background: rgba(13, 148, 136, 0.05);
+  background: rgba(220, 38, 38, 0.05);
   border-left: 4px solid var(--primary);
   border-radius: 0 8px 8px 0;
   color: var(--text-secondary);
@@ -993,7 +993,7 @@ onUnmounted(() => {
   justify-content: space-between;
   margin-bottom: 16px;
   padding: 10px 14px;
-  background: rgba(13, 148, 136, 0.08);
+  background: rgba(220, 38, 38, 0.08);
   border-left: 3px solid var(--primary);
   border-radius: 6px;
   font-size: 13px;
@@ -1057,7 +1057,7 @@ onUnmounted(() => {
 
 .form-textarea:focus {
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.12);
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.12);
 }
 
 .form-actions {
@@ -1084,7 +1084,7 @@ onUnmounted(() => {
 .submit-btn:hover:not(:disabled) {
   background: var(--primary-dark);
   transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(13, 148, 136, 0.35);
+  box-shadow: 0 8px 20px rgba(220, 38, 38, 0.35);
 }
 
 .submit-btn:disabled {
@@ -1255,7 +1255,7 @@ onUnmounted(() => {
   border-radius: 50%;
   cursor: pointer;
   z-index: 90;
-  box-shadow: 0 8px 24px rgba(13, 148, 136, 0.4);
+  box-shadow: 0 8px 24px rgba(220, 38, 38, 0.4);
   transition:
     transform 0.3s var(--ease-spring),
     box-shadow 0.3s var(--ease-out);
@@ -1263,7 +1263,7 @@ onUnmounted(() => {
 
 .back-top:hover {
   transform: translateY(-4px) scale(1.05);
-  box-shadow: 0 12px 32px rgba(13, 148, 136, 0.5);
+  box-shadow: 0 12px 32px rgba(220, 38, 38, 0.5);
 }
 
 /* 返回顶部按钮过渡 */

@@ -188,11 +188,26 @@ async function handleCommand(command) {
 </script>
 
 <style scoped>
+/* ========== 管理后台独立浅色主题 ========== */
+.admin-layout {
+  --admin-bg: #f8fafc;
+  --admin-card: #ffffff;
+  --admin-hover: #f1f5f9;
+  --admin-border: #e2e8f0;
+  --admin-text: #1f2937;
+  --admin-text-secondary: #6b7280;
+  --admin-text-tertiary: #9ca3af;
+  --admin-primary: #0d9488;
+  --admin-primary-light: #14b8a6;
+  --admin-primary-dark: #0f766e;
+  --admin-shadow: rgba(0, 0, 0, 0.04);
+}
+
 /* ========== 布局主容器 ========== */
 .admin-layout {
   display: flex;
   min-height: 100vh;
-  background: var(--bg-body);
+  background: var(--admin-bg);
 }
 
 /* ========== 移动端遮罩 ========== */
@@ -228,7 +243,7 @@ async function handleCommand(command) {
 .logo-wrapper {
   width: 38px;
   height: 38px;
-  background: linear-gradient(135deg, var(--primary) 0%, #0891b2 100%);
+  background: linear-gradient(135deg, var(--admin-primary) 0%, #0891b2 100%);
   border-radius: var(--radius-md);
   display: flex;
   align-items: center;
@@ -292,7 +307,7 @@ async function handleCommand(command) {
   content: '';
   width: 3px;
   height: 16px;
-  background: linear-gradient(180deg, var(--primary), #0891b2);
+  background: linear-gradient(180deg, var(--admin-primary), #0891b2);
   border-radius: 2px;
   margin-right: -6px;
 }
@@ -315,7 +330,7 @@ async function handleCommand(command) {
 }
 
 .back-to-site:hover {
-  color: var(--primary-light);
+  color: var(--admin-primary-light);
   background: rgba(13, 148, 136, 0.1);
 }
 
@@ -329,13 +344,13 @@ async function handleCommand(command) {
 }
 
 .admin-header {
-  background: var(--bg-card);
+  background: var(--admin-card);
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 32px;
   height: 60px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--admin-border);
   box-shadow: var(--shadow-sm);
   position: sticky;
   top: 0;
@@ -351,13 +366,13 @@ async function handleCommand(command) {
 /* 移动端菜单按钮（默认隐藏） */
 .menu-toggle {
   font-size: 20px;
-  color: var(--text-secondary);
+  color: var(--admin-text-secondary);
   cursor: pointer;
   display: none;
 }
 
 .menu-toggle:hover {
-  color: var(--primary);
+  color: var(--admin-primary);
 }
 
 .header-right {
@@ -376,7 +391,7 @@ async function handleCommand(command) {
 }
 
 .user-dropdown:hover {
-  background: var(--bg-hover);
+  background: var(--admin-hover);
 }
 
 .avatar,
@@ -388,7 +403,7 @@ async function handleCommand(command) {
 }
 
 .avatar {
-  background: linear-gradient(135deg, var(--primary) 0%, #0891b2 100%);
+  background: linear-gradient(135deg, var(--admin-primary) 0%, #0891b2 100%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -404,11 +419,11 @@ async function handleCommand(command) {
 .username {
   font-size: 14px;
   font-weight: 500;
-  color: var(--text-primary);
+  color: var(--admin-text);
 }
 
 .arrow {
-  color: var(--text-tertiary);
+  color: var(--admin-text-tertiary);
   font-size: 12px;
 }
 

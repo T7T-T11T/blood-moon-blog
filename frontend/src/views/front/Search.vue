@@ -500,7 +500,7 @@ onUnmounted(() => {
 /* 关键词高亮（通过 v-html 渲染） */
 .article-title :deep(mark.highlight),
 .article-excerpt :deep(mark.highlight) {
-  background: rgba(13, 148, 136, 0.15);
+  background: rgba(220, 38, 38, 0.15);
   color: var(--primary-dark);
   padding: 1px 4px;
   border-radius: 3px;

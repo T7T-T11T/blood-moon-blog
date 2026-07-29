@@ -1,16 +1,17 @@
 /** * @file Home.vue * @description 博客首页 - 暗夜哥特风格 * * 设计： * - 主题：暗夜血色（Deep Navy
-+ Ember Red） * - Hero：全屏血月背景图 + 遮罩层 + Canvas 火星粒子动画 * - 内容：深色编辑风格文章列表
-+ 极简侧边栏 * - 动效：Hero 入场 / 火星飘动 / 滚动揭示 / 悬浮微交互 */
++ Ember Red） * - Hero：全屏血月背景图 + 遮罩层 + Canvas 火星粒子动画（全页面） * -
+内容：深色编辑风格文章列表 + 极简侧边栏 * - 动效：Hero 入场 / 火星飘动 / 滚动揭示 / 悬浮微交互 */
 <template>
   <div class="home-page">
+    <!-- ============ 全页面背景：火星粒子层 ============ -->
+    <canvas ref="emberCanvasRef" class="ember-canvas-full" aria-hidden="true"></canvas>
+
     <!-- ============ Hero 全屏区域 ============ -->
     <section class="hero">
       <!-- 背景图 -->
       <div class="hero-bg" :style="{ backgroundImage: `url(${heroBg})` }" aria-hidden="true"></div>
       <!-- 暗色渐变遮罩 -->
       <div class="hero-overlay" aria-hidden="true"></div>
-      <!-- Canvas 火星粒子 -->
-      <canvas ref="emberCanvasRef" class="ember-canvas" aria-hidden="true"></canvas>
       <!-- 血月光晕 -->
       <div class="moon-glow" aria-hidden="true"></div>
 
@@ -18,7 +19,7 @@
       <div class="hero-inner">
         <p class="hero-eyebrow animate-fade-in-down">BLOG</p>
         <h1 class="hero-title">
-          <span class="title-text animate-glow">{{ siteName }}</span>
+          <span class="title-text animate-glow">{{ siteDisplayName }}</span>
         </h1>
         <p class="hero-tagline animate-fade-in-up delay-200">{{ siteDescription }}</p>
         <div class="hero-actions animate-fade-in-up delay-400">
@@ -207,8 +208,12 @@ const settings = ref({
   siteDescription: '分享技术，记录成长'
 });
 
-/** 站点名（Hero 主标题） */
-const siteName = computed(() => settings.value.siteName || '个人博客');
+/** 站点显示名称（用于 Hero 标题，空时不显示文字，仅保留发光效果） */
+const siteDisplayName = computed(() => {
+  const name = settings.value.siteName || '';
+  // 如果未配置或为默认值，返回空字符串
+  return name && name !== '个人博客' ? name : '';
+});
 
 /** 站点描述（Hero 副标题） */
 const siteDescription = computed(() => settings.value.siteDescription || '分享技术，记录成长');
@@ -305,18 +310,19 @@ async function loadSettings() {
 /**
  * 初始化火星粒子动画（Canvas 实现）
  * 粒子从底部向上飘动，带红色发光效果
+ * 覆盖整个页面（包含 Hero 区域和内容区域）
  */
 function initEmberParticles() {
   const canvas = emberCanvasRef.value;
   if (!canvas) return;
 
   const ctx = canvas.getContext('2d');
-  let width = (canvas.width = canvas.offsetWidth);
-  let height = (canvas.height = canvas.offsetHeight);
+  let width = (canvas.width = window.innerWidth);
+  let height = (canvas.height = document.body.scrollHeight);
 
   /** 粒子数组 */
   const particles = [];
-  const PARTICLE_COUNT = 60;
+  const PARTICLE_COUNT = 80;
 
   /**
    * 粒子类
@@ -384,10 +390,16 @@ function initEmberParticles() {
 
   // 响应窗口 resize
   const handleResize = () => {
-    width = canvas.width = canvas.offsetWidth;
-    height = canvas.height = canvas.offsetHeight;
+    width = canvas.width = window.innerWidth;
+    height = canvas.height = document.body.scrollHeight;
   };
   window.addEventListener('resize', handleResize);
+
+  // 页面滚动时更新高度
+  const handleScroll = () => {
+    height = canvas.height = document.body.scrollHeight;
+  };
+  window.addEventListener('scroll', handleScroll, { passive: true });
 
   animate();
 }
@@ -448,6 +460,17 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+/* ========== 全页面火星粒子层 ========== */
+.ember-canvas-full {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+}
+
 /* ========== Hero 全屏区域 ========== */
 .hero {
   position: relative;
@@ -459,6 +482,7 @@ onUnmounted(() => {
   overflow: hidden;
   color: #fff;
   isolation: isolate;
+  z-index: 1;
 }
 
 /* 背景图 */
@@ -483,14 +507,6 @@ onUnmounted(() => {
     rgba(10, 14, 26, 0.55) 70%,
     rgba(10, 14, 26, 0.95) 100%
   );
-}
-
-/* Canvas 火星粒子 */
-.ember-canvas {
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
 }
 
 /* 血月光晕（纯装饰） */
@@ -698,6 +714,8 @@ onUnmounted(() => {
 
 /* ========== 主体内容包装 ========== */
 .content-wrapper {
+  position: relative;
+  z-index: 1;
   max-width: 1200px;
   margin: 0 auto;
   padding: 96px 32px 80px;

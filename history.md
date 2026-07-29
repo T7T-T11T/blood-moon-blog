@@ -1,5 +1,14 @@
 # 版本历史
 
+## v1.4.7 (2026-07-30)
+
+- fix(theme): 修复后台管理文字颜色适配问题
+  - AdminLayout 使用独立浅色主题变量（admin-bg/admin-text），与前台暗色主题解耦
+- feat(home): Hero 区域去除默认"个人博客"字样，改为动态站点名
+- feat(effects): 火星粒子特效改为全页面覆盖（position: fixed），80 个粒子持续上升
+- fix(theme): ArticleDetail/Search 页面颜色统一适配暗色主题
+- 前后端版本号统一升级至 1.4.7
+
 ## v1.4.6 (2026-07-30)
 
 - feat(theme): 前台改为暗夜哥特主题（Deep Navy + Ember Red）
