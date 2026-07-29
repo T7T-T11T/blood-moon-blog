@@ -1,5 +1,13 @@
 # 版本历史
 
+## v1.3.2 (2026-07-30)
+
+- fix(route): 修复 Vite 路径别名(@)未配置导致的模块解析失败，所有页面正常加载
+- fix(editor): 修复文章编辑器图标包名错误(@element-plus/icons-v3 → @element-plus/icons-vue)
+- fix(route): 添加旧路径重定向(/task/add 等 → /admin/tasks)，解决历史链接 404
+- refactor(ArticleEdit): 重写文章编辑器 UI，优化布局和交互体验
+- 前后端版本号统一升级至 1.3.2
+
 ## v1.3.1 (2026-07-29)
 
 - chore: 删除冗余文档和文件，清理项目结构

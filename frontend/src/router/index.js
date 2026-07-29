@@ -186,6 +186,14 @@ const routes = [
     ]
   },
 
+  // ========== 旧路径重定向（兼容历史链接） ==========
+  { path: '/task', redirect: '/admin/tasks' },
+  { path: '/task/add', redirect: '/admin/tasks' },
+  { path: '/task/list', redirect: '/admin/tasks' },
+  { path: '/task/edit/:id?', redirect: '/admin/tasks' },
+  { path: '/statistics', redirect: '/admin/statistics' },
+  { path: '/settings', redirect: '/admin/settings' },
+
   // ========== 404 页面 ==========
   {
     path: '/:pathMatch(.*)*',

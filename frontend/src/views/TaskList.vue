@@ -10,7 +10,7 @@
         <h2 class="page-title">我的任务</h2>
         <span class="task-count">共 {{ tasks.length }} 项</span>
       </div>
-      <el-button type="primary" class="add-btn" @click="$router.push('/task/add')">
+      <el-button type="primary" class="add-btn" @click="$router.push('/admin/tasks')">
         <el-icon><Plus /></el-icon> 新增任务
       </el-button>
     </div>

@@ -1,14 +1,21 @@
 /**
  * Vite 配置文件
- * 作用：配置 Vite 构建工具，包括 Vue 插件和开发服务器代理
+ * 作用：配置 Vite 构建工具，包括 Vue 插件、路径别名和开发服务器代理
  *
  * proxy 代理：把 /api 开头的请求转发到后端 3000 端口，解决跨域问题
  */
 import { defineConfig } from 'vite';
 import vue from '@vitejs/plugin-vue';
+import path from 'path';
 
 export default defineConfig({
   plugins: [vue()],
+  // 路径别名：@ 指向 src 目录，简化导入路径
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, 'src')
+    }
+  },
   server: {
     port: 5173,           // 前端开发服务器端口
     open: true,           // 启动时自动打开浏览器

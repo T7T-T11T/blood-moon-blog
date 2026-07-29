@@ -1,11 +1,11 @@
 <template>
   <div class="article-edit-page">
     <div class="edit-container">
-      <!-- 编辑器主体 -->
+      <!-- 左侧编辑区 -->
       <div class="editor-main">
         <el-form ref="formRef" :model="form" :rules="rules" class="article-form">
           <!-- 标题输入 -->
-          <el-form-item prop="title">
+          <el-form-item prop="title" class="title-form-item">
             <el-input
               v-model="form.title"
               placeholder="请输入文章标题"
@@ -15,7 +15,7 @@
           </el-form-item>
 
           <!-- 摘要输入 -->
-          <el-form-item prop="summary">
+          <el-form-item prop="summary" class="summary-form-item">
             <el-input
               v-model="form.summary"
               type="textarea"
@@ -23,16 +23,49 @@
               placeholder="请输入文章摘要（可选）"
               maxlength="200"
               show-word-limit
+              class="summary-input"
             />
           </el-form-item>
 
-          <!-- 分类选择 -->
-          <el-form-item prop="category_id">
+          <!-- 内容编辑器 -->
+          <el-form-item prop="content" class="content-form-item">
+            <div class="editor-wrapper">
+              <MdEditor
+                v-model="form.content"
+                :toolbars="toolbars"
+                placeholder="开始写作..."
+                class="md-editor"
+              />
+            </div>
+          </el-form-item>
+        </el-form>
+      </div>
+
+      <!-- 右侧设置面板 -->
+      <div class="settings-panel">
+        <!-- 发布设置 -->
+        <div class="panel-section">
+          <h3 class="panel-title">发布设置</h3>
+
+          <div class="setting-item">
+            <span class="setting-label">状态</span>
+            <el-tag
+              :type="form.status === '已发布' ? 'success' : 'warning'"
+              effect="dark"
+              size="small"
+            >
+              {{ form.status }}
+            </el-tag>
+          </div>
+
+          <div class="setting-item">
+            <span class="setting-label">分类</span>
             <el-select
               v-model="form.category_id"
               placeholder="选择分类"
               clearable
-              style="width: 200px"
+              size="small"
+              class="setting-select"
             >
               <el-option
                 v-for="cat in categories"
@@ -41,51 +74,25 @@
                 :value="cat.id"
               />
             </el-select>
-          </el-form-item>
+          </div>
 
-          <!-- 标签选择 -->
-          <el-form-item prop="tag_ids">
+          <div class="setting-item setting-item-block">
+            <span class="setting-label">标签</span>
             <el-select
               v-model="form.tag_ids"
-              placeholder="选择标签"
+              placeholder="选择或输入标签"
               multiple
               filterable
               allow-create
-              style="width: 100%"
+              size="small"
+              class="setting-select"
             >
               <el-option v-for="tag in tags" :key="tag.id" :label="tag.name" :value="tag.id" />
             </el-select>
-          </el-form-item>
-
-          <!-- 内容编辑器 -->
-          <el-form-item prop="content">
-            <div class="editor-wrapper">
-              <MdEditor v-model="form.content" :toolbars="toolbars" placeholder="开始写作..." />
-            </div>
-          </el-form-item>
-
-          <!-- 状态选择 -->
-          <el-form-item prop="status">
-            <el-radio-group v-model="form.status">
-              <el-radio value="已发布">已发布</el-radio>
-              <el-radio value="草稿">草稿</el-radio>
-            </el-radio-group>
-          </el-form-item>
-        </el-form>
-      </div>
-
-      <!-- 右侧设置面板 -->
-      <div class="settings-panel">
-        <div class="panel-section">
-          <h3 class="panel-title">发布设置</h3>
-          <div class="setting-item">
-            <span class="setting-label">状态</span>
-            <el-tag :type="form.status === '已发布' ? 'success' : 'warning'" effect="dark">
-              {{ form.status }}
-            </el-tag>
           </div>
         </div>
 
+        <!-- 操作按钮 -->
         <div class="panel-section">
           <h3 class="panel-title">操作</h3>
           <div class="action-buttons">
@@ -105,19 +112,20 @@
           </div>
         </div>
 
-        <div v-if="!isNew" class="panel-section">
+        <!-- 文章信息（仅编辑模式显示） -->
+        <div v-if="!isNew && article" class="panel-section">
           <h3 class="panel-title">文章信息</h3>
           <div class="info-item">
             <span class="info-label">创建时间</span>
-            <span class="info-value">{{ formatDate(article?.created_at) }}</span>
+            <span class="info-value">{{ formatDate(article.created_at) }}</span>
           </div>
           <div class="info-item">
             <span class="info-label">更新时间</span>
-            <span class="info-value">{{ formatDate(article?.updated_at) }}</span>
+            <span class="info-value">{{ formatDate(article.updated_at) }}</span>
           </div>
           <div class="info-item">
             <span class="info-label">阅读量</span>
-            <span class="info-value">{{ article?.view_count || 0 }}</span>
+            <span class="info-value">{{ article.view_count || 0 }}</span>
           </div>
         </div>
       </div>
@@ -132,6 +140,9 @@ import { ElMessage } from 'element-plus';
 import { MdEditor } from 'md-editor-v3';
 import 'md-editor-v3/lib/preview.css';
 import { Check, Promotion, Document } from '@element-plus/icons-vue';
+import { getAdminArticleDetail, addArticle, updateArticle } from '@/api/articles';
+import { getCategories } from '@/api/categories';
+import { getTags } from '@/api/tags';
 
 const route = useRoute();
 const router = useRouter();
@@ -139,16 +150,16 @@ const router = useRouter();
 /** 表单引用 */
 const formRef = ref(null);
 
-/** 是否新建 */
+/** 是否新建文章 */
 const isNew = computed(() => !route.params.id);
 
-/** 文章数据 */
+/** 文章详情（编辑模式下） */
 const article = ref(null);
 
-/** 加载中 */
+/** 加载状态 */
 const loading = ref(false);
 
-/** 保存中 */
+/** 保存状态 */
 const saving = ref(false);
 
 /** 分类列表 */
@@ -164,7 +175,7 @@ const form = ref({
   content: '',
   category_id: null,
   tag_ids: [],
-  status: '已发布'
+  status: '草稿'
 });
 
 /** 表单验证规则 */
@@ -176,36 +187,41 @@ const rules = {
   content: [{ required: true, message: '请输入文章内容', trigger: 'blur' }]
 };
 
-/** 编辑器工具栏配置 */
+/**
+ * md-editor-v3 工具栏配置
+ * 说明：使用 '|' 作为分组分隔符
+ */
 const toolbars = [
   'bold',
   'italic',
   'underline',
   'strikeThrough',
-  '-',
+  '|',
   'title',
   'sub',
   'quote',
-  '-',
-  'alert',
+  '|',
   'image',
   'video',
-  'audio',
   'file',
-  '-',
+  '|',
   'list',
   'ordered-list',
   'task',
-  '-',
+  '|',
   'link',
   'table',
-  '=',
+  '|',
   'preview',
   'htmlPreview',
   'catalog'
 ];
 
-/** 格式化日期 */
+/**
+ * 格式化日期
+ * @param {string} dateStr - 日期字符串
+ * @returns {string} 格式化后的日期
+ */
 function formatDate(dateStr) {
   if (!dateStr) return '-';
   const date = new Date(dateStr);
@@ -221,10 +237,9 @@ function formatDate(dateStr) {
 /** 加载分类列表 */
 async function loadCategories() {
   try {
-    const res = await fetch('/api/categories');
-    const json = await res.json();
-    if (json.code === 200) {
-      categories.value = json.data;
+    const res = await getCategories();
+    if (res.code === 200) {
+      categories.value = res.data;
     }
   } catch (e) {
     console.error('加载分类失败:', e);
@@ -234,37 +249,30 @@ async function loadCategories() {
 /** 加载标签列表 */
 async function loadTags() {
   try {
-    const res = await fetch('/api/tags');
-    const json = await res.json();
-    if (json.code === 200) {
-      tags.value = json.data;
+    const res = await getTags();
+    if (res.code === 200) {
+      tags.value = res.data;
     }
   } catch (e) {
     console.error('加载标签失败:', e);
   }
 }
 
-/** 加载文章详情 */
+/** 加载文章详情（编辑模式） */
 async function loadArticle() {
   if (isNew.value) return;
 
   loading.value = true;
   try {
-    const res = await fetch(`/api/articles/${route.params.id}`, {
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem('token')}`
-      }
-    });
-    const json = await res.json();
-    if (json.code === 200) {
-      article.value = json.data;
-      // 填充表单
-      form.value.title = json.data.title;
-      form.value.summary = json.data.summary || '';
-      form.value.content = json.data.content;
-      form.value.category_id = json.data.category_id;
-      form.value.tag_ids = json.data.tags?.map((t) => t.id) || [];
-      form.value.status = json.data.status;
+    const res = await getAdminArticleDetail(route.params.id);
+    if (res.code === 200) {
+      article.value = res.data;
+      form.value.title = res.data.title;
+      form.value.summary = res.data.summary || '';
+      form.value.content = res.data.content;
+      form.value.category_id = res.data.category_id;
+      form.value.tag_ids = res.data.tags?.map((t) => t.id) || [];
+      form.value.status = res.data.status;
     }
   } catch (e) {
     console.error('加载文章失败:', e);
@@ -274,8 +282,11 @@ async function loadArticle() {
   }
 }
 
-/** 保存文章 */
-async function saveArticle(status = '已发布') {
+/**
+ * 保存文章
+ * @param {string} status - 文章状态（已发布/草稿）
+ */
+async function saveArticle(status = '草稿') {
   if (!formRef.value) return;
 
   try {
@@ -286,35 +297,31 @@ async function saveArticle(status = '已发布') {
 
   saving.value = true;
   try {
-    const url = isNew.value ? '/api/articles' : `/api/articles/${route.params.id}`;
-    const method = isNew.value ? 'POST' : 'PUT';
+    const payload = {
+      title: form.value.title,
+      content: form.value.content,
+      summary: form.value.summary,
+      category_id: form.value.category_id,
+      tag_ids: form.value.tag_ids,
+      status
+    };
 
-    const res = await fetch(url, {
-      method,
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${localStorage.getItem('token')}`
-      },
-      body: JSON.stringify({
-        title: form.value.title,
-        content: form.value.content,
-        summary: form.value.summary,
-        category_id: form.value.category_id,
-        tag_ids: form.value.tag_ids,
-        status
-      })
-    });
-    const json = await res.json();
+    let res;
+    if (isNew.value) {
+      res = await addArticle(payload);
+    } else {
+      res = await updateArticle(route.params.id, payload);
+    }
 
-    if (json.code === 200) {
+    if (res.code === 200) {
       ElMessage.success(isNew.value ? '创建成功' : '更新成功');
-      if (isNew.value && json.data?.id) {
-        router.replace(`/admin/articles/edit/${json.data.id}`);
+      if (isNew.value && res.data?.id) {
+        router.replace(`/admin/articles/edit/${res.data.id}`);
       } else {
         router.push('/admin/articles');
       }
     } else {
-      ElMessage.error(json.message || '保存失败');
+      ElMessage.error(res.message || '保存失败');
     }
   } catch (e) {
     console.error('保存文章失败:', e);
@@ -324,7 +331,7 @@ async function saveArticle(status = '已发布') {
   }
 }
 
-/** 保存 */
+/** 保存（保持当前状态） */
 function handleSave() {
   saveArticle(form.value.status);
 }
@@ -339,9 +346,9 @@ function handleDraft() {
   saveArticle('草稿');
 }
 
-/** 取消 */
+/** 取消编辑 */
 function handleCancel() {
-  router.back();
+  router.push('/admin/articles');
 }
 
 onMounted(() => {
@@ -364,7 +371,7 @@ onMounted(() => {
   height: calc(100vh - 60px);
 }
 
-/* 编辑器主体 */
+/* 编辑主区域 */
 .editor-main {
   flex: 1;
   padding: 32px 40px;
@@ -372,7 +379,12 @@ onMounted(() => {
 }
 
 .article-form {
-  max-width: 900px;
+  max-width: 860px;
+}
+
+/* 标题样式 */
+.title-form-item {
+  margin-bottom: 8px;
 }
 
 .title-input :deep(.el-input__wrapper) {
@@ -387,22 +399,66 @@ onMounted(() => {
   font-size: 32px;
   font-weight: 700;
   color: #0f172a;
+  line-height: 1.3;
+}
+
+.title-input :deep(.el-input__inner::placeholder) {
+  color: #cbd5e1;
+  font-weight: 400;
+}
+
+/* 摘要样式 */
+.summary-form-item {
+  margin-bottom: 16px;
+}
+
+.summary-input :deep(.el-textarea__inner) {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #475569;
+}
+
+/* 编辑器样式 */
+.content-form-item {
+  margin-bottom: 0;
 }
 
 .editor-wrapper {
   border: 1px solid #e2e8f0;
   border-radius: 12px;
   overflow: hidden;
+  transition: border-color 0.2s;
+}
+
+.editor-wrapper:focus-within {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
 .editor-wrapper :deep(.md-editor) {
   border: none;
-  min-height: 500px;
+  min-height: 480px;
+  font-size: 15px;
+}
+
+.editor-wrapper :deep(.md-editor__toolbar) {
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+  padding: 8px 12px;
+}
+
+.editor-wrapper :deep(.md-editor__content) {
+  padding: 24px 28px;
+}
+
+.editor-wrapper :deep(.md-editor__preview) {
+  padding: 24px 28px;
 }
 
 /* 设置面板 */
 .settings-panel {
   width: 280px;
+  flex-shrink: 0;
   background: #f8fafc;
   border-left: 1px solid #e2e8f0;
   padding: 24px;
@@ -410,42 +466,79 @@ onMounted(() => {
 }
 
 .panel-section {
-  margin-bottom: 32px;
+  margin-bottom: 28px;
 }
 
 .panel-title {
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 600;
-  color: #475569;
+  color: #64748b;
   margin: 0 0 16px;
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 0.5px;
 }
 
-.setting-item,
+.setting-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid #e2e8f0;
+  gap: 12px;
+}
+
+.setting-item:last-child {
+  border-bottom: none;
+}
+
+.setting-item-block {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.setting-label {
+  font-size: 13px;
+  color: #64748b;
+  white-space: nowrap;
+}
+
+.setting-select {
+  width: 180px;
+}
+
+.setting-item-block .setting-select {
+  width: 100%;
+  margin-top: 6px;
+}
+
 .info-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px 0;
+  padding: 8px 0;
   border-bottom: 1px solid #e2e8f0;
 }
 
-.setting-label,
+.info-item:last-child {
+  border-bottom: none;
+}
+
 .info-label {
-  font-size: 14px;
+  font-size: 13px;
   color: #64748b;
 }
 
 .info-value {
   font-size: 13px;
   color: #0f172a;
+  font-weight: 500;
 }
 
+/* 操作按钮 */
 .action-buttons {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
 .action-buttons .el-button {
@@ -462,7 +555,7 @@ onMounted(() => {
 
 @media (max-width: 768px) {
   .editor-main {
-    padding: 20px;
+    padding: 16px;
   }
 
   .title-input :deep(.el-input__wrapper),

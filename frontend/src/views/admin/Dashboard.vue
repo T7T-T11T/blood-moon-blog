@@ -124,6 +124,9 @@ import {
   PriceTag,
   List
 } from '@element-plus/icons-vue';
+import { getPublicArticles, getHotArticles, getLatestArticles } from '@/api/articles';
+import { getCategories } from '@/api/categories';
+import { getTags } from '@/api/tags';
 
 /** 统计数据 */
 const stats = ref({
@@ -151,42 +154,36 @@ function formatDate(dateStr) {
 /** 加载仪表盘数据 */
 async function loadDashboard() {
   try {
-    // 加载统计数据
-    const [articlesRes, categoriesRes, tagsRes] = await Promise.all([
-      fetch('/api/articles/public?page_size=1'),
-      fetch('/api/categories?with_count=true'),
-      fetch('/api/tags?with_count=true')
+    const [articlesRes, categoriesRes, tagsRes, hotRes, latestRes] = await Promise.allSettled([
+      getPublicArticles({ page_size: 1 }),
+      getCategories(),
+      getTags(),
+      getHotArticles(5),
+      getLatestArticles(5)
     ]);
 
-    const articlesJson = await articlesRes.json();
-    const categoriesJson = await categoriesRes.json();
-    const tagsJson = await tagsRes.json();
-
-    if (articlesJson.code === 200) {
-      stats.value.articles = articlesJson.data.pagination.total;
-      stats.value.views = articlesJson.data.list.reduce((sum, a) => sum + (a.view_count || 0), 0);
+    if (articlesRes.status === 'fulfilled' && articlesRes.value.code === 200) {
+      stats.value.articles = articlesRes.value.data.pagination.total;
+      stats.value.views = articlesRes.value.data.list.reduce(
+        (sum, a) => sum + (a.view_count || 0),
+        0
+      );
     }
 
-    if (categoriesJson.code === 200) {
-      stats.value.categories = categoriesJson.data.length;
+    if (categoriesRes.status === 'fulfilled' && categoriesRes.value.code === 200) {
+      stats.value.categories = categoriesRes.value.data.length;
     }
 
-    if (tagsJson.code === 200) {
-      stats.value.tags = tagsJson.data.length;
+    if (tagsRes.status === 'fulfilled' && tagsRes.value.code === 200) {
+      stats.value.tags = tagsRes.value.data.length;
     }
 
-    // 加载热门文章
-    const hotRes = await fetch('/api/articles/public/hot?limit=5');
-    const hotJson = await hotRes.json();
-    if (hotJson.code === 200) {
-      hotArticles.value = hotJson.data;
+    if (hotRes.status === 'fulfilled' && hotRes.value.code === 200) {
+      hotArticles.value = hotRes.value.data;
     }
 
-    // 加载最新文章
-    const latestRes = await fetch('/api/articles/public/latest?limit=5');
-    const latestJson = await latestRes.json();
-    if (latestJson.code === 200) {
-      latestArticles.value = latestJson.data;
+    if (latestRes.status === 'fulfilled' && latestRes.value.code === 200) {
+      latestArticles.value = latestRes.value.data;
     }
   } catch (e) {
     console.error('加载仪表盘数据失败:', e);
