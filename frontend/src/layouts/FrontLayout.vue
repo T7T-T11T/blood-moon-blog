@@ -245,7 +245,7 @@ onUnmounted(() => {
   left: 0;
   right: 0;
   z-index: 100;
-  background: rgba(255, 255, 255, 0.6);
+  background: rgba(6, 9, 18, 0.6);
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
   border-bottom: 1px solid transparent;
@@ -255,11 +255,11 @@ onUnmounted(() => {
     box-shadow 0.3s var(--ease-out);
 }
 
-/* 滚动后加深背景与边框，增强可读性 */
+/* 滚动后加深背景与边框 */
 .navbar.scrolled {
-  background: rgba(255, 255, 255, 0.85);
+  background: rgba(6, 9, 18, 0.85);
   border-bottom-color: var(--border);
-  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.04);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
 }
 
 .navbar-inner {
@@ -288,12 +288,12 @@ onUnmounted(() => {
   justify-content: center;
   width: 40px;
   height: 40px;
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
   color: #fff;
   font-weight: 800;
   font-size: 20px;
   border-radius: 12px;
-  box-shadow: 0 6px 16px rgba(13, 148, 136, 0.35);
+  box-shadow: 0 6px 16px rgba(220, 38, 38, 0.35);
   transition: transform 0.3s var(--ease-spring);
 }
 
@@ -340,14 +340,15 @@ onUnmounted(() => {
   transform: scaleX(0);
   transform-origin: center;
   transition: transform 0.3s var(--ease-spring);
+  box-shadow: 0 0 6px rgba(220, 38, 38, 0.5);
 }
 
 .nav-link:hover {
-  color: var(--primary);
+  color: var(--primary-light);
 }
 
 .nav-link.active {
-  color: var(--primary);
+  color: var(--primary-light);
   font-weight: 600;
 }
 
@@ -370,7 +371,7 @@ onUnmounted(() => {
   gap: 8px;
   height: 40px;
   padding: 0 16px;
-  background: rgba(248, 250, 252, 0.7);
+  background: rgba(26, 32, 53, 0.6);
   border: 1px solid var(--border);
   border-radius: 20px;
   width: 220px;
@@ -384,8 +385,8 @@ onUnmounted(() => {
 /* 聚焦时：宽度扩展 + 主色描边 */
 .search-box:focus-within {
   border-color: var(--primary);
-  background: #fff;
-  box-shadow: 0 0 0 4px rgba(13, 148, 136, 0.12);
+  background: rgba(26, 32, 53, 0.9);
+  box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.12);
   width: 260px;
 }
 
@@ -408,7 +409,7 @@ onUnmounted(() => {
   color: var(--text-tertiary);
 }
 
-/* 后台入口：仅图标按钮 */
+/* 后台入口 */
 .admin-entry {
   display: flex;
   align-items: center;
@@ -417,7 +418,7 @@ onUnmounted(() => {
   height: 40px;
   color: var(--text-secondary);
   text-decoration: none;
-  background: rgba(248, 250, 252, 0.7);
+  background: rgba(26, 32, 53, 0.6);
   border: 1px solid var(--border);
   border-radius: 12px;
   font-size: 18px;
@@ -429,7 +430,7 @@ onUnmounted(() => {
 }
 
 .admin-entry:hover {
-  color: var(--primary);
+  color: var(--primary-light);
   border-color: var(--primary);
   background: var(--primary-bg);
   transform: rotate(45deg);
@@ -479,7 +480,7 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   padding: 12px 20px 20px;
-  background: rgba(255, 255, 255, 0.96);
+  background: rgba(6, 9, 18, 0.98);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-bottom: 1px solid var(--border);
@@ -500,7 +501,7 @@ onUnmounted(() => {
 
 .mobile-nav-link:hover,
 .mobile-nav-link.active {
-  color: var(--primary);
+  color: var(--primary-light);
   background: var(--primary-bg);
 }
 
@@ -510,7 +511,7 @@ onUnmounted(() => {
   gap: 8px;
   margin: 8px 0;
   padding: 12px 14px;
-  background: var(--bg-body);
+  background: var(--bg-hover);
   border: 1px solid var(--border);
   border-radius: 10px;
 }
@@ -525,7 +526,7 @@ onUnmounted(() => {
 /* ========== 页脚 ========== */
 .footer {
   border-top: 1px solid var(--border);
-  background: #fff;
+  background: var(--bg-sidebar);
 }
 
 .footer-inner {

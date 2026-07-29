@@ -7,33 +7,33 @@
 
 /* ========== CSS 变量（设计 Token） ========== */
 :root {
-  /* 主色调 - 自然青绿色系 */
-  --primary: #0d9488;
-  --primary-light: #14b8a6;
-  --primary-dark: #0f766e;
-  --primary-bg: #f0fdfa;
+  /* 主色调 - 暗夜血色 / Ember 系 */
+  --primary: #dc2626;
+  --primary-light: #f87171;
+  --primary-dark: #991b1b;
+  --primary-bg: rgba(220, 38, 38, 0.12);
 
   /* 语义色 */
   --success: #10b981;
   --warning: #f59e0b;
   --danger: #ef4444;
-  --info: #3b82f6;
+  --info: #6366f1;
 
-  /* 中性色 */
-  --text-primary: #1f2937;
-  --text-secondary: #6b7280;
-  --text-tertiary: #9ca3af;
-  --text-placeholder: #d1d5db;
+  /* 中性色 - 暗色主题 */
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-tertiary: #64748b;
+  --text-placeholder: #475569;
 
-  /* 背景色 */
-  --bg-body: #f8fafc;
-  --bg-card: #ffffff;
-  --bg-hover: #f1f5f9;
-  --bg-sidebar: #0f172a;
+  /* 背景色 - 暗色主题 */
+  --bg-body: #0a0e1a;
+  --bg-card: #121828;
+  --bg-hover: #1a2035;
+  --bg-sidebar: #060912;
 
   /* 边框 */
-  --border: #e2e8f0;
-  --border-light: #f1f5f9;
+  --border: #1e293b;
+  --border-light: #162032;
 
   /* 圆角 */
   --radius-sm: 6px;
@@ -86,7 +86,7 @@
   background: var(--primary-light);
   border-color: var(--primary-light);
   transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(13, 148, 136, 0.35);
+  box-shadow: 0 8px 20px rgba(220, 38, 38, 0.35);
 }
 
 .el-button--primary:active {
@@ -113,7 +113,7 @@
 }
 
 .el-input__wrapper.is-focus {
-  box-shadow: 0 0 0 2px rgba(13, 148, 136, 0.2) !important;
+  box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.2) !important;
 }
 
 .el-tag {
@@ -212,12 +212,12 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: #334155;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: #475569;
 }
 
 /* ========== Keyframes ========== */
@@ -440,10 +440,10 @@ body {
 @keyframes glow {
   0%,
   100% {
-    box-shadow: 0 0 5px rgba(13, 148, 136, 0.3);
+    box-shadow: 0 0 5px rgba(220, 38, 38, 0.3);
   }
   50% {
-    box-shadow: 0 0 20px rgba(13, 148, 136, 0.6);
+    box-shadow: 0 0 20px rgba(220, 38, 38, 0.6);
   }
 }
 
@@ -607,7 +607,7 @@ body {
 }
 
 .hover-glow:hover {
-  box-shadow: 0 0 20px rgba(13, 148, 136, 0.3);
+  box-shadow: 0 0 20px rgba(220, 38, 38, 0.3);
 }
 
 .click-ripple {
@@ -724,7 +724,7 @@ body {
 
 /* ========== 骨架屏 / Shimmer ========== */
 .shimmer {
-  background: linear-gradient(90deg, var(--bg-hover) 0%, #e8ecf1 50%, var(--bg-hover) 100%);
+  background: linear-gradient(90deg, var(--bg-hover) 0%, #1e2a3e 50%, var(--bg-hover) 100%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
 }

@@ -848,7 +848,7 @@ onUnmounted(() => {
   font-weight: 500;
   border: 1px solid var(--border);
   border-radius: 20px;
-  background: #fff;
+  background: var(--bg-hover);
   color: var(--text-secondary);
   cursor: pointer;
   transition:
@@ -1027,7 +1027,7 @@ onUnmounted(() => {
   border-radius: 10px;
   font-size: 14px;
   color: var(--text-primary);
-  background: #fff;
+  background: var(--bg-hover);
   outline: none;
   transition:
     border-color 0.25s var(--ease-out),
@@ -1036,7 +1036,7 @@ onUnmounted(() => {
 
 .form-input:focus {
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.12);
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.12);
 }
 
 .form-textarea {
@@ -1046,7 +1046,7 @@ onUnmounted(() => {
   border-radius: 10px;
   font-size: 14px;
   color: var(--text-primary);
-  background: #fff;
+  background: var(--bg-hover);
   outline: none;
   resize: vertical;
   font-family: inherit;
