@@ -11,8 +11,11 @@
 
 const jwt = require('jsonwebtoken')
 
-// JWT 密钥 —— 从环境变量读取
-const JWT_SECRET = process.env.JWT_SECRET || 'default-secret-key'
+// JWT 密钥 —— 从环境变量读取，缺失时拒绝启动（防止生产环境使用弱默认值）
+const JWT_SECRET = process.env.JWT_SECRET
+if (!JWT_SECRET) {
+  throw new Error('JWT_SECRET 未配置！请在 .env 文件中设置一个随机强密钥（至少32字符）')
+}
 
 // token 有效期：默认 7 天，可通过环境变量配置
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d'

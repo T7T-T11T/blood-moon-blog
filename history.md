@@ -1,5 +1,26 @@
 # 版本历史
 
+## v1.7.0 (2026-07-30)
+
+- 安全加固与部署准备（为生产环境部署做准备）
+- fix(security): 修复 ArticleDetail/Search 页面 XSS 漏洞
+  - ArticleDetail 引入 DOMPurify 对 Markdown 渲染结果消毒
+  - Search 新增 escapeHtml 函数，关键词高亮前先转义防 XSS
+- feat(security): 后端添加 helmet 安全响应头（CSP/X-Frame-Options/HSTS 等）
+- feat(security): CORS 改为白名单模式，支持通过 CORS_ORIGIN 环境变量配置生产域名
+- feat(security): 登录/评论/上传接口添加 express-rate-limit 限流
+  - 登录 5 次/15 分钟（防暴力破解）
+  - 评论 3 次/分钟（防刷屏）
+  - 上传 10 次/分钟（防恶意上传）
+- feat(security): 上传接口按文件类型设置大小限制（图片5MB/音频50MB/视频200MB/文件20MB）
+- feat(security): JWT_SECRET 强制从环境变量读取，缺失时拒绝启动
+- feat(security): 请求体大小限制 10MB，防止 body 炸弹
+- feat(seo): index.html 添加完整 meta 标签（description/keywords/OG/Twitter Card）
+- feat(seo): index.html 添加首屏 loading 占位动画，避免白屏
+- feat(seo): 新增 favicon（blood-moon-logo.jpg）
+- chore(deploy): 完善 backend/.env.example，补充 CORS_ORIGIN 配置说明
+- 前后端版本号统一升级至 1.7.0
+
 ## v1.6.0 (2026-07-30)
 
 - feat(music): 新增音乐管理功能，支持后台上传、编辑、删除音乐

@@ -1,14 +1,80 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>任务管理系统</title>
-</head>
-<body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- ========== SEO 基础 ========== -->
+    <title>血月博客 - 记录技术与成长</title>
+    <meta
+      name="description"
+      content="一个专注于技术分享与个人成长的暗夜哥特风博客，涵盖前端开发、后端架构、数据库设计与随笔感悟。"
+    />
+    <meta name="keywords" content="博客,技术分享,前端开发,Vue,Node.js,个人博客,血月" />
+    <meta name="author" content="血月博客" />
+    <link rel="canonical" href="/" />
+
+    <!-- ========== Open Graph（社交分享） ========== -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="血月博客 - 记录技术与成长" />
+    <meta property="og:description" content="一个专注于技术分享与个人成长的暗夜哥特风博客。" />
+    <meta property="og:url" content="/" />
+    <meta property="og:site_name" content="血月博客" />
+
+    <!-- ========== Twitter Card ========== -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="血月博客 - 记录技术与成长" />
+    <meta name="twitter:description" content="一个专注于技术分享与个人成长的暗夜哥特风博客。" />
+
+    <!-- ========== Favicon ========== -->
+    <link rel="icon" type="image/jpeg" href="/blood-moon-logo.jpg" />
+
+    <!-- ========== 首屏 loading 占位（JS 加载前显示，避免白屏） ========== -->
+    <style>
+      #app-loading {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #0a0508;
+        z-index: 99999;
+        transition: opacity 0.5s ease;
+      }
+      #app-loading.hidden {
+        opacity: 0;
+        pointer-events: none;
+      }
+      .loading-moon {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        background: radial-gradient(circle at 35% 35%, #fca5a5, #dc2626 50%, #7f1d1d);
+        box-shadow: 0 0 30px rgba(220, 38, 38, 0.5);
+        animation: loading-pulse 1.5s ease-in-out infinite;
+      }
+      @keyframes loading-pulse {
+        0%,
+        100% {
+          transform: scale(1);
+          opacity: 0.8;
+        }
+        50% {
+          transform: scale(1.1);
+          opacity: 1;
+        }
+      }
+    </style>
+  </head>
+  <body>
     <!-- Vue 应用挂载点 -->
-    <div id="app"></div>
+    <div id="app">
+      <!-- 首屏 loading 占位（Vue 挂载后自动替换） -->
+      <div id="app-loading">
+        <div class="loading-moon"></div>
+      </div>
+    </div>
     <!-- 入口脚本 -->
     <script type="module" src="/src/main.js"></script>
-</body>
+  </body>
 </html>

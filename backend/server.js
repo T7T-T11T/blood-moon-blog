@@ -7,8 +7,10 @@
  * - 数据库密码、JWT 密钥等敏感信息不硬编码在代码中
  *
  * 中间件：
- * - cors：允许跨域请求（Vite 开发代理已处理生产环境跨域）
- * - express.json：解析 JSON 请求体
+ * - helmet：设置安全响应头（X-Frame-Options/CSP/HSTS 等）
+ * - cors：跨域请求控制（支持白名单配置）
+ * - express.json：解析 JSON 请求体（限制 100KB 防 body 炸弹）
+ * - express-rate-limit：API 限流（登录/评论/上传分别限速）
  *
  * 路由：
  * 【公开接口】（无需登录）
@@ -36,6 +38,8 @@ require('dotenv').config()
 
 const express = require('express')
 const cors = require('cors')
+const helmet = require('helmet')
+const rateLimit = require('express-rate-limit')
 
 // 路由模块
 const authRoutes = require('./routes/auth')
@@ -54,10 +58,85 @@ const fs = require('fs')
 
 const app = express()
 
-// ========== 中间件 ==========
-app.use(cors())                              // 跨域
-app.use(express.json())                      // JSON 请求体解析
-app.use(express.urlencoded({ extended: true }))  // URL 编码请求体解析
+// ========== 安全中间件 ==========
+
+/**
+ * helmet：设置安全响应头
+ * 包括 X-Content-Type-Options、X-Frame-Options、HSTS、CSP 等
+ * 生产环境必须开启，防止点击劫持、MIME 嗅探等攻击
+ */
+app.use(helmet({
+  // 允许加载同源图片（文章封面、头像等）
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      imgSrc: ["'self'", "data:", "blob:"],
+      mediaSrc: ["'self'", "data:", "blob:"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      fontSrc: ["'self'", "data:"],
+      connectSrc: ["'self'"]
+    }
+  },
+  // 允许同源 iframe 嵌入（后台管理可能需要）
+  frameguard: { action: 'sameorigin' }
+}))
+
+/**
+ * CORS 跨域配置
+ * 开发环境：允许 localhost:5173（Vite 默认端口）
+ * 生产环境：通过 CORS_ORIGIN 环境变量配置白名单域名，逗号分隔
+ */
+const corsOrigins = process.env.CORS_ORIGIN
+  ? process.env.CORS_ORIGIN.split(',').map((s) => s.trim())
+  : ['http://localhost:5173', 'http://localhost:4173']
+
+app.use(cors({
+  origin: corsOrigins,
+  credentials: true
+}))
+
+// ========== 请求体解析（限制大小防止 body 炸弹） ==========
+app.use(express.json({ limit: '10mb' }))                          // JSON 请求体（文章内容可能较大，限 10MB）
+app.use(express.urlencoded({ extended: true, limit: '10mb' }))    // URL 编码请求体
+
+// ========== 限流中间件 ==========
+
+/**
+ * 登录接口限流：5 次/15 分钟/IP
+ * 防止暴力破解管理员密码
+ */
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: { code: 429, message: '登录尝试过于频繁，请15分钟后再试' },
+  standardHeaders: true,
+  legacyHeaders: false
+})
+
+/**
+ * 评论接口限流：3 次/分钟/IP
+ * 防止垃圾评论刷屏
+ */
+const commentLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 3,
+  message: { code: 429, message: '评论提交过于频繁，请稍后再试' },
+  standardHeaders: true,
+  legacyHeaders: false
+})
+
+/**
+ * 上传接口限流：10 次/分钟/IP
+ * 防止恶意大量上传消耗磁盘
+ */
+const uploadLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 10,
+  message: { code: 429, message: '上传请求过于频繁，请稍后再试' },
+  standardHeaders: true,
+  legacyHeaders: false
+})
 
 // ========== 静态资源服务 ==========
 // 确保上传目录存在
@@ -70,18 +149,18 @@ app.use('/uploads', express.static(uploadDir))
 
 // ========== 路由注册 ==========
 // 公开接口
-app.use('/api/auth', authRoutes)           // 认证
-app.use('/api/categories', categoryRoutes) // 分类（公开 + 管理）
-app.use('/api/tags', tagRoutes)            // 标签（公开 + 管理）
-app.use('/api/articles', articleRoutes)    // 博客（包含公开和管理接口）
-app.use('/api/comments', commentRoutes)    // 评论（公开浏览 + 管理）
-app.use('/api/links', linkRoutes)          // 友链（公开浏览 + 管理）
-app.use('/api/settings', settingRoutes)    // 网站设置（公开读取 + 管理）
-app.use('/api/music', musicRoutes)         // 音乐（公开播放 + 管理）
+app.use('/api/auth', authRoutes)                                   // 认证（登录限流在 auth.js 内部挂载）
+app.use('/api/categories', categoryRoutes)                         // 分类（公开 + 管理）
+app.use('/api/tags', tagRoutes)                                    // 标签（公开 + 管理）
+app.use('/api/articles', articleRoutes)                            // 博客（包含公开和管理接口）
+app.use('/api/comments', commentLimiter, commentRoutes)            // 评论（公开浏览 + 管理，限流防刷屏）
+app.use('/api/links', linkRoutes)                                  // 友链（公开浏览 + 管理）
+app.use('/api/settings', settingRoutes)                            // 网站设置（公开读取 + 管理）
+app.use('/api/music', musicRoutes)                                 // 音乐（公开播放 + 管理）
 
 // 需要登录的接口
-app.use('/api/dashboard', dashboardRoutes) // 仪表盘
-app.use('/api/upload', uploadRoutes)       // 文件上传
+app.use('/api/dashboard', dashboardRoutes)                         // 仪表盘
+app.use('/api/upload', uploadLimiter, uploadRoutes)               // 文件上传（限流防滥用）
 
 /**
  * 健康检查接口

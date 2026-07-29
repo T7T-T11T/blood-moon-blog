@@ -228,6 +228,7 @@
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { marked } from 'marked';
+import DOMPurify from 'dompurify';
 import { ElMessage } from 'element-plus';
 import {
   ArrowLeft,
@@ -276,12 +277,12 @@ const commentForm = ref({
 });
 
 /**
- * 渲染后的 Markdown HTML
+ * 渲染后的 Markdown HTML（经过 DOMPurify 消毒，防止 XSS 攻击）
  * @returns {string}
  */
 const renderedContent = computed(() => {
   if (!article.value || !article.value.content) return '';
-  return marked(article.value.content);
+  return DOMPurify.sanitize(marked(article.value.content));
 });
 
 /**
@@ -304,10 +305,7 @@ const commentCount = computed(() => {
  * @returns {boolean}
  */
 const canSubmit = computed(() => {
-  return (
-    commentForm.value.nickname.trim() !== '' &&
-    commentForm.value.content.trim() !== ''
-  );
+  return commentForm.value.nickname.trim() !== '' && commentForm.value.content.trim() !== '';
 });
 
 /**

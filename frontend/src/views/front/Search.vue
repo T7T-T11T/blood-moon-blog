@@ -176,17 +176,31 @@ function formatDate(dateStr) {
 }
 
 /**
+ * HTML 特殊字符转义
+ * 防止文本中包含 HTML 标签时被当作 HTML 执行（XSS 防护）
+ * @param {string} str - 原始字符串
+ * @returns {string} 转义后的安全字符串
+ */
+function escapeHtml(str) {
+  const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+  return str.replace(/[&<>"']/g, (m) => map[m]);
+}
+
+/**
  * 关键词高亮处理
- * 将文本中匹配关键词的部分用 <mark> 标签包裹，实现视觉高亮
+ * 先对原始文本做 HTML 转义（防 XSS），再将匹配关键词的部分用 <mark> 标签包裹
  * @param {string} text - 原始文本
- * @returns {string} 包含高亮标签的 HTML 字符串
+ * @returns {string} 包含高亮标签的安全 HTML 字符串
  */
 function highlightKeyword(text) {
-  if (!keyword.value || !text) return text || '';
+  if (!text) return '';
+  // 先转义 HTML，防止 XSS
+  const safeText = escapeHtml(text);
+  if (!keyword.value) return safeText;
   const escaped = escapeRegExp(keyword.value);
   // 全局匹配正则替换所有出现位置
   const reg = new RegExp(`(${escaped})`, 'gi');
-  return text.replace(reg, '<mark class="highlight">$1</mark>');
+  return safeText.replace(reg, '<mark class="highlight">$1</mark>');
 }
 
 /**
@@ -315,7 +329,12 @@ onUnmounted(() => {
   padding: 120px 32px 64px;
   text-align: center;
   overflow: hidden;
-  background: linear-gradient(180deg, rgba(6, 9, 18, 0.55) 0%, rgba(10, 14, 26, 0.45) 50%, rgba(18, 24, 40, 0.65) 100%);
+  background: linear-gradient(
+    180deg,
+    rgba(6, 9, 18, 0.55) 0%,
+    rgba(10, 14, 26, 0.45) 50%,
+    rgba(18, 24, 40, 0.65) 100%
+  );
   backdrop-filter: blur(2px);
   transition: opacity 0.8s ease-out;
 }

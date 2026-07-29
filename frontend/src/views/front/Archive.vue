@@ -195,7 +195,12 @@ onUnmounted(() => {
 .hero {
   position: relative;
   padding: 120px 32px 80px;
-  background: linear-gradient(180deg, rgba(6, 9, 18, 0.55) 0%, rgba(10, 14, 26, 0.45) 50%, rgba(18, 24, 40, 0.65) 100%);
+  background: linear-gradient(
+    180deg,
+    rgba(6, 9, 18, 0.55) 0%,
+    rgba(10, 14, 26, 0.45) 50%,
+    rgba(18, 24, 40, 0.65) 100%
+  );
   backdrop-filter: blur(2px);
   overflow: hidden;
   color: #fff;

@@ -13,17 +13,31 @@
  */
 const express = require('express');
 const bcrypt = require('bcryptjs');
+const rateLimit = require('express-rate-limit');
 const pool = require('../config/db');
 const { generateToken, authMiddleware } = require('../middleware/auth');
 
 const router = express.Router();
 
 /**
+ * 登录接口限流：5 次/15 分钟/IP
+ * 防止暴力破解管理员密码
+ */
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: { code: 429, message: '登录尝试过于频繁，请15分钟后再试' },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
+/**
  * POST /api/auth/login - 用户登录
  * 请求体：{ username, password }
  * 逻辑：查询用户 → 验证密码 → 生成 JWT token 返回
+ * 限流：5次/15分钟，防止暴力破解
  */
-router.post('/login', async (req, res) => {
+router.post('/login', loginLimiter, async (req, res) => {
     try {
         const { username, password } = req.body;
 

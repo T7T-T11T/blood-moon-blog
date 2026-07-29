@@ -55,6 +55,18 @@ const MIME_TYPES = {
 }
 
 /**
+ * 各类型文件大小限制（字节）
+ * 图片 5MB / 音频 50MB / 视频 200MB / 普通文件 20MB
+ * 防止恶意上传大文件导致磁盘耗尽
+ */
+const FILE_SIZE_LIMITS = {
+  image: 5 * 1024 * 1024,     // 5MB
+  audio: 50 * 1024 * 1024,    // 50MB
+  video: 200 * 1024 * 1024,   // 200MB
+  file: 20 * 1024 * 1024      // 20MB
+}
+
+/**
  * 确保目录存在，不存在则创建
  * @param {string} dir - 目录路径
  */
@@ -155,7 +167,8 @@ router.post('/image', (req, res) => {
   ensureDir(DIRS.image)
   const upload = multer({
     storage: createStorage('image'),
-    fileFilter: createFileFilter('image')
+    fileFilter: createFileFilter('image'),
+    limits: { fileSize: FILE_SIZE_LIMITS.image }
   }).single('file')
 
   upload(req, res, (err) => {
@@ -190,7 +203,8 @@ router.post('/audio', (req, res) => {
   ensureDir(DIRS.audio)
   const upload = multer({
     storage: createStorage('audio'),
-    fileFilter: createFileFilter('audio')
+    fileFilter: createFileFilter('audio'),
+    limits: { fileSize: FILE_SIZE_LIMITS.audio }
   }).single('file')
 
   upload(req, res, (err) => {
@@ -220,7 +234,8 @@ router.post('/video', (req, res) => {
   ensureDir(DIRS.video)
   const upload = multer({
     storage: createStorage('video'),
-    fileFilter: createFileFilter('video')
+    fileFilter: createFileFilter('video'),
+    limits: { fileSize: FILE_SIZE_LIMITS.video }
   }).single('file')
 
   upload(req, res, (err) => {
@@ -249,7 +264,8 @@ router.post('/video', (req, res) => {
 router.post('/file', (req, res) => {
   ensureDir(DIRS.file)
   const upload = multer({
-    storage: createStorage('file')
+    storage: createStorage('file'),
+    limits: { fileSize: FILE_SIZE_LIMITS.file }
   }).single('file')
 
   upload(req, res, (err) => {
