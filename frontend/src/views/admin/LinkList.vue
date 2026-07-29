@@ -92,7 +92,12 @@
     </div>
 
     <!-- 新增/编辑对话框 -->
-    <el-dialog v-model="dialogVisible" :title="isEditing ? '编辑友链' : '新增友链'" width="560px" append-to-body>
+    <el-dialog
+      v-model="dialogVisible"
+      :title="isEditing ? '编辑友链' : '新增友链'"
+      width="560px"
+      append-to-body
+    >
       <el-form ref="formRef" :model="form" :rules="rules" label-width="90px">
         <el-form-item label="网站名称" prop="name">
           <el-input v-model="form.name" placeholder="请输入网站名称" />

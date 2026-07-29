@@ -285,30 +285,35 @@ async function handleLogin() {
   margin: 0;
 }
 
-/* ========== 表单输入样式覆盖 ========== */
+/* ========== 表单输入样式覆盖（暗色主题适配） ========== */
 .login-form :deep(.el-input__wrapper) {
   padding: 10px 16px;
-  background: #f8fafc;
+  background: var(--bg-hover);
   border-radius: 12px;
   box-shadow: none;
-  border: 1.5px solid transparent;
+  border: 1.5px solid var(--border);
   transition: all 0.3s var(--ease-out);
 }
 
 .login-form :deep(.el-input__wrapper:hover) {
-  border-color: var(--border);
-  background: #fff;
+  border-color: var(--primary);
+  background: var(--bg-hover);
 }
 
 .login-form :deep(.el-input__wrapper.is-focus) {
-  background: #fff;
+  background: var(--bg-hover);
   border-color: var(--primary);
-  box-shadow: 0 0 0 4px rgba(13, 148, 136, 0.1);
+  box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.15);
 }
 
 .login-form :deep(.el-input__inner) {
   height: 44px;
   font-size: 15px;
+  color: var(--text-primary);
+}
+
+.login-form :deep(.el-input__inner::placeholder) {
+  color: var(--text-tertiary);
 }
 
 /* ========== 提交按钮 ========== */

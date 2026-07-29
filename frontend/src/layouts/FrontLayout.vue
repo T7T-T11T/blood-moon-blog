@@ -10,7 +10,7 @@
       <div class="navbar-inner">
         <!-- 品牌：仅 Logo 字母图标 -->
         <router-link to="/" class="brand" @click="closeMobileMenu">
-          <span class="brand-mark">{{ brandInitial }}</span>
+          <img src="@/assets/blood-moon-logo.jpg" alt="logo" class="brand-mark" />
         </router-link>
 
         <!-- 桌面端导航 -->
@@ -282,17 +282,15 @@ onUnmounted(() => {
 }
 
 .brand-mark {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: block;
   width: 40px;
   height: 40px;
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-  color: #fff;
-  font-weight: 800;
-  font-size: 20px;
-  border-radius: 12px;
-  box-shadow: 0 6px 16px rgba(220, 38, 38, 0.35);
+  border-radius: 50%;
+  object-fit: cover;
+  box-shadow:
+    0 0 0 2px rgba(220, 38, 38, 0.4),
+    0 0 12px rgba(220, 38, 38, 0.3),
+    inset 0 0 8px rgba(220, 38, 38, 0.15);
   transition: transform 0.3s var(--ease-spring);
 }
 

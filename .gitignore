@@ -49,3 +49,6 @@ backend/uploads/
 tmp/
 temp/
 *.tmp
+
+# 临时脚本（数据清理、调试工具等）
+backend/scripts/delete-*.js

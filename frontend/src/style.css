@@ -110,10 +110,77 @@
 .el-input__wrapper {
   border-radius: var(--radius-md) !important;
   transition: box-shadow var(--dur-normal) var(--ease-out) !important;
+  background: var(--bg-hover) !important;
+  box-shadow: 0 0 0 1px var(--border) inset !important;
 }
 
 .el-input__wrapper.is-focus {
-  box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.2) !important;
+  box-shadow:
+    0 0 0 1px var(--primary) inset,
+    0 0 0 3px rgba(220, 38, 38, 0.15) !important;
+}
+
+.el-input__inner {
+  color: var(--text-primary) !important;
+}
+
+.el-input__inner::placeholder {
+  color: var(--text-tertiary) !important;
+}
+
+.el-textarea__inner {
+  background: var(--bg-hover) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border) !important;
+  border-radius: var(--radius-md) !important;
+}
+
+.el-textarea__inner::placeholder {
+  color: var(--text-tertiary) !important;
+}
+
+.el-textarea__inner:focus {
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.15) !important;
+}
+
+.el-select__wrapper {
+  border-radius: var(--radius-md) !important;
+  background: var(--bg-hover) !important;
+  box-shadow: 0 0 0 1px var(--border) inset !important;
+}
+
+.el-select__wrapper.is-focused {
+  box-shadow:
+    0 0 0 1px var(--primary) inset,
+    0 0 0 3px rgba(220, 38, 38, 0.15) !important;
+}
+
+.el-select__selection {
+  color: var(--text-primary) !important;
+}
+
+.el-select-dropdown__item {
+  color: var(--text-secondary) !important;
+}
+
+.el-select-dropdown__item.is-selected {
+  color: var(--primary-light) !important;
+}
+
+.el-select-dropdown__item.hover,
+.el-select-dropdown__item:hover {
+  background: var(--bg-hover) !important;
+  color: var(--text-primary) !important;
+}
+
+.el-popper.is-light {
+  background: var(--bg-card) !important;
+  border-color: var(--border) !important;
+}
+
+.el-form-item__label {
+  color: var(--text-secondary) !important;
 }
 
 .el-tag {

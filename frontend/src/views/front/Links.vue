@@ -212,7 +212,14 @@ onUnmounted(() => {
 .hero {
   position: relative;
   padding: 120px 32px 80px;
-  background: linear-gradient(180deg, #060912 0%, #0a0e1a 40%, #121828 100%);
+  background:
+    linear-gradient(
+      180deg,
+      rgba(6, 9, 18, 0.88) 0%,
+      rgba(10, 14, 26, 0.8) 40%,
+      rgba(18, 24, 40, 0.92) 100%
+    ),
+    url('@/assets/bats-decoration.jpg') center/cover no-repeat fixed;
   overflow: hidden;
   color: #fff;
   isolation: isolate;

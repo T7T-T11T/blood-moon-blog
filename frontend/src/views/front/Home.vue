@@ -378,10 +378,6 @@ function initEmberParticles() {
       this.windSpeed = Math.random() * 0.02 + 0.01;
       this.windAmp = this.layer === 'front' ? 1.5 : 0.8;
 
-      // 闪烁
-      this.flickerPhase = Math.random() * Math.PI * 2;
-      this.flickerSpeed = Math.random() * 0.1 + 0.05;
-
       // 偶尔爆发的火花粒子
       this.isSpark = Math.random() < 0.03;
       if (this.isSpark) {
@@ -410,11 +406,6 @@ function initEmberParticles() {
       // 更新位置
       this.y += this.speedY;
       this.x += this.speedX + windOffset * 0.02;
-
-      // 闪烁效果
-      this.flickerPhase += this.flickerSpeed;
-      const flicker = Math.sin(this.flickerPhase) * 0.3 + 0.7; // 0.4 ~ 1.0
-      this.size = this.baseSize * flicker;
 
       // 渐隐
       this.opacity -= this.fadeSpeed;
@@ -447,9 +438,9 @@ function initEmberParticles() {
         }
       }
 
-      // 绘制主粒子
+      // 绘制主粒子（使用固定大小，无闪烁）
       ctx.beginPath();
-      ctx.arc(this.x, this.y, Math.max(this.size, 0.1), 0, Math.PI * 2);
+      ctx.arc(this.x, this.y, Math.max(this.baseSize, 0.1), 0, Math.PI * 2);
       const alpha = Math.max(this.opacity, 0);
       ctx.fillStyle = `hsla(${this.hue}, 100%, ${this.isSpark ? 75 : 60}%, ${alpha})`;
       ctx.shadowBlur = this.layer === 'front' ? 12 : this.layer === 'mid' ? 8 : 5;
@@ -1230,7 +1221,7 @@ onUnmounted(() => {
     gap: 40px;
   }
   .hero-bg {
-    background-attachment: scroll;
+    background-attachment: fixed;
   }
 }
 

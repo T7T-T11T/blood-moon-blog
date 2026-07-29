@@ -197,7 +197,14 @@ onUnmounted(() => {
 .hero {
   position: relative;
   padding: 140px 32px 100px;
-  background: linear-gradient(180deg, #060912 0%, #0a0e1a 40%, #121828 100%);
+  background:
+    linear-gradient(
+      180deg,
+      rgba(6, 9, 18, 0.85) 0%,
+      rgba(10, 14, 26, 0.75) 40%,
+      rgba(18, 24, 40, 0.9) 100%
+    ),
+    url('@/assets/gothic-manor.jpg') center/cover no-repeat fixed;
   overflow: hidden;
   color: #fff;
   isolation: isolate;
