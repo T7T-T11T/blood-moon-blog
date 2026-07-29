@@ -170,6 +170,9 @@ import { User, Camera, Link, ChatDotRound, ChatLineSquare } from '@element-plus/
 import { getProfile, updateProfile, changePassword } from '@/api/profile';
 import { getDashboardStatsAPI } from '@/api/dashboard';
 import { uploadImage } from '@/api/upload';
+import { useUserStore } from '@/stores/user';
+
+const userStore = useUserStore();
 
 /** 表单数据 */
 const form = reactive({
@@ -253,6 +256,10 @@ async function loadData() {
         qq_url: data.qq_url || '',
         wechat: data.wechat || ''
       });
+      // 同步头像到全局 store，确保右上角头像与资料一致
+      if (data.avatar_url) {
+        userStore.setAvatar(data.avatar_url);
+      }
     }
 
     // 加载博客统计
@@ -357,6 +364,8 @@ async function handleAvatarChange(e) {
     const url = res.data?.url || res.url || res.data;
     if (url) {
       form.avatar_url = url;
+      // 同步更新全局 store，使右上角头像立即生效
+      userStore.setAvatar(url);
       await updateProfile({ avatar_url: url });
       ElMessage.success('头像更新成功');
     }

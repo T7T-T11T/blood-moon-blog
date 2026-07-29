@@ -74,7 +74,13 @@
         <div class="header-right">
           <el-dropdown trigger="click" @command="handleCommand">
             <div class="user-dropdown">
-              <div class="avatar">{{ userStore.username?.[0]?.toUpperCase() }}</div>
+              <img
+                v-if="userStore.avatar_url"
+                :src="userStore.avatar_url"
+                class="avatar-img"
+                alt="头像"
+              />
+              <div v-else class="avatar">{{ userStore.username?.[0]?.toUpperCase() }}</div>
               <span class="username">{{ userStore.username }}</span>
               <el-icon class="arrow"><ArrowDown /></el-icon>
             </div>
@@ -373,17 +379,26 @@ async function handleCommand(command) {
   background: var(--bg-hover);
 }
 
-.avatar {
+.avatar,
+.avatar-img {
   width: 34px;
   height: 34px;
-  background: linear-gradient(135deg, var(--primary) 0%, #0891b2 100%);
   border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.avatar {
+  background: linear-gradient(135deg, var(--primary) 0%, #0891b2 100%);
   display: flex;
   align-items: center;
   justify-content: center;
   color: #fff;
   font-weight: 600;
   font-size: 14px;
+}
+
+.avatar-img {
+  object-fit: cover;
 }
 
 .username {

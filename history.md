@@ -1,5 +1,14 @@
 # 版本历史
 
+## v1.4.5 (2026-07-30)
+
+- fix(profile): 修复头像上传后右上角导航栏头像未同步的问题
+  - userStore 新增 avatar_url 状态和 setAvatar 方法，持久化到 localStorage
+  - AdminLayout 右上角优先显示头像图片，无头像时回退到用户名首字母
+  - Profile.vue 上传头像和加载资料时同步更新全局 store
+  - Login.vue 登录成功后异步获取用户资料并同步头像到 store
+- 前后端版本号统一升级至 1.4.5
+
 ## v1.4.4 (2026-07-30)
 
 - feat(profile): 新增个人中心页面，支持修改头像、简介、邮箱、GitHub/QQ/微信链接及密码

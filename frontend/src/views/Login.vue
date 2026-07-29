@@ -113,6 +113,17 @@ async function handleLogin() {
     userStore.setLogin(data.token, data.user?.username || form.username);
     ElMessage.success('登录成功');
 
+    // 异步获取完整用户资料（含头像），同步到 store
+    try {
+      const { getProfile } = await import('@/api/profile');
+      const profileRes = await getProfile();
+      if (profileRes.code === 200 && profileRes.data?.avatar_url) {
+        userStore.setAvatar(profileRes.data.avatar_url);
+      }
+    } catch {
+      // 头像同步失败不影响登录流程
+    }
+
     // 跳转到 redirect 指定页面，默认 /admin
     const redirect = route.query.redirect || '/admin';
     router.push(redirect);
