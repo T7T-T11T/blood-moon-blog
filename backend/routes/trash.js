@@ -5,9 +5,10 @@
  *
  * 接口列表：
  * 【管理接口】（需要登录）
- *   GET    /api/trash           - 获取回收站文章列表
+ *   GET    /api/trash             - 获取回收站文章列表
  *   POST   /api/trash/:id/restore - 恢复文章
- *   DELETE /api/trash/:id       - 永久删除文章
+ *   DELETE /api/trash/:id         - 永久删除文章
+ *   DELETE /api/trash/clear      - 清空回收站
  */
 
 const express = require('express');
@@ -31,6 +32,13 @@ router.get('/', authMiddleware, articlesController.getTrashArticles);
  * @access Private（需要登录）
  */
 router.post('/:id/restore', authMiddleware, articlesController.restoreArticle);
+
+/**
+ * 清空回收站（必须在 /:id 路由之前，避免被 :id 匹配）
+ * @route DELETE /api/trash/clear
+ * @access Private（需要登录）
+ */
+router.delete('/clear', authMiddleware, articlesController.clearAllTrash);
 
 /**
  * 永久删除文章

@@ -284,10 +284,7 @@ async function loadLogs() {
     }
 
     const res = await getLogs(params);
-    if (res.data?.data) {
-      logs.value = res.data.data.list || [];
-      total.value = res.data.data.pagination?.total || 0;
-    } else if (res.data?.list) {
+    if (res.code === 200 && res.data) {
       logs.value = res.data.list || [];
       total.value = res.data.pagination?.total || 0;
     }

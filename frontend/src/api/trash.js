@@ -4,7 +4,7 @@
  * 作用：提供回收站文章的查看、恢复和永久删除接口
  */
 
-import request from '../utils/request';
+import request from './request';
 
 /**
  * 获取回收站文章列表

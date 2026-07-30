@@ -136,10 +136,7 @@ async function loadArticles() {
       page: currentPage.value,
       page_size: pageSize
     });
-    if (res.data?.data) {
-      articles.value = res.data.data.list || [];
-      total.value = res.data.data.pagination?.total || 0;
-    } else if (res.data?.list) {
+    if (res.code === 200 && res.data) {
       articles.value = res.data.list || [];
       total.value = res.data.pagination?.total || 0;
     }
@@ -167,6 +164,8 @@ async function handleRestore(row) {
     if (res.code === 200) {
       ElMessage.success('文章已恢复');
       loadArticles();
+    } else {
+      ElMessage.error(res.message || '恢复失败');
     }
   } catch (e) {
     if (e !== 'cancel') {
@@ -194,6 +193,8 @@ async function handlePermanentDelete(row) {
     if (res.code === 200) {
       ElMessage.success('文章已永久删除');
       loadArticles();
+    } else {
+      ElMessage.error(res.message || '删除失败');
     }
   } catch (e) {
     if (e !== 'cancel') {
@@ -218,8 +219,10 @@ async function handleClearAll() {
     );
     const res = await clearAllTrash();
     if (res.code === 200) {
-      ElMessage.success('回收站已清空');
+      ElMessage.success(res.message || '回收站已清空');
       loadArticles();
+    } else {
+      ElMessage.error(res.message || '清空失败');
     }
   } catch (e) {
     if (e !== 'cancel') {

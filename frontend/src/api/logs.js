@@ -4,7 +4,7 @@
  * 作用：提供操作日志查询和统计接口
  */
 
-import request from '../utils/request';
+import request from './request';
 
 /**
  * 获取操作日志列表

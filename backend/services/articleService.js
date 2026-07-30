@@ -540,13 +540,23 @@ async function getRelatedArticles(articleId, limit = 5) {
 // ==================== 回收站功能 ====================
 
 /**
- * 获取回收站文章列表
+ * 获取回收站文章列表（支持分页）
  * 查询已被软删除的文章
  * @param {Object} params - 查询参数
  * @param {number} params.userId - 用户ID
- * @returns {Promise<Array>} 回收站文章列表
+ * @param {number} [params.page=1] - 页码
+ * @param {number} [params.pageSize=20] - 每页数量
+ * @returns {Promise<Object>} 包含 list 和 pagination 的对象
  */
-async function getTrashArticles({ userId }) {
+async function getTrashArticles({ userId, page = 1, pageSize = 20 }) {
+  // 查询总数
+  const [countResult] = await pool.execute(
+    'SELECT COUNT(*) as total FROM articles WHERE user_id = ? AND deleted_at IS NOT NULL',
+    [userId]
+  );
+  const total = countResult[0].total;
+
+  const offset = (page - 1) * pageSize;
   const [rows] = await pool.execute(
     `SELECT a.id, a.title, a.summary, a.cover_image, a.status, a.view_count,
             a.category_id, a.created_at, a.updated_at, a.deleted_at,
@@ -554,10 +564,21 @@ async function getTrashArticles({ userId }) {
      FROM articles a
      LEFT JOIN categories c ON a.category_id = c.id
      WHERE a.user_id = ? AND a.deleted_at IS NOT NULL
-     ORDER BY a.deleted_at DESC`,
-    [userId]
+     ORDER BY a.deleted_at DESC
+     LIMIT ? OFFSET ?`,
+    [userId, String(pageSize), String(offset)]
   );
-  return attachTags(rows);
+
+  const list = await attachTags(rows);
+  return {
+    list,
+    pagination: {
+      page,
+      page_size: pageSize,
+      total,
+      total_pages: Math.ceil(total / pageSize)
+    }
+  };
 }
 
 /**
@@ -613,6 +634,52 @@ async function permanentDeleteArticle({ id, userId }) {
   }
 }
 
+/**
+ * 清空回收站（永久删除所有已软删除的文章）
+ * @param {Object} params - 参数对象
+ * @param {number} params.userId - 用户ID
+ * @returns {Promise<number>} 删除的文章数量
+ */
+async function clearAllTrash({ userId }) {
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    // 获取所有要删除的文章ID
+    const [articles] = await conn.execute(
+      'SELECT id FROM articles WHERE user_id = ? AND deleted_at IS NOT NULL',
+      [userId]
+    );
+
+    const ids = articles.map((a) => a.id);
+    if (ids.length === 0) {
+      await conn.commit();
+      return 0;
+    }
+
+    // 删除所有文章的标签关联
+    const placeholders = ids.map(() => '?').join(',');
+    await conn.execute(
+      `DELETE FROM article_tags WHERE article_id IN (${placeholders})`,
+      ids
+    );
+
+    // 永久删除文章
+    const [result] = await conn.execute(
+      `DELETE FROM articles WHERE id IN (${placeholders})`,
+      ids
+    );
+
+    await conn.commit();
+    return result.affectedRows;
+  } catch (e) {
+    await conn.rollback();
+    throw e;
+  } finally {
+    conn.release();
+  }
+}
+
 module.exports = {
   getPublishedArticles,
   getLatestArticles,
@@ -630,5 +697,6 @@ module.exports = {
   deleteArticle,
   getTrashArticles,
   restoreArticle,
-  permanentDeleteArticle
+  permanentDeleteArticle,
+  clearAllTrash
 };

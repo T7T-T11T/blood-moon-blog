@@ -238,8 +238,12 @@ exports.deleteArticle = async (req, res) => {
  */
 exports.getTrashArticles = async (req, res) => {
   try {
+    const page = parseInt(req.query.page) || 1;
+    const pageSize = parseInt(req.query.page_size) || 20;
     const data = await articleService.getTrashArticles({
-      userId: req.user.id
+      userId: req.user.id,
+      page,
+      pageSize
     });
     res.json({ code: 200, data });
   } catch (e) {
@@ -286,6 +290,22 @@ exports.permanentDeleteArticle = async (req, res) => {
     res.json({ code: 200, message: '已永久删除' });
   } catch (e) {
     console.error('永久删除文章失败：', e);
+    res.status(500).json({ code: 500, message: '服务器错误' });
+  }
+};
+
+/**
+ * 清空回收站
+ * DELETE /api/trash/clear
+ */
+exports.clearAllTrash = async (req, res) => {
+  try {
+    const count = await articleService.clearAllTrash({
+      userId: req.user.id
+    });
+    res.json({ code: 200, message: `已清空回收站，共删除 ${count} 篇文章` });
+  } catch (e) {
+    console.error('清空回收站失败：', e);
     res.status(500).json({ code: 500, message: '服务器错误' });
   }
 };
