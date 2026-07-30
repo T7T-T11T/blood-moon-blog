@@ -1,6 +1,6 @@
 {
   "name": "task-manager-backend",
-  "version": "1.9.0",
+  "version": "1.10.0",
   "description": "任务管理系统后端 - Express + MySQL",
   "main": "server.js",
   "scripts": {

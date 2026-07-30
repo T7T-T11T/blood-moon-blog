@@ -14,6 +14,21 @@
       </button>
     </div>
 
+    <!-- 面包屑导航 -->
+    <nav v-if="article" class="breadcrumb">
+      <router-link to="/" class="breadcrumb-item">首页</router-link>
+      <span class="breadcrumb-separator">/</span>
+      <router-link
+        v-if="article.category_slug"
+        :to="`/category/${article.category_slug}`"
+        class="breadcrumb-item"
+      >
+        {{ article.category_name }}
+      </router-link>
+      <span v-if="article.category_slug" class="breadcrumb-separator">/</span>
+      <span class="breadcrumb-current">{{ article.title }}</span>
+    </nav>
+
     <!-- 移动端 TOC 下拉 -->
     <div v-if="tocItems.length > 0" class="toc-mobile">
       <button class="toc-mobile-toggle" @click="tocMobileOpen = !tocMobileOpen">
@@ -59,6 +74,10 @@
           <span class="meta-item">
             <el-icon><View /></el-icon>
             {{ article.view_count }} 阅读
+          </span>
+          <span class="meta-item reading-time">
+            <el-icon><Timer /></el-icon>
+            约 {{ readingTime }} 分钟
           </span>
         </div>
         <h1 class="article-title">{{ article.title }}</h1>
@@ -171,6 +190,39 @@
       </div>
     </aside>
 
+    <!-- 相关文章推荐 -->
+    <section v-if="relatedArticles.length > 0" class="related-section reveal">
+      <h3 class="related-title">相关推荐</h3>
+      <div class="related-grid">
+        <router-link
+          v-for="related in relatedArticles"
+          :key="related.id"
+          :to="`/article/${related.id}`"
+          class="related-card"
+        >
+          <div class="related-cover">
+            <img
+              v-if="related.cover_image"
+              :src="related.cover_image"
+              :alt="related.title"
+              loading="lazy"
+            />
+            <div v-else class="cover-placeholder">
+              <el-icon><Document /></el-icon>
+            </div>
+          </div>
+          <div class="related-content">
+            <h4 class="related-card-title">{{ related.title }}</h4>
+            <p class="related-excerpt">{{ related.summary || '暂无摘要' }}</p>
+            <span class="related-meta">
+              <el-icon><View /></el-icon>
+              {{ related.view_count || 0 }} 阅读
+            </span>
+          </div>
+        </router-link>
+      </div>
+    </section>
+
     <!-- 评论区 -->
     <CommentSection v-if="article" :article-id="route.params.id" />
 
@@ -199,9 +251,11 @@ import {
   List,
   ArrowDown,
   Star,
-  StarFilled
+  StarFilled,
+  Document,
+  Timer
 } from '@element-plus/icons-vue';
-import { getArticleDetail } from '../../api/articles';
+import { getArticleDetail, getRelatedArticles } from '../../api/articles';
 import { toggleLike, getLikeStatus, getLikeCount } from '../../api/likes';
 import { toggleFavorite, getFavoriteStatus } from '../../api/favorites';
 import { useUserStore } from '../../stores/user';
@@ -221,6 +275,21 @@ const articleBodyRef = ref(null);
 const liked = ref(false);
 const likeCount = ref(0);
 const favorited = ref(false);
+const relatedArticles = ref([]);
+
+/**
+ * 加载相关文章
+ * @param {number} articleId - 文章ID
+ */
+async function loadRelatedArticles(articleId) {
+  try {
+    const res = await getRelatedArticles(articleId, 5);
+    relatedArticles.value = res.data.data || [];
+  } catch (e) {
+    console.error('加载相关文章失败：', e);
+    relatedArticles.value = [];
+  }
+}
 
 async function handleToggleLike() {
   if (!userStore.token) {
@@ -302,6 +371,19 @@ let revealObserver = null;
 // ---- 图片懒加载 Observer ----
 let lazyImgObserver = null;
 
+/**
+ * 计算阅读时间（按中文约 500 字/分钟，英文约 200 词/分钟）
+ * @returns {number} 预估阅读时间（分钟）
+ */
+const readingTime = computed(() => {
+  if (!article.value || !article.value.content) return 1;
+  const text = article.value.content.replace(/<[^>]+>/g, ''); // 去除 HTML 标签
+  const charCount = text.length;
+  // 平均阅读速度：约 400 字/分钟
+  const minutes = Math.ceil(charCount / 400);
+  return Math.max(1, minutes);
+});
+
 const renderedContent = computed(() => {
   if (!article.value || !article.value.content) return '';
   let html = DOMPurify.sanitize(marked(article.value.content));
@@ -347,6 +429,8 @@ async function loadArticle() {
     initLazyImages();
     updateActiveToc();
     fetchInteractionStatus();
+    // 加载相关文章
+    loadRelatedArticles(id);
   } catch (e) {
     console.error('加载文章失败:', e);
     article.value = null;
@@ -1170,6 +1254,165 @@ onUnmounted(() => {
   }
   .toc-mobile {
     display: block;
+  }
+}
+</style>
+
+<style scoped>
+/* ========== 相关文章推荐 ========== */
+.related-section {
+  max-width: 900px;
+  margin: 48px auto;
+  padding: 32px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+}
+
+.related-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #fff;
+  margin: 0 0 24px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.related-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 20px;
+}
+
+.related-card {
+  display: flex;
+  flex-direction: column;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  overflow: hidden;
+  text-decoration: none;
+  color: inherit;
+  transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+}
+
+.related-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 32px rgba(198, 40, 40, 0.1);
+  border-color: rgba(198, 40, 40, 0.2);
+}
+
+.related-cover {
+  width: 100%;
+  height: 120px;
+  overflow: hidden;
+}
+
+.related-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.5s ease;
+}
+
+.related-card:hover .related-cover img {
+  transform: scale(1.05);
+}
+
+.related-cover .cover-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  color: rgba(255, 255, 255, 0.2);
+}
+
+.related-content {
+  padding: 12px;
+}
+
+.related-card-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  margin: 0 0 8px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.related-excerpt {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.5);
+  line-height: 1.5;
+  margin: 0 0 8px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.related-meta {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.4);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+@media (max-width: 768px) {
+  .related-section {
+    margin: 32px 16px;
+    padding: 20px;
+  }
+  .related-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ========== 面包屑导航 ========== */
+.breadcrumb {
+  max-width: 900px;
+  margin: 0 auto 24px;
+  padding: 0 24px;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.breadcrumb-item {
+  color: rgba(255, 255, 255, 0.6);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.breadcrumb-item:hover {
+  color: #c62828;
+}
+
+.breadcrumb-separator {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.breadcrumb-current {
+  color: rgba(255, 255, 255, 0.9);
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+  .breadcrumb {
+    padding: 0 16px;
+    font-size: 12px;
+  }
+  .breadcrumb-current {
+    max-width: 120px;
   }
 }
 </style>

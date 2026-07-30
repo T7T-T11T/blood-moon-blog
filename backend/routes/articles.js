@@ -47,6 +47,7 @@ router.get('/public/category/:slug', articlesController.getArticlesByCategory);
 router.get('/public/tag/:slug', articlesController.getArticlesByTag);
 router.get('/public/archives', articlesController.getArchives);
 router.get('/public/search', searchLimiter, articlesController.search);
+router.get('/public/related/:id', articlesController.getRelatedArticles);
 router.get('/public/:id', articlesController.getArticleDetail);
 
 // ==================== 管理接口 ====================

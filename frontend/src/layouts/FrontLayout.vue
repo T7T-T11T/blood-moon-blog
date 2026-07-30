@@ -21,7 +21,7 @@
         <!-- 桌面端导航 -->
         <nav class="nav-menu">
           <router-link
-            v-for="item in navItems"
+            v-for="item in visibleNavItems"
             :key="item.path"
             :to="item.path"
             class="nav-link"
@@ -73,7 +73,7 @@
       <transition name="slide-down">
         <nav v-if="mobileMenuOpen" class="mobile-menu">
           <router-link
-            v-for="item in navItems"
+            v-for="item in visibleNavItems"
             :key="item.path"
             :to="item.path"
             class="mobile-nav-link"
@@ -108,6 +108,9 @@
       </router-view>
     </main>
 
+    <!-- 返回顶部浮动按钮 -->
+    <BackToTop />
+
     <!-- 极简页脚 -->
     <footer class="footer">
       <div class="footer-inner">
@@ -135,11 +138,14 @@ import { Search, Setting, Sunny, Moon, Connection } from '@element-plus/icons-vu
 import { getSettings } from '../api/settings';
 import heroBg from '../assets/hero-bg.webp';
 import MusicPlayer from '../components/MusicPlayer.vue';
+import BackToTop from '../components/common/BackToTop.vue';
 import { useThemeStore } from '../stores/theme';
+import { useUserStore } from '../stores/user';
 
 const route = useRoute();
 const router = useRouter();
 const themeStore = useThemeStore();
+const userStore = useUserStore();
 
 /**
  * 站点配置（getSettings 失败时使用默认值）
@@ -162,6 +168,13 @@ const currentYear = new Date().getFullYear();
 /** 搜索关键词 */
 const searchKeyword = ref('');
 
+/**
+ * 可见导航项（auth 标记的项仅在登录时显示）
+ */
+const visibleNavItems = computed(() => {
+  return navItems.filter((item) => !item.auth || userStore.isLoggedIn);
+});
+
 /** 移动菜单展开状态 */
 const mobileMenuOpen = ref(false);
 
@@ -171,11 +184,12 @@ const isScrolled = ref(false);
 /**
  * 导航菜单项
  * - exact: true 表示仅精确匹配高亮（首页特殊处理）
- * @type {Array<{path: string, label: string, exact: boolean}>}
+* @type {Array<{path: string, label: string, exact: boolean, auth?: boolean}>}
  */
 const navItems = [
   { path: '/', label: '首页', exact: true },
   { path: '/archive', label: '归档', exact: false },
+  { path: '/favorites', label: '收藏', exact: false, auth: true },
   { path: '/links', label: '友链', exact: false },
   { path: '/about', label: '关于', exact: false }
 ];

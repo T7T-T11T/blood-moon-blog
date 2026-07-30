@@ -1,5 +1,31 @@
 # 版本历史
 
+## v1.10.0 (2026-07-30)
+
+- feat(front): 新增标签云页面（/tags），动态展示所有标签并按文章数量调整大小
+- feat(front): 新增收藏夹页面（/favorites），登录用户可查看和取消收藏文章
+- feat(front): 文章详情页新增相关文章推荐模块，按同分类或同标签智能推荐5篇相关文章
+- feat(front): 新增独立返回顶部按钮组件（BackToTop），提升长页面浏览体验
+- feat(front): 文章详情页新增阅读时间预估功能（按400字/分钟计算）
+- feat(seo): 新增 sitemap.xml 自动生成接口（/api/sitemap.xml），动态生成站点地图
+- feat(seo): 新增 robots.txt 文件，配置搜索引擎爬虫规则
+- feat(seo): index.html 添加 Open Graph 和 Twitter Card 元数据，优化社交分享效果
+- feat(seo): index.html 添加 JSON-LD 结构化数据（WebSite/Person/Blog），提升搜索引擎理解
+- feat(admin): 新增回收站功能，已删除文章可在回收站恢复或永久删除
+- feat(admin): 新增操作日志记录功能，记录文章/评论/分类/标签的增删改操作
+- feat(admin): 新增数据导出功能，支持导出文章和评论数据为JSON格式
+- fix(front): 修复 FrontLayout.vue 缺少 userStore 导入导致 ESLint 报错
+- fix(backend): 清理 exportController.js 未使用的导入，符合 ESLint 规范
+- feat(front): 路由新增 /tags、/favorites、/admin/trash 路径
+- feat(api): 后端新增相关文章推荐接口 GET /api/articles/public/related/:id
+- feat(api): 后端新增 sitemap 生成路由和接口
+- feat(api): 后端新增回收站相关接口（GET /api/trash、POST /api/trash/:id/restore、DELETE /api/trash/:id）
+- feat(api): 后端新增操作日志接口 GET /api/logs
+- feat(api): 后端新增数据导出接口（GET /api/export/articles、GET /api/export/comments）
+- feat(db): 新增软删除迁移脚本（004_soft_delete.sql），为文章表添加 deleted_at 字段
+- feat(db): 新增操作日志表迁移脚本（005_operation_logs.sql）
+- 前后端版本号统一升级至 1.10.0
+
 ## v1.9.0 (2026-07-30)
 
 - fix(security): 放宽 Helmet CSP 策略，支持前后端分离部署（connectSrc/imgSrc/mediaSrc 允许 http/https）

@@ -92,6 +92,18 @@ const routes = [
         name: 'Search',
         component: () => import('../views/front/Search.vue'),
         meta: { title: '搜索结果' }
+      },
+      {
+        path: 'favorites',
+        name: 'Favorites',
+        component: () => import('../views/front/Favorites.vue'),
+        meta: { title: '我的收藏', requiresAuth: true }
+      },
+      {
+        path: 'tags',
+        name: 'Tags',
+        component: () => import('../views/front/Tags.vue'),
+        meta: { title: '标签云' }
       }
     ]
   },

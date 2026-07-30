@@ -52,9 +52,10 @@ async function attachTags(articles) {
 
 /**
  * 获取已发布文章列表（分页、筛选）
+ * 只查询未被软删除的文章
  */
 async function getPublishedArticles({ page = 1, pageSize = 10, category_id, tag_id, keyword }) {
-  let whereConditions = ['a.status = ?'];
+  let whereConditions = ['a.status = ?', 'a.deleted_at IS NULL'];
   let params = ['已发布'];
 
   if (category_id) {
@@ -104,6 +105,7 @@ async function getPublishedArticles({ page = 1, pageSize = 10, category_id, tag_
 
 /**
  * 获取最新文章
+ * 只查询未被软删除的文章
  */
 async function getLatestArticles(limit = 5) {
   const [rows] = await pool.execute(
@@ -112,7 +114,7 @@ async function getLatestArticles(limit = 5) {
             c.name as category_name, c.slug as category_slug
      FROM articles a
      LEFT JOIN categories c ON a.category_id = c.id
-     WHERE a.status = '已发布'
+     WHERE a.status = '已发布' AND a.deleted_at IS NULL
      ORDER BY a.created_at DESC
      LIMIT ?`,
     [String(limit)]
@@ -122,6 +124,7 @@ async function getLatestArticles(limit = 5) {
 
 /**
  * 获取热门文章
+ * 只查询未被软删除的文章
  */
 async function getHotArticles(limit = 5) {
   const [rows] = await pool.execute(
@@ -129,7 +132,7 @@ async function getHotArticles(limit = 5) {
             c.name as category_name, c.slug as category_slug
      FROM articles a
      LEFT JOIN categories c ON a.category_id = c.id
-     WHERE a.status = '已发布'
+     WHERE a.status = '已发布' AND a.deleted_at IS NULL
      ORDER BY a.view_count DESC
      LIMIT ?`,
     [String(limit)]
@@ -139,6 +142,7 @@ async function getHotArticles(limit = 5) {
 
 /**
  * 按分类获取文章
+ * 只查询未被软删除的文章
  */
 async function getArticlesByCategory({ slug, page = 1, pageSize = 10 }) {
   const [categories] = await pool.execute(
@@ -149,7 +153,7 @@ async function getArticlesByCategory({ slug, page = 1, pageSize = 10 }) {
 
   const category = categories[0];
   const [countResult] = await pool.execute(
-    'SELECT COUNT(*) as total FROM articles WHERE status = ? AND category_id = ?',
+    'SELECT COUNT(*) as total FROM articles WHERE status = ? AND deleted_at IS NULL AND category_id = ?',
     ['已发布', category.id]
   );
 
@@ -160,7 +164,7 @@ async function getArticlesByCategory({ slug, page = 1, pageSize = 10 }) {
             c.name as category_name, c.slug as category_slug
      FROM articles a
      LEFT JOIN categories c ON a.category_id = c.id
-     WHERE a.status = '已发布' AND a.category_id = ?
+     WHERE a.status = '已发布' AND a.deleted_at IS NULL AND a.category_id = ?
      ORDER BY a.created_at DESC
      LIMIT ? OFFSET ?`,
     [category.id, pageSize, offset]
@@ -176,6 +180,7 @@ async function getArticlesByCategory({ slug, page = 1, pageSize = 10 }) {
 
 /**
  * 按标签获取文章
+ * 只查询未被软删除的文章
  */
 async function getArticlesByTag({ slug, page = 1, pageSize = 10 }) {
   const [tags] = await pool.execute(
@@ -189,7 +194,7 @@ async function getArticlesByTag({ slug, page = 1, pageSize = 10 }) {
     `SELECT COUNT(DISTINCT a.id) as total
      FROM articles a
      JOIN article_tags at ON a.id = at.article_id
-     WHERE a.status = '已发布' AND at.tag_id = ?`,
+     WHERE a.status = '已发布' AND a.deleted_at IS NULL AND at.tag_id = ?`,
     [tag.id]
   );
 
@@ -201,7 +206,7 @@ async function getArticlesByTag({ slug, page = 1, pageSize = 10 }) {
      FROM articles a
      JOIN article_tags at ON a.id = at.article_id
      LEFT JOIN categories c ON a.category_id = c.id
-     WHERE a.status = '已发布' AND at.tag_id = ?
+     WHERE a.status = '已发布' AND a.deleted_at IS NULL AND at.tag_id = ?
      ORDER BY a.created_at DESC
      LIMIT ? OFFSET ?`,
     [tag.id, String(pageSize), String(offset)]
@@ -217,12 +222,13 @@ async function getArticlesByTag({ slug, page = 1, pageSize = 10 }) {
 
 /**
  * 获取文章归档
+ * 只查询未被软删除的文章
  */
 async function getArchives() {
   const [rows] = await pool.execute(
     `SELECT id, title, created_at
      FROM articles
-     WHERE status = '已发布'
+     WHERE status = '已发布' AND deleted_at IS NULL
      ORDER BY created_at DESC`
   );
 
@@ -249,13 +255,14 @@ async function getArchives() {
 
 /**
  * 获取已发布文章详情（含上一篇/下一篇、标签）
+ * 只查询未被软删除的文章
  */
 async function getPublishedArticleDetail(id) {
   const [rows] = await pool.execute(
     `SELECT a.*, c.name as category_name, c.slug as category_slug
      FROM articles a
      LEFT JOIN categories c ON a.category_id = c.id
-     WHERE a.id = ? AND a.status = '已发布'`,
+     WHERE a.id = ? AND a.status = '已发布' AND a.deleted_at IS NULL`,
     [id]
   );
   if (!rows.length) return null;
@@ -276,13 +283,13 @@ async function getPublishedArticleDetail(id) {
   );
   article.tags = tagRows;
 
-  // 获取上一篇和下一篇
+  // 获取上一篇和下一篇（排除已删除文章）
   const [prevResult] = await pool.execute(
-    'SELECT id, title FROM articles WHERE id < ? AND status = ? ORDER BY id DESC LIMIT 1',
+    'SELECT id, title FROM articles WHERE id < ? AND status = ? AND deleted_at IS NULL ORDER BY id DESC LIMIT 1',
     [article.id, '已发布']
   );
   const [nextResult] = await pool.execute(
-    'SELECT id, title FROM articles WHERE id > ? AND status = ? ORDER BY id ASC LIMIT 1',
+    'SELECT id, title FROM articles WHERE id > ? AND status = ? AND deleted_at IS NULL ORDER BY id ASC LIMIT 1',
     [article.id, '已发布']
   );
   article.prev_article = prevResult.length ? prevResult[0] : null;
@@ -295,6 +302,7 @@ async function getPublishedArticleDetail(id) {
 
 /**
  * 获取管理端文章列表（含草稿）
+ * 只查询未被软删除的文章
  */
 async function getAdminArticles({ userId, status, category_id, keyword }) {
   let sql = `SELECT a.id, a.title, a.summary, a.cover_image, a.status, a.view_count,
@@ -302,7 +310,7 @@ async function getAdminArticles({ userId, status, category_id, keyword }) {
              c.name as category_name
              FROM articles a
              LEFT JOIN categories c ON a.category_id = c.id
-             WHERE a.user_id = ?`;
+             WHERE a.user_id = ? AND a.deleted_at IS NULL`;
   let params = [userId];
 
   if (status && status !== '全部') {
@@ -325,13 +333,14 @@ async function getAdminArticles({ userId, status, category_id, keyword }) {
 
 /**
  * 获取管理端文章详情
+ * 只查询未被软删除的文章
  */
 async function getAdminArticleDetail({ id, userId }) {
   const [rows] = await pool.execute(
     `SELECT a.*, c.name as category_name
      FROM articles a
      LEFT JOIN categories c ON a.category_id = c.id
-     WHERE a.id = ? AND a.user_id = ?`,
+     WHERE a.id = ? AND a.user_id = ? AND a.deleted_at IS NULL`,
     [id, userId]
   );
   if (!rows.length) return null;
@@ -418,11 +427,16 @@ async function updateArticle({ id, title, content, summary, cover_image, status,
 }
 
 /**
- * 删除文章
+ * 删除文章（软删除）
+ * 将文章标记为已删除，移入回收站
+ * @param {Object} params - 参数对象
+ * @param {number} params.id - 文章ID
+ * @param {number} params.userId - 用户ID
+ * @returns {Promise<boolean>} 是否删除成功
  */
 async function deleteArticle({ id, userId }) {
   const [result] = await pool.execute(
-    'DELETE FROM articles WHERE id = ? AND user_id = ?',
+    'UPDATE articles SET deleted_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ? AND deleted_at IS NULL',
     [id, userId]
   );
   return result.affectedRows > 0;
@@ -431,6 +445,7 @@ async function deleteArticle({ id, userId }) {
 /**
  * 全站搜索文章（按标题和内容模糊匹配）
  * 转义用户输入中的 LIKE 通配符，防止搜索逻辑被注入
+ * 只查询未被软删除的文章
  */
 async function searchArticles({ keyword, page = 1, pageSize = 10 }) {
   const safeKeyword = escapeLike(keyword);
@@ -439,7 +454,7 @@ async function searchArticles({ keyword, page = 1, pageSize = 10 }) {
   const [countResult] = await pool.execute(
     `SELECT COUNT(*) as total
      FROM articles
-     WHERE status = '已发布' AND (title LIKE ? OR content LIKE ?)`,
+     WHERE status = '已发布' AND deleted_at IS NULL AND (title LIKE ? OR content LIKE ?)`,
     [searchTerm, searchTerm]
   );
   const total = countResult[0].total;
@@ -451,7 +466,7 @@ async function searchArticles({ keyword, page = 1, pageSize = 10 }) {
             c.name as category_name, c.slug as category_slug
      FROM articles a
      LEFT JOIN categories c ON a.category_id = c.id
-     WHERE a.status = '已发布' AND (a.title LIKE ? OR a.content LIKE ?)
+     WHERE a.status = '已发布' AND a.deleted_at IS NULL AND (a.title LIKE ? OR a.content LIKE ?)
      ORDER BY a.created_at DESC
      LIMIT ? OFFSET ?`,
     [searchTerm, searchTerm, String(pageSize), String(offset)]
@@ -465,6 +480,139 @@ async function searchArticles({ keyword, page = 1, pageSize = 10 }) {
   };
 }
 
+/**
+ * 获取相关文章（按同分类或同标签推荐）
+ * 只查询未被软删除的文章
+ * @param {number} articleId - 当前文章ID
+ * @param {number} limit - 返回数量，默认5篇
+ * @returns {Promise<Array>} 相关文章列表
+ */
+async function getRelatedArticles(articleId, limit = 5) {
+  // 先获取当前文章的分类和标签
+  const [currentArticle] = await pool.execute(
+    'SELECT category_id FROM articles WHERE id = ? AND deleted_at IS NULL',
+    [articleId]
+  );
+
+  if (!currentArticle.length) return [];
+
+  const categoryId = currentArticle[0].category_id;
+
+  // 获取当前文章的标签
+  const [currentTags] = await pool.execute(
+    'SELECT tag_id FROM article_tags WHERE article_id = ?',
+    [articleId]
+  );
+  const tagIds = currentTags.map((t) => t.tag_id);
+
+  // 构建查询：优先同分类，其次同标签，排除当前文章
+  let query = `
+    SELECT DISTINCT a.id, a.title, a.summary, a.cover_image, a.view_count,
+           a.created_at, c.name AS category_name
+    FROM articles a
+    LEFT JOIN categories c ON a.category_id = c.id
+    LEFT JOIN article_tags at ON a.id = at.article_id
+    WHERE a.status = '已发布' AND a.deleted_at IS NULL AND a.id != ?`;
+
+  const params = [articleId];
+
+  // 同分类或同标签
+  const conditions = [];
+  if (categoryId) {
+    conditions.push('a.category_id = ?');
+    params.push(categoryId);
+  }
+  if (tagIds.length > 0) {
+    conditions.push(`at.tag_id IN (${tagIds.map(() => '?').join(',')})`);
+    params.push(...tagIds);
+  }
+
+  if (conditions.length > 0) {
+    query += ` AND (${conditions.join(' OR ')})`;
+  }
+
+  query += ` ORDER BY a.view_count DESC, a.created_at DESC LIMIT ${Math.max(limit, 1)}`;
+
+  const [rows] = await pool.execute(query, params);
+  return rows;
+}
+
+// ==================== 回收站功能 ====================
+
+/**
+ * 获取回收站文章列表
+ * 查询已被软删除的文章
+ * @param {Object} params - 查询参数
+ * @param {number} params.userId - 用户ID
+ * @returns {Promise<Array>} 回收站文章列表
+ */
+async function getTrashArticles({ userId }) {
+  const [rows] = await pool.execute(
+    `SELECT a.id, a.title, a.summary, a.cover_image, a.status, a.view_count,
+            a.category_id, a.created_at, a.updated_at, a.deleted_at,
+            c.name as category_name
+     FROM articles a
+     LEFT JOIN categories c ON a.category_id = c.id
+     WHERE a.user_id = ? AND a.deleted_at IS NOT NULL
+     ORDER BY a.deleted_at DESC`,
+    [userId]
+  );
+  return attachTags(rows);
+}
+
+/**
+ * 恢复文章
+ * 将回收站中的文章恢复到正常状态
+ * @param {Object} params - 参数对象
+ * @param {number} params.id - 文章ID
+ * @param {number} params.userId - 用户ID
+ * @returns {Promise<boolean>} 是否恢复成功
+ */
+async function restoreArticle({ id, userId }) {
+  const [result] = await pool.execute(
+    'UPDATE articles SET deleted_at = NULL WHERE id = ? AND user_id = ? AND deleted_at IS NOT NULL',
+    [id, userId]
+  );
+  return result.affectedRows > 0;
+}
+
+/**
+ * 永久删除文章
+ * 从数据库中彻底删除文章（物理删除）
+ * @param {Object} params - 参数对象
+ * @param {number} params.id - 文章ID
+ * @param {number} params.userId - 用户ID
+ * @returns {Promise<boolean>} 是否删除成功
+ */
+async function permanentDeleteArticle({ id, userId }) {
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    // 删除文章的标签关联
+    await conn.execute('DELETE FROM article_tags WHERE article_id = ?', [id]);
+
+    // 永久删除文章
+    const [result] = await conn.execute(
+      'DELETE FROM articles WHERE id = ? AND user_id = ? AND deleted_at IS NOT NULL',
+      [id, userId]
+    );
+
+    if (!result.affectedRows) {
+      await conn.rollback();
+      return false;
+    }
+
+    await conn.commit();
+    return true;
+  } catch (e) {
+    await conn.rollback();
+    throw e;
+  } finally {
+    conn.release();
+  }
+}
+
 module.exports = {
   getPublishedArticles,
   getLatestArticles,
@@ -474,9 +622,13 @@ module.exports = {
   getArchives,
   getPublishedArticleDetail,
   searchArticles,
+  getRelatedArticles,
   getAdminArticles,
   getAdminArticleDetail,
   createArticle,
   updateArticle,
-  deleteArticle
+  deleteArticle,
+  getTrashArticles,
+  restoreArticle,
+  permanentDeleteArticle
 };

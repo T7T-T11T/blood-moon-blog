@@ -125,6 +125,16 @@ export function searchArticles(params) {
   return request.get('/articles/public/search', { params });
 }
 
+/**
+ * 获取相关文章（同分类或同标签推荐）
+ * @param {number} articleId - 当前文章ID
+ * @param {number} limit - 返回数量，默认5
+ * @returns {Promise} 相关文章列表
+ */
+export function getRelatedArticles(articleId, limit = 5) {
+  return request.get(`/articles/public/related/${articleId}`, { params: { limit } });
+}
+
 // ==================== 管理接口 ====================
 
 /**

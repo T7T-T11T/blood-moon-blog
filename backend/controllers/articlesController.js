@@ -102,6 +102,23 @@ exports.getArchives = async (req, res) => {
   }
 };
 
+/**
+ * 获取相关文章（按同分类或同标签推荐）
+ * GET /api/articles/public/related/:id
+ */
+exports.getRelatedArticles = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const limit = parseInt(req.query.limit) || 5;
+
+    const data = await articleService.getRelatedArticles(id, limit);
+    res.json({ code: 200, data });
+  } catch (e) {
+    console.error('获取相关文章失败：', e);
+    res.status(500).json({ code: 500, message: '服务器错误' });
+  }
+};
+
 exports.getArticleDetail = async (req, res) => {
   try {
     const article = await articleService.getPublishedArticleDetail(req.params.id);
@@ -209,6 +226,66 @@ exports.deleteArticle = async (req, res) => {
     res.json({ code: 200, message: '已删除' });
   } catch (e) {
     console.error('删除文章失败：', e);
+    res.status(500).json({ code: 500, message: '服务器错误' });
+  }
+};
+
+// ==================== 回收站接口 ====================
+
+/**
+ * 获取回收站文章列表
+ * GET /api/trash
+ */
+exports.getTrashArticles = async (req, res) => {
+  try {
+    const data = await articleService.getTrashArticles({
+      userId: req.user.id
+    });
+    res.json({ code: 200, data });
+  } catch (e) {
+    console.error('获取回收站文章失败：', e);
+    res.status(500).json({ code: 500, message: '服务器错误' });
+  }
+};
+
+/**
+ * 恢复文章
+ * POST /api/trash/:id/restore
+ */
+exports.restoreArticle = async (req, res) => {
+  try {
+    const restored = await articleService.restoreArticle({
+      id: req.params.id,
+      userId: req.user.id
+    });
+
+    if (!restored) {
+      return res.status(404).json({ code: 404, message: '文章不存在或已恢复' });
+    }
+    res.json({ code: 200, message: '恢复成功' });
+  } catch (e) {
+    console.error('恢复文章失败：', e);
+    res.status(500).json({ code: 500, message: '服务器错误' });
+  }
+};
+
+/**
+ * 永久删除文章
+ * DELETE /api/trash/:id
+ */
+exports.permanentDeleteArticle = async (req, res) => {
+  try {
+    const deleted = await articleService.permanentDeleteArticle({
+      id: req.params.id,
+      userId: req.user.id
+    });
+
+    if (!deleted) {
+      return res.status(404).json({ code: 404, message: '文章不存在' });
+    }
+    res.json({ code: 200, message: '已永久删除' });
+  } catch (e) {
+    console.error('永久删除文章失败：', e);
     res.status(500).json({ code: 500, message: '服务器错误' });
   }
 };

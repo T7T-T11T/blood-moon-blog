@@ -6,17 +6,24 @@
         <h2 class="page-title">评论管理</h2>
         <span class="count-badge">共 {{ total }} 条</span>
       </div>
-      <!-- 状态筛选标签 -->
-      <div class="filter-tabs">
-        <div
-          v-for="tab in statusTabs"
-          :key="tab.value"
-          class="filter-tab"
-          :class="{ active: filterStatus === tab.value }"
-          @click="filterByStatus(tab.value)"
-        >
-          {{ tab.label }}
+      <div class="header-right">
+        <!-- 状态筛选标签 -->
+        <div class="filter-tabs">
+          <div
+            v-for="tab in statusTabs"
+            :key="tab.value"
+            class="filter-tab"
+            :class="{ active: filterStatus === tab.value }"
+            @click="filterByStatus(tab.value)"
+          >
+            {{ tab.label }}
+          </div>
         </div>
+        <!-- 导出按钮 -->
+        <el-button @click="handleExportComments">
+          <el-icon><Download /></el-icon>
+          <span>导出评论</span>
+        </el-button>
       </div>
     </div>
 
@@ -123,7 +130,7 @@
  */
 import { ref, onMounted } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { ChatDotRound } from '@element-plus/icons-vue';
+import { ChatDotRound, Download } from '@element-plus/icons-vue';
 import { getCommentList, updateCommentStatus, deleteComment } from '@/api/comments';
 
 /** 评论列表数据 */
@@ -272,6 +279,49 @@ async function handleDelete(comment) {
   }
 }
 
+/**
+ * 导出评论数据
+ * 调用后端导出接口，下载 JSON 文件
+ */
+async function handleExportComments() {
+  try {
+    loading.value = true;
+    const params = {};
+    if (filterStatus.value) params.status = filterStatus.value;
+
+    const queryParams = new URLSearchParams(params);
+    const res = await fetch(`/api/export/comments?${queryParams.toString()}`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    });
+
+    if (!res.ok) {
+      throw new Error('导出失败');
+    }
+
+    const data = await res.json();
+    if (data.code === 200) {
+      // 创建下载链接
+      const blob = new Blob([JSON.stringify(data.data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `comments_${Date.now()}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      ElMessage.success(`成功导出 ${data.total} 条评论`);
+    }
+  } catch (e) {
+    console.error('导出评论失败:', e);
+    ElMessage.error('导出失败，请稍后重试');
+  } finally {
+    loading.value = false;
+  }
+}
+
 onMounted(() => {
   loadComments();
 });
@@ -289,6 +339,12 @@ onMounted(() => {
 }
 
 .header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.header-right {
   display: flex;
   align-items: center;
   gap: 12px;

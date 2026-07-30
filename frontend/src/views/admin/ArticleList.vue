@@ -32,6 +32,11 @@
             <el-icon><Search /></el-icon>
           </template>
         </el-input>
+        <!-- 导出按钮 -->
+        <el-button @click="handleExportArticles">
+          <el-icon><Download /></el-icon>
+          <span>导出文章</span>
+        </el-button>
         <!-- 写文章按钮 -->
         <el-button type="primary" @click="goToAdd">
           <el-icon><Plus /></el-icon>
@@ -144,7 +149,7 @@
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { Search, Plus, Document } from '@element-plus/icons-vue';
+import { Search, Plus, Document, Download } from '@element-plus/icons-vue';
 import { getArticles, deleteArticle } from '@/api/articles';
 
 const router = useRouter();
@@ -282,6 +287,49 @@ async function handleDelete(article) {
     if (e !== 'cancel') {
       console.error('删除文章失败:', e);
     }
+  }
+}
+
+/**
+ * 导出文章数据
+ * 调用后端导出接口，下载 JSON 文件
+ */
+async function handleExportArticles() {
+  try {
+    loading.value = true;
+    const params = {};
+    if (filterStatus.value !== '全部') params.status = filterStatus.value;
+    if (searchKeyword.value.trim()) params.keyword = searchKeyword.value.trim();
+
+    const res = await fetch('/api/export/articles', {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    });
+
+    if (!res.ok) {
+      throw new Error('导出失败');
+    }
+
+    const data = await res.json();
+    if (data.code === 200) {
+      // 创建下载链接
+      const blob = new Blob([JSON.stringify(data.data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `articles_${Date.now()}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      ElMessage.success(`成功导出 ${data.total} 篇文章`);
+    }
+  } catch (e) {
+    console.error('导出文章失败:', e);
+    ElMessage.error('导出失败，请稍后重试');
+  } finally {
+    loading.value = false;
   }
 }
 

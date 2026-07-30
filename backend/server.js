@@ -53,9 +53,13 @@ const linkRoutes = require('./routes/links')
 const settingRoutes = require('./routes/settings')
 const musicRoutes = require('./routes/music')
 const rssRoutes = require('./routes/rss')
+const sitemapRoutes = require('./routes/sitemap')
 const likeRoutes = require('./routes/likes')
 const favoriteRoutes = require('./routes/favorites')
 const visitRoutes = require('./routes/visits')
+const trashRoutes = require('./routes/trash')
+const logsRoutes = require('./routes/logs')
+const exportRoutes = require('./routes/export')
 
 const path = require('path')
 const fs = require('fs')
@@ -187,6 +191,7 @@ app.use('/api/links', linkRoutes)                                  // 友链（�
 app.use('/api/settings', settingRoutes)                            // 网站设置（公开读取 + 管理）
 app.use('/api/music', musicRoutes)                                 // 音乐（公开播放 + 管理）
 app.use('/api/rss', rssRoutes)                                    // RSS 订阅（公开）
+app.use('/api/sitemap.xml', sitemapRoutes)                        // Sitemap（公开）
 app.use('/api/likes', likeRoutes)                                 // 文章点赞（公开 + IP 去重）
 app.use('/api/favorites', favoriteRoutes)                         // 文章收藏（需登录）
 app.use('/api/visits', visitRoutes)                               // 访问统计（记录公开 / 查询需登录）
@@ -194,6 +199,9 @@ app.use('/api/visits', visitRoutes)                               // 访问统�
 // 需要登录的接口
 app.use('/api/dashboard', dashboardRoutes)                         // 仪表盘
 app.use('/api/upload', uploadRoutes)                             // 文件上传（POST 上传限流在 upload.js 路由内部挂载）
+app.use('/api/trash', trashRoutes)                               // 回收站（需登录）
+app.use('/api/logs', logsRoutes)                                 // 操作日志（需登录）
+app.use('/api/export', exportRoutes)                             // 数据导出（需登录）
 
 /**
  * 健康检查接口
