@@ -1,5 +1,12 @@
 # 版本历史
 
+## v1.12.1 (2026-07-31)
+
+- fix(database): 修复 MySQL 预处理语句不支持 LIMIT/OFFSET 占位符的问题（5处SQL查询）
+- fix(ui): 修复 getActionTagType 返回空字符串导致 Element Plus prop 验证警告
+- fix(ui): Dashboard 文章状态为 null 时显示兜底文案「草稿」
+- 前后端版本号统一升级至 1.12.1
+
 ## v1.12.0 (2026-07-31)
 
 - feat(editor): 文章编辑器新增自动保存功能（草稿恢复 + 30秒自动保存）

@@ -201,15 +201,15 @@ const resourceOptions = [
  */
 function getActionTagType(action) {
   const map = {
-    登录: '',
+    登录: 'info',
     创建: 'success',
     更新: 'warning',
     删除: 'danger',
     恢复: 'info',
-    导出: '',
+    导出: 'info',
     审核: 'warning'
   };
-  return map[action] || '';
+  return map[action] || 'info';
 }
 
 /**

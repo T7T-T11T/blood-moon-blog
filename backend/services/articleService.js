@@ -5,6 +5,19 @@
 const pool = require('../config/db');
 
 /**
+ * 处理分页参数，确保为正整数
+ * MySQL 预处理语句不允许 LIMIT/OFFSET 使用占位符，需直接拼接到 SQL
+ * @param {number} pageSize - 每页数量
+ * @param {number} offset - 偏移量
+ * @returns {Object} 规范化后的分页参数
+ */
+function sanitizePagination(pageSize, offset) {
+  const safePageSize = Math.max(1, parseInt(pageSize, 10) || 10);
+  const safeOffset = Math.max(0, parseInt(offset, 10) || 0);
+  return { safePageSize, safeOffset };
+}
+
+/**
  * 转义 SQL LIKE 通配符
  * 防止用户输入的 %、_、\ 被 LIKE 当作通配符解释
  * @param {string} str - 原始字符串
@@ -83,6 +96,7 @@ async function getPublishedArticles({ page = 1, pageSize = 10, category_id, tag_
   const total = countResult[0].total;
 
   const offset = (page - 1) * pageSize;
+  const { safePageSize, safeOffset } = sanitizePagination(pageSize, offset);
   const [rows] = await pool.execute(
     `SELECT DISTINCT a.id, a.title, a.summary, a.cover_image, a.status, a.view_count,
             a.category_id, a.created_at, a.updated_at, a.is_top,
@@ -92,8 +106,8 @@ async function getPublishedArticles({ page = 1, pageSize = 10, category_id, tag_
      LEFT JOIN categories c ON a.category_id = c.id
      WHERE ${whereClause}
      ORDER BY a.is_top DESC, a.created_at DESC
-     LIMIT ? OFFSET ?`,
-    [...params, String(pageSize), String(offset)]
+     LIMIT ${safePageSize} OFFSET ${safeOffset}`,
+    params
   );
 
   const list = await attachTags(rows);
@@ -158,6 +172,7 @@ async function getArticlesByCategory({ slug, page = 1, pageSize = 10 }) {
   );
 
   const offset = (page - 1) * pageSize;
+  const { safePageSize, safeOffset } = sanitizePagination(pageSize, offset);
   const [rows] = await pool.execute(
     `SELECT a.id, a.title, a.summary, a.cover_image, a.view_count,
             a.category_id, a.created_at,
@@ -166,8 +181,8 @@ async function getArticlesByCategory({ slug, page = 1, pageSize = 10 }) {
      LEFT JOIN categories c ON a.category_id = c.id
      WHERE a.status = '已发布' AND a.deleted_at IS NULL AND a.category_id = ?
      ORDER BY a.created_at DESC
-     LIMIT ? OFFSET ?`,
-    [category.id, pageSize, offset]
+     LIMIT ${safePageSize} OFFSET ${safeOffset}`,
+    [category.id]
   );
 
   const list = await attachTags(rows);
@@ -199,6 +214,7 @@ async function getArticlesByTag({ slug, page = 1, pageSize = 10 }) {
   );
 
   const offset = (page - 1) * pageSize;
+  const { safePageSize, safeOffset } = sanitizePagination(pageSize, offset);
   const [rows] = await pool.execute(
     `SELECT DISTINCT a.id, a.title, a.summary, a.cover_image, a.view_count,
             a.category_id, a.created_at,
@@ -208,8 +224,8 @@ async function getArticlesByTag({ slug, page = 1, pageSize = 10 }) {
      LEFT JOIN categories c ON a.category_id = c.id
      WHERE a.status = '已发布' AND a.deleted_at IS NULL AND at.tag_id = ?
      ORDER BY a.created_at DESC
-     LIMIT ? OFFSET ?`,
-    [tag.id, String(pageSize), String(offset)]
+     LIMIT ${safePageSize} OFFSET ${safeOffset}`,
+    [tag.id]
   );
 
   const list = await attachTags(rows);
@@ -487,6 +503,7 @@ async function searchArticles({ keyword, page = 1, pageSize = 10 }) {
   const total = countResult[0].total;
 
   const offset = (page - 1) * pageSize;
+  const { safePageSize, safeOffset } = sanitizePagination(pageSize, offset);
   const [rows] = await pool.execute(
     `SELECT a.id, a.title, a.summary, a.cover_image, a.status, a.view_count,
             a.category_id, a.created_at, a.updated_at,
@@ -495,8 +512,8 @@ async function searchArticles({ keyword, page = 1, pageSize = 10 }) {
      LEFT JOIN categories c ON a.category_id = c.id
      WHERE a.status = '已发布' AND a.deleted_at IS NULL AND (a.title LIKE ? OR a.content LIKE ?)
      ORDER BY a.created_at DESC
-     LIMIT ? OFFSET ?`,
-    [searchTerm, searchTerm, String(pageSize), String(offset)]
+     LIMIT ${safePageSize} OFFSET ${safeOffset}`,
+    [searchTerm, searchTerm]
   );
 
   const list = await attachTags(rows);
@@ -584,6 +601,7 @@ async function getTrashArticles({ userId, page = 1, pageSize = 20 }) {
   const total = countResult[0].total;
 
   const offset = (page - 1) * pageSize;
+  const { safePageSize, safeOffset } = sanitizePagination(pageSize, offset);
   const [rows] = await pool.execute(
     `SELECT a.id, a.title, a.summary, a.cover_image, a.status, a.view_count,
             a.category_id, a.created_at, a.updated_at, a.deleted_at,
@@ -592,8 +610,8 @@ async function getTrashArticles({ userId, page = 1, pageSize = 20 }) {
      LEFT JOIN categories c ON a.category_id = c.id
      WHERE a.user_id = ? AND a.deleted_at IS NOT NULL
      ORDER BY a.deleted_at DESC
-     LIMIT ? OFFSET ?`,
-    [userId, String(pageSize), String(offset)]
+     LIMIT ${safePageSize} OFFSET ${safeOffset}`,
+    [userId]
   );
 
   const list = await attachTags(rows);

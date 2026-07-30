@@ -61,7 +61,7 @@
               :type="article.status === '已发布' ? 'success' : 'info'"
               effect="plain"
             >
-              {{ article.status }}
+              {{ article.status || '草稿' }}
             </el-tag>
           </div>
           <div v-if="!latestArticles.length" class="empty-tip">暂无数据</div>
