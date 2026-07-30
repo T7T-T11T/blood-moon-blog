@@ -1,5 +1,14 @@
 # 版本历史
 
+## v1.11.2 (2026-07-30)
+
+- feat(log): 登录接口添加 logLogin 日志记录
+- feat(log): 文章管理路由添加 logAction 中间件（创建/更新/删除文章）
+- feat(log): 分类管理路由添加 logAction 中间件（创建/更新/删除分类）
+- feat(log): 标签管理路由添加 logAction 中间件（创建/更新/删除标签）
+- feat(log): 评论管理路由添加 logAction 中间件（审核/删除评论）
+- feat(log): 回收站路由添加 logAction 中间件（恢复/永久删除/清空回收站）
+
 ## v1.11.1 (2026-07-30)
 
 - fix(api): 修复 logs.js 和 trash.js 中 request 导入路径错误（../utils/request → ./request）

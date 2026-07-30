@@ -18,6 +18,7 @@
 const express = require('express');
 const rateLimit = require('express-rate-limit');
 const { authMiddleware } = require('../middleware/auth');
+const { logAction } = require('../middleware/logAction');
 const commentsController = require('../controllers/commentsController');
 
 const router = express.Router();
@@ -45,7 +46,7 @@ router.post('/:articleId', commentPostLimiter, commentsController.createComment)
 
 // ==================== 管理接口（参数路由） ====================
 
-router.put('/:id/status', authMiddleware, commentsController.updateStatus);
-router.delete('/:id', authMiddleware, commentsController.deleteComment);
+router.put('/:id/status', authMiddleware, logAction('审核评论', { resource_type: 'comment' }), commentsController.updateStatus);
+router.delete('/:id', authMiddleware, logAction('删除评论', { resource_type: 'comment' }), commentsController.deleteComment);
 
 module.exports = router;

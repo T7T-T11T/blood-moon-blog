@@ -22,6 +22,7 @@
 const express = require('express');
 const rateLimit = require('express-rate-limit');
 const { authMiddleware } = require('../middleware/auth');
+const { logAction } = require('../middleware/logAction');
 const articlesController = require('../controllers/articlesController');
 
 const router = express.Router();
@@ -54,8 +55,8 @@ router.get('/public/:id', articlesController.getArticleDetail);
 
 router.get('/', authMiddleware, articlesController.getAdminArticles);
 router.get('/:id', authMiddleware, articlesController.getAdminArticleDetail);
-router.post('/', authMiddleware, articlesController.createArticle);
-router.put('/:id', authMiddleware, articlesController.updateArticle);
-router.delete('/:id', authMiddleware, articlesController.deleteArticle);
+router.post('/', authMiddleware, logAction('创建文章', { resource_type: 'article' }), articlesController.createArticle);
+router.put('/:id', authMiddleware, logAction('更新文章', { resource_type: 'article' }), articlesController.updateArticle);
+router.delete('/:id', authMiddleware, logAction('删除文章', { resource_type: 'article' }), articlesController.deleteArticle);
 
 module.exports = router;

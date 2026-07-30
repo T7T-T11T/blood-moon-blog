@@ -16,6 +16,7 @@ const bcrypt = require('bcryptjs');
 const rateLimit = require('express-rate-limit');
 const pool = require('../config/db');
 const { generateToken, authMiddleware } = require('../middleware/auth');
+const { logLogin } = require('../middleware/logAction');
 
 const router = express.Router();
 
@@ -67,6 +68,11 @@ router.post('/login', loginLimiter, async (req, res) => {
 
         // 登录成功，生成 JWT token
         const token = generateToken({ id: user.id, username: user.username });
+
+        // 异步记录登录日志（不阻塞响应）
+        logLogin(req, { id: user.id, username: user.username }).catch(err => {
+            console.error('记录登录日志失败：', err);
+        });
 
         res.json({
             code: 200,

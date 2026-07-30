@@ -13,6 +13,7 @@
 
 const express = require('express');
 const { authMiddleware } = require('../middleware/auth');
+const { logAction } = require('../middleware/logAction');
 const articlesController = require('../controllers/articlesController');
 
 const router = express.Router();
@@ -31,20 +32,20 @@ router.get('/', authMiddleware, articlesController.getTrashArticles);
  * @route POST /api/trash/:id/restore
  * @access Private（需要登录）
  */
-router.post('/:id/restore', authMiddleware, articlesController.restoreArticle);
+router.post('/:id/restore', authMiddleware, logAction('恢复文章', { resource_type: 'article' }), articlesController.restoreArticle);
 
 /**
  * 清空回收站（必须在 /:id 路由之前，避免被 :id 匹配）
  * @route DELETE /api/trash/clear
  * @access Private（需要登录）
  */
-router.delete('/clear', authMiddleware, articlesController.clearAllTrash);
+router.delete('/clear', authMiddleware, logAction('清空回收站', { resource_type: 'article' }), articlesController.clearAllTrash);
 
 /**
  * 永久删除文章
  * @route DELETE /api/trash/:id
  * @access Private（需要登录）
  */
-router.delete('/:id', authMiddleware, articlesController.permanentDeleteArticle);
+router.delete('/:id', authMiddleware, logAction('永久删除文章', { resource_type: 'article' }), articlesController.permanentDeleteArticle);
 
 module.exports = router;

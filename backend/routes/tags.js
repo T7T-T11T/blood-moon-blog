@@ -12,6 +12,7 @@
 const express = require('express');
 const pool = require('../config/db');
 const { authMiddleware } = require('../middleware/auth');
+const { logAction } = require('../middleware/logAction');
 
 const router = express.Router();
 
@@ -75,7 +76,7 @@ router.get('/:slug', async (req, res) => {
  * 需要登录
  * 请求体：{ name, slug }
  */
-router.post('/', authMiddleware, async (req, res) => {
+router.post('/', authMiddleware, logAction('创建标签', { resource_type: 'tag' }), async (req, res) => {
   try {
     const { name, slug } = req.body;
 
@@ -115,7 +116,7 @@ router.post('/', authMiddleware, async (req, res) => {
  * 需要登录
  * 请求体：{ name, slug }
  */
-router.put('/:id', authMiddleware, async (req, res) => {
+router.put('/:id', authMiddleware, logAction('更新标签', { resource_type: 'tag' }), async (req, res) => {
   try {
     const { name, slug } = req.body;
 
@@ -164,7 +165,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
  * 需要登录
  * 注意：删除标签时，关联的article_tags记录会被级联删除
  */
-router.delete('/:id', authMiddleware, async (req, res) => {
+router.delete('/:id', authMiddleware, logAction('删除标签', { resource_type: 'tag' }), async (req, res) => {
   try {
     const [result] = await pool.execute(
       'DELETE FROM tags WHERE id = ?',

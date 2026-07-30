@@ -12,6 +12,7 @@
 const express = require('express');
 const pool = require('../config/db');
 const { authMiddleware } = require('../middleware/auth');
+const { logAction } = require('../middleware/logAction');
 
 const router = express.Router();
 
@@ -74,7 +75,7 @@ router.get('/:slug', async (req, res) => {
  * 需要登录
  * 请求体：{ name, slug, description, sort_order }
  */
-router.post('/', authMiddleware, async (req, res) => {
+router.post('/', authMiddleware, logAction('创建分类', { resource_type: 'category' }), async (req, res) => {
   try {
     const { name, slug, description, sort_order } = req.body;
 
@@ -115,7 +116,7 @@ router.post('/', authMiddleware, async (req, res) => {
  * 需要登录
  * 请求体：{ name, slug, description, sort_order }
  */
-router.put('/:id', authMiddleware, async (req, res) => {
+router.put('/:id', authMiddleware, logAction('更新分类', { resource_type: 'category' }), async (req, res) => {
   try {
     const { name, slug, description, sort_order } = req.body;
 
@@ -165,7 +166,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
  * 需要登录
  * 注意：删除分类时，该分类下的文章的category_id会被设为NULL（ON DELETE SET NULL）
  */
-router.delete('/:id', authMiddleware, async (req, res) => {
+router.delete('/:id', authMiddleware, logAction('删除分类', { resource_type: 'category' }), async (req, res) => {
   try {
     const [result] = await pool.execute(
       'DELETE FROM categories WHERE id = ?',
