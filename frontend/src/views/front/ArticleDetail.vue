@@ -130,14 +130,6 @@
           <span>{{ liked ? '已点赞' : '点赞' }}</span>
           <span v-if="likeCount > 0" class="interact-count">{{ likeCount }}</span>
         </button>
-        <button
-          class="interact-btn fav-btn"
-          :class="{ active: favorited }"
-          @click="handleToggleFavorite"
-        >
-          <el-icon><StarFilled v-if="favorited" /><Star v-else /></el-icon>
-          <span>{{ favorited ? '已收藏' : '收藏' }}</span>
-        </button>
       </section>
 
       <footer class="article-footer reveal">
@@ -257,7 +249,6 @@ import {
 } from '@element-plus/icons-vue';
 import { getArticleDetail, getRelatedArticles } from '../../api/articles';
 import { toggleLike, getLikeStatus, getLikeCount } from '../../api/likes';
-import { toggleFavorite, getFavoriteStatus } from '../../api/favorites';
 import { useUserStore } from '../../stores/user';
 import CommentSection from '../../components/front/CommentSection.vue';
 import ReadingProgress from '../../components/front/ReadingProgress.vue';
@@ -271,10 +262,9 @@ const loading = ref(true);
 const coverImageError = ref(false);
 const articleBodyRef = ref(null);
 
-// ---- 点赞/收藏 ----
+// ---- 点赞 ----
 const liked = ref(false);
 const likeCount = ref(0);
-const favorited = ref(false);
 const relatedArticles = ref([]);
 
 /**
@@ -306,30 +296,14 @@ async function handleToggleLike() {
   }
 }
 
-async function handleToggleFavorite() {
-  if (!userStore.token) {
-    ElMessage.warning('请先登录');
-    return;
-  }
-  try {
-    await toggleFavorite(article.value.id);
-    favorited.value = !favorited.value;
-    ElMessage.success(favorited.value ? '已收藏' : '已取消收藏');
-  } catch {
-    ElMessage.error('操作失败');
-  }
-}
-
 async function fetchInteractionStatus() {
   if (!userStore.token || !article.value) return;
   try {
-    const [likeRes, favRes, countRes] = await Promise.all([
+    const [likeRes, countRes] = await Promise.all([
       getLikeStatus(article.value.id).catch(() => ({ data: { liked: false } })),
-      getFavoriteStatus(article.value.id).catch(() => ({ data: { favorited: false } })),
       getLikeCount(article.value.id).catch(() => ({ data: { count: 0 } }))
     ]);
     liked.value = likeRes.data?.liked || false;
-    favorited.value = favRes.data?.favorited || false;
     likeCount.value = countRes.data?.count || 0;
   } catch {
     // 静默失败

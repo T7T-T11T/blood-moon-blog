@@ -264,19 +264,23 @@ function goToEdit(id) {
 }
 
 /**
- * 删除文章（带二次确认）
+ * 删除文章（软删除，移到回收站）
  * @param {Object} article - 当前行文章数据
  */
 async function handleDelete(article) {
   try {
-    await ElMessageBox.confirm(`确定要删除文章"${article.title}"吗？此操作不可恢复。`, '确认删除', {
-      confirmButtonText: '确定删除',
-      cancelButtonText: '取消',
-      type: 'warning'
-    });
+    await ElMessageBox.confirm(
+      `确定要删除文章"${article.title}"吗？文章将移至回收站，可在30天内恢复。`,
+      '删除确认',
+      {
+        confirmButtonText: '移至回收站',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    );
 
     await deleteArticle(article.id);
-    ElMessage.success('删除成功');
+    ElMessage.success('文章已移至回收站');
     // 若当前页删除后为空且非第一页，回退一页
     if (articles.value.length === 1 && page.value > 1) {
       page.value -= 1;

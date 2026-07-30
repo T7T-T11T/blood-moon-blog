@@ -161,7 +161,9 @@ import {
   Expand,
   RefreshRight,
   Headset,
-  Picture
+  Picture,
+  Delete,
+  Tickets
 } from '@element-plus/icons-vue';
 
 const userStore = useUserStore();
@@ -322,12 +324,14 @@ const contentMenu = [
   { path: '/admin/comments', label: '评论管理', icon: markRaw(ChatDotRound) },
   { path: '/admin/links', label: '友链管理', icon: markRaw(Link) },
   { path: '/admin/music', label: '音乐管理', icon: markRaw(Headset) },
-  { path: '/admin/media', label: '媒体库', icon: markRaw(Picture) }
+  { path: '/admin/media', label: '媒体库', icon: markRaw(Picture) },
+  { path: '/admin/trash', label: '回收站', icon: markRaw(Delete) }
 ];
 
 /** 系统菜单项 */
 const systemMenu = [
   { path: '/admin/statistics', label: '数据统计', icon: markRaw(TrendCharts) },
+  { path: '/admin/logs', label: '操作日志', icon: markRaw(Tickets) },
   { path: '/admin/settings', label: '系统设置', icon: markRaw(Setting) },
   { path: '/admin/profile', label: '个人中心', icon: markRaw(User) }
 ];

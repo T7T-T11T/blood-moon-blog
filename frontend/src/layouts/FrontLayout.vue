@@ -189,7 +189,6 @@ const isScrolled = ref(false);
 const navItems = [
   { path: '/', label: '首页', exact: true },
   { path: '/archive', label: '归档', exact: false },
-  { path: '/favorites', label: '收藏', exact: false, auth: true },
   { path: '/links', label: '友链', exact: false },
   { path: '/about', label: '关于', exact: false }
 ];

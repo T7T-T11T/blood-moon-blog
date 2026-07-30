@@ -94,12 +94,6 @@ const routes = [
         meta: { title: '搜索结果' }
       },
       {
-        path: 'favorites',
-        name: 'Favorites',
-        component: () => import('../views/front/Favorites.vue'),
-        meta: { title: '我的收藏', requiresAuth: true }
-      },
-      {
         path: 'tags',
         name: 'Tags',
         component: () => import('../views/front/Tags.vue'),
@@ -192,6 +186,18 @@ const routes = [
         name: 'Media',
         component: () => import('../views/admin/Media.vue'),
         meta: { title: '媒体库', requiresAuth: true }
+      },
+      {
+        path: 'trash',
+        name: 'TrashList',
+        component: () => import('../views/admin/TrashList.vue'),
+        meta: { title: '回收站', requiresAuth: true }
+      },
+      {
+        path: 'logs',
+        name: 'LogList',
+        component: () => import('../views/admin/LogList.vue'),
+        meta: { title: '操作日志', requiresAuth: true }
       }
     ]
   },
