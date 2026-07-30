@@ -52,9 +52,14 @@ const commentRoutes = require('./routes/comments')
 const linkRoutes = require('./routes/links')
 const settingRoutes = require('./routes/settings')
 const musicRoutes = require('./routes/music')
+const rssRoutes = require('./routes/rss')
+const likeRoutes = require('./routes/likes')
+const favoriteRoutes = require('./routes/favorites')
+const visitRoutes = require('./routes/visits')
 
 const path = require('path')
 const fs = require('fs')
+const pool = require('./config/db')
 
 const app = express()
 
@@ -160,20 +165,63 @@ app.use('/api/comments', commentReadLimiter, commentRoutes)       // 评论（�
 app.use('/api/links', linkRoutes)                                  // 友链（公开浏览 + 管理）
 app.use('/api/settings', settingRoutes)                            // 网站设置（公开读取 + 管理）
 app.use('/api/music', musicRoutes)                                 // 音乐（公开播放 + 管理）
+app.use('/api/rss', rssRoutes)                                    // RSS 订阅（公开）
+app.use('/api/likes', likeRoutes)                                 // 文章点赞（公开 + IP 去重）
+app.use('/api/favorites', favoriteRoutes)                         // 文章收藏（需登录）
+app.use('/api/visits', visitRoutes)                               // 访问统计（记录公开 / 查询需登录）
 
 // 需要登录的接口
 app.use('/api/dashboard', dashboardRoutes)                         // 仪表盘
-app.use('/api/upload', uploadLimiter, uploadRoutes)               // 文件上传（限流防滥用）
+app.use('/api/upload', uploadRoutes)                             // 文件上传（POST 上传限流在 upload.js 路由内部挂载）
 
 /**
  * 健康检查接口
  * GET /api/health - 用于监控服务是否正常运行
+ * 包含：服务器状态、数据库连接状态、磁盘空间
  */
-app.get('/api/health', (req, res) => {
+app.get('/api/health', async (req, res) => {
+  const startTime = Date.now()
+
+  // 检查数据库连接
+  let dbStatus = { status: 'unknown', message: '' }
+  try {
+    const [rows] = await pool.execute('SELECT 1 as test')
+    if (rows && rows[0] && rows[0].test === 1) {
+      dbStatus = { status: 'ok', message: '数据库连接正常' }
+    } else {
+      dbStatus = { status: 'error', message: '数据库连接异常' }
+    }
+  } catch (err) {
+    dbStatus = { status: 'error', message: `数据库连接失败: ${err.message}` }
+  }
+
+  // 检查上传目录状态
+  let uploadStatus = { status: 'unknown', message: '' }
+  try {
+    if (fs.existsSync(uploadDir)) {
+      uploadStatus = { status: 'ok', message: '上传目录正常' }
+    } else {
+      uploadStatus = { status: 'warning', message: '上传目录不存在' }
+    }
+  } catch (err) {
+    uploadStatus = { status: 'error', message: `上传目录检查失败: ${err.message}` }
+  }
+
+  const responseTime = Date.now() - startTime
+  const isHealthy = dbStatus.status === 'ok' && uploadStatus.status === 'ok'
+
   res.json({
-    code: 200,
-    message: '服务器运行正常',
-    time: new Date().toISOString()
+    code: isHealthy ? 200 : 503,
+    status: isHealthy ? 'healthy' : 'unhealthy',
+    message: isHealthy ? '服务器运行正常' : '部分服务异常',
+    time: new Date().toISOString(),
+    uptime: process.uptime(),
+    version: require('./package.json').version || '1.0.0',
+    checks: {
+      database: dbStatus,
+      uploads: uploadStatus
+    },
+    responseTime: `${responseTime}ms`
   })
 })
 

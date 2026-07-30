@@ -27,17 +27,10 @@
             />
           </el-form-item>
 
-          <!-- Markdown 内容编辑器 -->
+          <!-- 内容编辑器 -->
           <el-form-item prop="content" class="content-form-item">
             <div class="editor-wrapper">
-              <MdEditor
-                ref="mdEditorRef"
-                v-model="form.content"
-                :toolbars="toolbars"
-                placeholder="开始写作..."
-                class="md-editor"
-                theme="dark"
-              />
+              <TipTapEditor ref="editorRef" v-model="form.content" placeholder="开始写作..." />
             </div>
           </el-form-item>
         </el-form>
@@ -114,36 +107,6 @@
           </div>
         </div>
 
-        <!-- 媒体上传 -->
-        <div class="panel-section">
-          <h3 class="panel-title">媒体上传</h3>
-          <div class="media-buttons">
-            <input
-              ref="audioInputRef"
-              type="file"
-              accept="audio/*"
-              style="display: none"
-              @change="handleAudioSelected"
-            />
-            <input
-              ref="videoInputRef"
-              type="file"
-              accept="video/*"
-              style="display: none"
-              @change="handleVideoSelected"
-            />
-            <el-button size="small" :loading="uploadingAudio" @click="selectAudio">
-              <el-icon><Headset /></el-icon>
-              <span>上传音频</span>
-            </el-button>
-            <el-button size="small" :loading="uploadingVideo" @click="selectVideo">
-              <el-icon><VideoCamera /></el-icon>
-              <span>上传视频</span>
-            </el-button>
-          </div>
-          <p class="media-tip">上传后自动插入编辑器光标处</p>
-        </div>
-
         <!-- 文章信息（仅编辑模式显示） -->
         <div v-if="!isNew && article" class="panel-section">
           <h3 class="panel-title">文章信息</h3>
@@ -173,16 +136,14 @@
  *       支持保存、保存并发布、存为草稿三种操作。编辑模式下加载已有文章详情。
  * 依赖 API：getAdminArticleDetail / addArticle / updateArticle / getCategories / getTags
  */
-import { ref, computed, onMounted, nextTick } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
-import { MdEditor } from 'md-editor-v3';
-import 'md-editor-v3/lib/preview.css';
-import { Check, Promotion, Document, Headset, VideoCamera } from '@element-plus/icons-vue';
+import { Check, Promotion, Document } from '@element-plus/icons-vue';
+import TipTapEditor from '@/components/TipTapEditor.vue';
 import { getAdminArticleDetail, addArticle, updateArticle } from '@/api/articles';
 import { getCategories } from '@/api/categories';
 import { getTags } from '@/api/tags';
-import { uploadAudio, uploadVideo } from '@/api/upload';
 
 const route = useRoute();
 const router = useRouter();
@@ -190,8 +151,8 @@ const router = useRouter();
 /** 表单引用 */
 const formRef = ref(null);
 
-/** MdEditor 组件引用 */
-const mdEditorRef = ref(null);
+/** 编辑器组件引用（用于清除草稿） */
+const editorRef = ref(null);
 
 /** 是否为新建模式（无路由 id 参数） */
 const isNew = computed(() => !route.params.id);
@@ -201,18 +162,6 @@ const article = ref(null);
 
 /** 保存中状态 */
 const saving = ref(false);
-
-/** 音频上传中状态 */
-const uploadingAudio = ref(false);
-
-/** 视频上传中状态 */
-const uploadingVideo = ref(false);
-
-/** 音频文件 input 引用 */
-const audioInputRef = ref(null);
-
-/** 视频文件 input 引用 */
-const videoInputRef = ref(null);
 
 /** 分类列表 */
 const categories = ref([]);
@@ -238,36 +187,6 @@ const rules = {
   ],
   content: [{ required: true, message: '请输入文章内容', trigger: 'blur' }]
 };
-
-/**
- * md-editor-v3 工具栏配置
- * 使用 '|' 作为分组分隔符
- */
-const toolbars = [
-  'bold',
-  'italic',
-  'underline',
-  'strikeThrough',
-  '|',
-  'title',
-  'sub',
-  'quote',
-  '|',
-  'image',
-  'video',
-  'file',
-  '|',
-  'list',
-  'ordered-list',
-  'task',
-  '|',
-  'link',
-  'table',
-  '|',
-  'preview',
-  'htmlPreview',
-  'catalog'
-];
 
 /**
  * 格式化日期为完整本地时间
@@ -364,6 +283,8 @@ async function saveArticle(status = '草稿') {
     }
 
     if (res.code === 200) {
+      // 清除草稿
+      editorRef.value?.clearDraft();
       ElMessage.success(isNew.value ? '创建成功' : '更新成功');
       // 新建成功后跳转到编辑页（带新 id），否则返回列表
       if (isNew.value && res.data?.id) {
@@ -400,96 +321,6 @@ function handleDraft() {
 /** 取消编辑，返回列表 */
 function handleCancel() {
   router.push('/admin/articles');
-}
-
-/** 触发音频文件选择 */
-function selectAudio() {
-  audioInputRef.value?.click();
-}
-
-/** 触发视频文件选择 */
-function selectVideo() {
-  videoInputRef.value?.click();
-}
-
-/**
- * 将文本插入编辑器光标位置
- * @param {string} text - 要插入的文本
- */
-function insertIntoEditor(text) {
-  // 优先尝试通过 MdEditor 内部的 textarea 插入
-  const wrapper = mdEditorRef.value?.$el;
-  const textarea = wrapper?.querySelector('textarea');
-  if (textarea) {
-    const start = textarea.selectionStart || 0;
-    const end = textarea.selectionEnd || 0;
-    const value = form.value.content || '';
-    form.value.content = value.substring(0, start) + text + value.substring(end);
-    // 恢复光标位置
-    nextTick(() => {
-      textarea.selectionStart = textarea.selectionEnd = start + text.length;
-      textarea.focus();
-    });
-  } else {
-    // 兜底：追加到末尾
-    form.value.content = (form.value.content || '') + '\n' + text + '\n';
-  }
-}
-
-/**
- * 处理音频文件选择并上传
- * @param {Event} e - input change 事件
- */
-async function handleAudioSelected(e) {
-  const file = e.target.files?.[0];
-  if (!file) return;
-  uploadingAudio.value = true;
-  try {
-    const res = await uploadAudio(file);
-    if (res.code === 200) {
-      const url = res.data?.url || '';
-      const name = res.data?.originalName || '音频';
-      const tag = `\n<audio controls src="${url}" style="width:100%">${name}</audio>\n`;
-      insertIntoEditor(tag);
-      ElMessage.success('音频上传成功');
-    } else {
-      ElMessage.error(res.message || '上传失败');
-    }
-  } catch (err) {
-    console.error('音频上传失败:', err);
-    ElMessage.error('音频上传失败');
-  } finally {
-    uploadingAudio.value = false;
-    if (audioInputRef.value) audioInputRef.value.value = '';
-  }
-}
-
-/**
- * 处理视频文件选择并上传
- * @param {Event} e - input change 事件
- */
-async function handleVideoSelected(e) {
-  const file = e.target.files?.[0];
-  if (!file) return;
-  uploadingVideo.value = true;
-  try {
-    const res = await uploadVideo(file);
-    if (res.code === 200) {
-      const url = res.data?.url || '';
-      const name = res.data?.originalName || '视频';
-      const tag = `\n<video controls src="${url}" style="width:100%;max-height:480px">${name}</video>\n`;
-      insertIntoEditor(tag);
-      ElMessage.success('视频上传成功');
-    } else {
-      ElMessage.error(res.message || '上传失败');
-    }
-  } catch (err) {
-    console.error('视频上传失败:', err);
-    ElMessage.error('视频上传失败');
-  } finally {
-    uploadingVideo.value = false;
-    if (videoInputRef.value) videoInputRef.value.value = '';
-  }
 }
 
 onMounted(() => {
@@ -573,89 +404,6 @@ onMounted(() => {
 .editor-wrapper:focus-within {
   border-color: var(--primary);
   box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.15);
-}
-
-.editor-wrapper :deep(.md-editor) {
-  border: none;
-  min-height: 480px;
-  font-size: 15px;
-  background: var(--bg-body);
-}
-
-.editor-wrapper :deep(.md-editor__toolbar) {
-  display: flex !important;
-  flex-direction: row !important;
-  flex-wrap: wrap !important;
-  align-items: center !important;
-  gap: 2px;
-  background: var(--bg-card);
-  border-bottom: 1px solid var(--border);
-  padding: 8px 12px;
-}
-
-.editor-wrapper :deep(.md-editor__toolbar > *) {
-  display: inline-flex !important;
-  flex-direction: row !important;
-}
-
-.editor-wrapper :deep(.md-editor__content) {
-  padding: 24px 28px;
-  background: var(--bg-body);
-}
-
-.editor-wrapper :deep(.md-editor__preview) {
-  padding: 24px 28px;
-  background: var(--bg-body);
-  color: var(--text-primary);
-}
-
-/* MdEditor 暗色主题覆盖 */
-.editor-wrapper :deep(.md-editor-dark) {
-  background: var(--bg-body) !important;
-  color: var(--text-primary) !important;
-}
-
-.editor-wrapper :deep(.md-editor-dark .md-editor__content) {
-  background: var(--bg-body) !important;
-  color: var(--text-primary) !important;
-}
-
-.editor-wrapper :deep(.md-editor-dark .md-editor__content textarea) {
-  background: var(--bg-body) !important;
-  color: var(--text-primary) !important;
-}
-
-.editor-wrapper :deep(.md-editor-dark .md-editor__preview) {
-  background: var(--bg-body) !important;
-  color: var(--text-primary) !important;
-}
-
-.editor-wrapper :deep(.md-editor-dark .md-editor__preview h1),
-.editor-wrapper :deep(.md-editor-dark .md-editor__preview h2),
-.editor-wrapper :deep(.md-editor-dark .md-editor__preview h3) {
-  color: var(--text-primary) !important;
-}
-
-.editor-wrapper :deep(.md-editor-dark .md-editor__preview p),
-.editor-wrapper :deep(.md-editor-dark .md-editor__preview li) {
-  color: var(--text-secondary) !important;
-}
-
-.editor-wrapper :deep(.md-editor-dark .md-editor__preview code) {
-  background: var(--bg-hover) !important;
-  color: var(--primary-light) !important;
-}
-
-.editor-wrapper :deep(.md-editor-dark .md-editor__preview blockquote) {
-  border-left-color: var(--primary) !important;
-  background: var(--bg-hover) !important;
-  color: var(--text-secondary) !important;
-}
-
-.editor-wrapper :deep(.md-editor-dark .md-editor__table) {
-  background: var(--bg-card) !important;
-  color: var(--text-primary) !important;
-  border-color: var(--border) !important;
 }
 
 /* ========== 右侧设置面板 ========== */

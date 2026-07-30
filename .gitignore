@@ -1,54 +1,47 @@
-# 依赖
+# Dependencies
 node_modules/
-.pnp/
-.pnp.js
 
-# 测试
-coverage/
-
-# 生产构建
+# Build output
 dist/
 build/
+*.tsbuildinfo
 
-# 环境变量
+# Environment variables
 .env
 .env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env.*.local
+backend/.env
+backend/.env.local
 
-# 日志
+# Uploads (user-generated content)
+backend/uploads/
+
+# Logs
+*.log
+logs/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-*.log
 
-# 编辑器
+# Temporary scripts (debug/admin operations)
+backend/scripts/*.js
+!backend/scripts/.gitkeep
+
+# IDE
 .vscode/
 .idea/
 *.swp
 *.swo
 
-# 系统
+# OS
 .DS_Store
 Thumbs.db
-ehthumbs.db
 Desktop.ini
 
-# 缓存
-.cache/
-.parcel-cache/
-.eslintcache
-.vite/
+# Editor
+*.sublime-workspace
+*.sublime-project
 
-# 上传文件（运行时生成）
-backend/uploads/
-!backend/uploads/.gitkeep
-
-# 临时文件
-tmp/
-temp/
-*.tmp
-
-# 临时脚本（数据清理、调试工具等）
-backend/scripts/delete-*.js
+# Coverage
+coverage/
+.nyc_output/
