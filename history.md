@@ -1,5 +1,13 @@
 # 版本历史
 
+## v1.11.1 (2026-07-30)
+
+- fix(api): 修复 logs.js 和 trash.js 中 request 导入路径错误（../utils/request → ./request）
+- feat(backend): 回收站 getTrashArticles 接口支持分页查询
+- feat(backend): 新增 clearAllTrash 接口，支持批量永久删除回收站文章
+- feat(backend): 新增 clearAllTrash 路由 DELETE /api/trash/clear
+- fix(front): TrashList.vue 和 LogList.vue 响应解析逻辑对齐项目规范
+
 ## v1.11.0 (2026-07-30)
 
 - refactor: 移除收藏功能（单管理员博客收藏自己的文章无意义）
