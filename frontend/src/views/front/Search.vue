@@ -1,261 +1,191 @@
-/** * @file Search.vue * @description 搜索结果页（杂志风，卡片化舍弃，列表 + 强调条） * * 作用： * -
-顶部突出展示搜索关键词 + 结果统计 * - 搜索结果为简洁列表（标题、摘要、日期、分类），悬浮主色强调条 *
-- 空状态带友好文案与动画 * * 数据获取： * - getPublicArticles({ keyword, page, page_size }) 搜索文章
-* - 返回 { list, pagination: { total } } * * 路由参数： * - route.query.keyword 获取搜索关键词 * -
-关键词变化时自动重新搜索 * * 动效（2-3 组）： * - 入场：关键词标题 fade-in-up * -
-滚动：结果项进入视口时 fade-in-up 错峰（Intersection Observer） * - 悬浮：标题变主色 +
-左侧强调条展开 + 阅读箭头右移 */
+/** * Search.vue - 全站搜索页面 * * 接入 AsyncData 统一处理 loading/error/empty 状态 * 关键词高亮 +
+分页 */
 <template>
   <div ref="rootRef" class="search-page">
-    <!-- ============ 搜索头部：关键词突出展示 ============ -->
-    <section class="search-header">
-      <p class="eyebrow animate-fade-in-down">SEARCH</p>
-      <h1 class="keyword-title animate-fade-in-up">
-        <span v-if="keyword" class="keyword-text">{{ keyword }}</span>
-        <span v-else class="keyword-empty">搜索文章</span>
-      </h1>
-      <p v-if="keyword && searched" class="result-stats animate-fade-in-up delay-100">
-        共找到 <span class="stats-count">{{ total }}</span> 篇相关文章
-      </p>
+    <!-- ============ Hero 区域 ============ -->
+    <section class="hero">
+      <div class="hero-inner">
+        <p class="hero-eyebrow animate-fade-in-down">SEARCH</p>
+        <h1 class="hero-title animate-fade-in-up">搜索文章</h1>
+        <div class="search-form animate-fade-in-up delay-100">
+          <el-icon class="search-icon"><Search /></el-icon>
+          <input
+            ref="searchInputRef"
+            v-model="keyword"
+            type="text"
+            class="search-input"
+            placeholder="输入关键词搜索…"
+            @keyup.enter="doSearch"
+          />
+          <button class="search-btn" @click="doSearch">搜索</button>
+        </div>
+      </div>
     </section>
 
-    <!-- ============ 搜索结果区域 ============ -->
+    <!-- ============ 搜索结果 ============ -->
     <div class="content-wrapper">
-      <!-- 加载骨架 -->
-      <div v-if="loading && articles.length === 0" class="article-list">
-        <div v-for="n in 5" :key="n" class="skeleton-row">
-          <div class="skeleton-line w-70"></div>
-          <div class="skeleton-line w-90"></div>
-          <div class="skeleton-line w-40"></div>
+      <AsyncData
+        :loading="loading"
+        :error="error"
+        :empty="results.length === 0 && !loading && !error && searched"
+        error-message="搜索失败，请稍后重试"
+        empty-message="未找到匹配的文章，请尝试其他关键词"
+        retry-text="重试"
+        @retry="doSearch"
+      >
+        <!-- 结果统计 -->
+        <div v-if="searched" class="search-stats">
+          找到 <strong>{{ total }}</strong> 篇相关文章
         </div>
-      </div>
 
-      <!-- 结果列表 -->
-      <div v-else-if="articles.length > 0" class="article-list">
-        <article
-          v-for="(article, index) in articles"
-          :key="article.id"
-          class="article-row reveal"
-          :style="{ '--row-index': index }"
-          @click="goToArticle(article.id)"
-        >
-          <!-- 主色强调条：悬浮时从左侧展开 -->
-          <span class="accent-bar" aria-hidden="true"></span>
-          <div class="article-body">
-            <!-- 元信息 -->
-            <div class="article-meta">
-              <span v-if="article.category_name" class="meta-category">
-                {{ article.category_name }}
+        <!-- 文章列表 -->
+        <div class="article-list">
+          <article
+            v-for="(article, index) in results"
+            :key="article.id"
+            class="article-row reveal"
+            :style="{ '--row-index': index }"
+            @click="goToArticle(article.id)"
+          >
+            <span class="accent-bar" aria-hidden="true"></span>
+            <div class="article-body">
+              <div class="article-meta">
+                <span v-if="article.category_name" class="meta-category">
+                  {{ article.category_name }}
+                </span>
+                <span class="meta-date">{{ formatDate(article.created_at) }}</span>
+                <span class="meta-views">
+                  <el-icon><View /></el-icon>
+                  {{ article.view_count || 0 }}
+                </span>
+              </div>
+              <!-- eslint-disable vue/no-v-html -->
+              <h3 class="article-title" v-html="highlightKeyword(article.title)"></h3>
+              <p
+                class="article-excerpt"
+                v-html="highlightKeyword(article.summary || '暂无摘要')"
+              ></p>
+              <!-- eslint-enable vue/no-v-html -->
+              <span class="article-read">
+                阅读全文
+                <span class="read-arrow">→</span>
               </span>
-              <span class="meta-date">{{ formatDate(article.created_at) }}</span>
             </div>
-            <!-- 标题（关键词高亮） -->
-            <h3 class="article-title" v-html="highlightKeyword(article.title)"></h3>
-            <!-- 摘要（关键词高亮） -->
-            <p class="article-excerpt" v-html="highlightKeyword(article.summary || '暂无摘要')"></p>
-            <!-- 阅读链接 -->
-            <span class="article-read">
-              阅读全文
-              <span class="read-arrow">→</span>
-            </span>
-          </div>
-        </article>
-      </div>
-
-      <!-- 空状态：已搜索但无结果 -->
-      <div v-else-if="keyword && searched && !loading" class="empty-state animate-fade-in-up">
-        <div class="empty-icon" aria-hidden="true">
-          <svg
-            viewBox="0 0 24 24"
-            width="64"
-            height="64"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.5"
-          >
-            <circle cx="11" cy="11" r="7" />
-            <line x1="21" y1="21" x2="16.65" y2="16.65" />
-          </svg>
+          </article>
         </div>
-        <p class="empty-title">未找到与「{{ keyword }}」相关的文章</p>
-        <p class="empty-desc">尝试更换关键词或浏览其他文章</p>
-      </div>
 
-      <!-- 初始状态：未输入关键词 -->
-      <div v-else-if="!keyword" class="empty-state animate-fade-in-up">
-        <div class="empty-icon" aria-hidden="true">
-          <svg
-            viewBox="0 0 24 24"
-            width="64"
-            height="64"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.5"
-          >
-            <circle cx="11" cy="11" r="7" />
-            <line x1="21" y1="21" x2="16.65" y2="16.65" />
-          </svg>
+        <!-- 分页 -->
+        <div v-if="totalPages > 1" class="pagination-wrapper">
+          <el-pagination
+            v-model:current-page="currentPage"
+            :page-size="pageSize"
+            :total="total"
+            layout="prev, pager, next"
+            background
+            @current-change="onPageChange"
+          />
         </div>
-        <p class="empty-title">请输入关键词开始搜索</p>
-        <p class="empty-desc">支持按文章标题、摘要、内容进行搜索</p>
-      </div>
-
-      <!-- 分页 -->
-      <div v-if="total > pageSize" class="pagination-wrapper">
-        <el-pagination
-          :current-page="currentPage"
-          :page-size="pageSize"
-          :total="total"
-          layout="prev, pager, next"
-          background
-          @current-change="handlePageChange"
-        />
-      </div>
+      </AsyncData>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue';
+import { ref, onMounted, onUnmounted, nextTick } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { getPublicArticles } from '../../api/articles';
+import { Search, View } from '@element-plus/icons-vue';
+import { searchArticles } from '../../api/articles';
+import AsyncData from '../../components/common/AsyncData.vue';
 
 const route = useRoute();
 const router = useRouter();
 
-/** 组件根节点引用（用于作用域内的滚动观察） */
 const rootRef = ref(null);
-
-/** 当前搜索关键词（实际用于查询的值） */
+const searchInputRef = ref(null);
 const keyword = ref('');
-
-/** 搜索结果列表 */
-const articles = ref([]);
-
-/** 加载状态 */
-const loading = ref(false);
-
-/** 是否已执行过搜索（控制空状态与初始状态的展示差异） */
-const searched = ref(false);
-
-/** 当前页码 */
-const currentPage = ref(1);
-
-/** 每页数量 */
-const pageSize = 10;
-
-/** 搜索结果总数 */
+const results = ref([]);
 const total = ref(0);
-
-/** Intersection Observer 实例（滚动揭示动画） */
+const totalPages = ref(0);
+const currentPage = ref(1);
+const pageSize = 10;
+const loading = ref(false);
+const error = ref(false);
+const searched = ref(false);
 let observer = null;
 
-/**
- * 转义字符串中的正则特殊字符
- * 用于安全构建关键词高亮正则，避免用户输入导致正则注入
- * @param {string} str - 需要转义的字符串
- * @returns {string} 转义后的字符串
- */
-function escapeRegExp(str) {
-  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
+/** 当前搜索关键词（记录最近一次搜索，用于高亮） */
+const lastKeyword = ref('');
 
-/**
- * 格式化日期为 YYYY-MM-DD
- * @param {string} dateStr - 后端返回的日期字符串
- * @returns {string} 格式化后的日期，无效时返回空字符串
- */
+/** 格式化日期 */
 function formatDate(dateStr) {
   if (!dateStr) return '';
-  const date = new Date(dateStr);
-  if (isNaN(date.getTime())) return '';
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
+  const d = new Date(dateStr);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
 }
 
-/**
- * HTML 特殊字符转义
- * 防止文本中包含 HTML 标签时被当作 HTML 执行（XSS 防护）
- * @param {string} str - 原始字符串
- * @returns {string} 转义后的安全字符串
- */
-function escapeHtml(str) {
-  const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
-  return str.replace(/[&<>"']/g, (m) => map[m]);
-}
-
-/**
- * 关键词高亮处理
- * 先对原始文本做 HTML 转义（防 XSS），再将匹配关键词的部分用 <mark> 标签包裹
- * @param {string} text - 原始文本
- * @returns {string} 包含高亮标签的安全 HTML 字符串
- */
+/** 高亮关键词（转义 HTML 防止 XSS） */
 function highlightKeyword(text) {
-  if (!text) return '';
-  // 先转义 HTML，防止 XSS
-  const safeText = escapeHtml(text);
-  if (!keyword.value) return safeText;
-  const escaped = escapeRegExp(keyword.value);
-  // 全局匹配正则替换所有出现位置
-  const reg = new RegExp(`(${escaped})`, 'gi');
-  return safeText.replace(reg, '<mark class="highlight">$1</mark>');
+  if (!lastKeyword.value || !text) return text;
+  const escaped = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const kw = lastKeyword.value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const regex = new RegExp(`(${kw})`, 'gi');
+  return escaped.replace(regex, '<mark>$1</mark>');
 }
 
-/**
- * 跳转到文章详情页
- * @param {number} id - 文章 ID
- */
-function goToArticle(id) {
-  router.push(`/article/${id}`);
-}
-
-/**
- * 执行搜索
- * 重置页码后调用搜索接口获取结果
- * @returns {Promise<void>}
- */
+/** 执行搜索 */
 async function doSearch() {
   const kw = keyword.value.trim();
-  // 关键词为空时不执行搜索
-  if (!kw) {
-    articles.value = [];
-    total.value = 0;
-    searched.value = false;
-    return;
-  }
+  if (!kw) return;
+
+  currentPage.value = 1;
+  await fetchResults();
+  // 同步 URL 参数
+  router.replace({ query: { keyword: kw } });
+}
+
+/** 分页切换 */
+async function onPageChange(page) {
+  currentPage.value = page;
+  await fetchResults();
+  // 滚动到顶部
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+/** 请求搜索结果 */
+async function fetchResults() {
+  const kw = keyword.value.trim();
+  if (!kw) return;
+
   loading.value = true;
+  error.value = false;
   searched.value = true;
+
   try {
-    const { data } = await getPublicArticles({
-      keyword: kw,
-      page: currentPage.value,
-      page_size: pageSize
-    });
-    // 兼容返回结构：data = { list, pagination }
-    if (data && data.list) {
-      articles.value = data.list;
-      total.value = data.pagination?.total ?? 0;
-    } else {
-      articles.value = [];
-      total.value = 0;
-    }
+    const res = await searchArticles({ keyword: kw, page: currentPage.value, page_size: pageSize });
+    const data = res.data || {};
+    results.value = data.list || [];
+    total.value = (data.pagination && data.pagination.total) || 0;
+    totalPages.value = (data.pagination && data.pagination.total_pages) || 0;
+    lastKeyword.value = kw;
     await nextTick();
     initObserver();
   } catch (e) {
     console.error('搜索失败:', e);
-    articles.value = [];
-    total.value = 0;
+    error.value = true;
   } finally {
     loading.value = false;
   }
 }
 
-/**
- * 初始化 Intersection Observer
- * 监听组件内所有 .reveal 元素，进入视口时添加 visible 类触发动画
- */
+/** 跳转到文章详情 */
+function goToArticle(id) {
+  router.push(`/article/${id}`);
+}
+
+/** 初始化滚动动画 */
 function initObserver() {
   if (observer) observer.disconnect();
   if (!rootRef.value) return;
@@ -268,50 +198,17 @@ function initObserver() {
         }
       });
     },
-    { threshold: 0.1, rootMargin: '0px 0px -60px 0px' }
+    { threshold: 0.15, rootMargin: '0px 0px -40px 0px' }
   );
   rootRef.value.querySelectorAll('.reveal').forEach((el) => observer.observe(el));
 }
 
-/**
- * 分页器页码变化回调
- * @param {number} page - 新页码
- */
-function handlePageChange(page) {
-  currentPage.value = page;
-  doSearch();
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-
-/**
- * 监听路由查询参数变化
- * 外部链接或浏览器前进/后退导致 keyword 变化时同步状态并重新搜索
- */
-watch(
-  () => route.query.keyword,
-  (newKeyword) => {
-    const kw = newKeyword ? String(newKeyword).trim() : '';
-    // 仅在关键词实际变化时处理，避免重复搜索
-    if (kw !== keyword.value) {
-      keyword.value = kw;
-      currentPage.value = 1;
-      if (kw) {
-        doSearch();
-      } else {
-        articles.value = [];
-        total.value = 0;
-        searched.value = false;
-      }
-    }
-  }
-);
-
 onMounted(() => {
-  // 初始化：从路由查询参数读取关键词
-  const initialKeyword = route.query.keyword ? String(route.query.keyword).trim() : '';
-  if (initialKeyword) {
-    keyword.value = initialKeyword;
-    doSearch();
+  // 从 URL 参数读取关键词
+  const queryKw = route.query.keyword;
+  if (queryKw) {
+    keyword.value = queryKw;
+    fetchResults();
   }
 });
 
@@ -321,307 +218,327 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-/* ========== 搜索头部：黑红血月主题 ========== */
-.search-header {
+/* ========== Hero ========== */
+.hero {
   position: relative;
-  max-width: 960px;
-  margin: 0 auto;
-  padding: 120px 32px 64px;
-  text-align: center;
-  overflow: hidden;
+  padding: 120px 32px 80px;
   background: linear-gradient(
     180deg,
     rgba(6, 9, 18, 0.55) 0%,
     rgba(10, 14, 26, 0.45) 50%,
     rgba(18, 24, 40, 0.65) 100%
   );
-  backdrop-filter: blur(2px);
-  transition: opacity 0.8s ease-out;
+  overflow: hidden;
+  color: #fff;
+  isolation: isolate;
+  border-bottom: 1px solid var(--border);
 }
 
-/* 血月光晕背景 */
-.search-header::before {
+.hero::before {
   content: '';
   position: absolute;
-  top: 50%;
+  top: 5%;
   left: 50%;
-  transform: translate(-50%, -50%);
-  width: 500px;
-  height: 500px;
-  background: radial-gradient(circle, rgba(220, 38, 38, 0.08) 0%, transparent 60%);
+  transform: translateX(-50%);
+  width: 480px;
+  height: 480px;
+  background: radial-gradient(
+    circle,
+    rgba(220, 38, 38, 0.1) 0%,
+    rgba(153, 27, 27, 0.04) 40%,
+    transparent 70%
+  );
   border-radius: 50%;
   z-index: 0;
   pointer-events: none;
 }
 
-.eyebrow {
+.hero-inner {
   position: relative;
-  z-index: 1;
-  margin: 0 0 16px;
+  z-index: 2;
+  max-width: 720px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.hero-eyebrow {
+  margin: 0 0 20px;
   font-size: 13px;
   font-weight: 600;
   letter-spacing: 6px;
   color: rgba(248, 113, 113, 0.8);
 }
 
-/* 关键词突出展示：超大字号 */
-.keyword-title {
-  position: relative;
-  z-index: 1;
-  margin: 0 0 20px;
-  font-size: clamp(40px, 7vw, 72px);
+.hero-title {
+  margin: 0 0 32px;
+  font-size: clamp(40px, 7vw, 64px);
   font-weight: 800;
   letter-spacing: -2px;
-  line-height: 1.1;
-}
-
-.keyword-text {
   background: linear-gradient(180deg, #ffffff 0%, #fca5a5 60%, #dc2626 100%);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
-  filter: drop-shadow(0 0 20px rgba(220, 38, 38, 0.3));
 }
 
-.keyword-empty {
+/* ========== 搜索表单 ========== */
+.search-form {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  max-width: 560px;
+  margin: 0 auto;
+  background: rgba(26, 32, 53, 0.8);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  transition:
+    border-color 0.25s var(--ease-out),
+    box-shadow 0.25s var(--ease-out);
+}
+
+.search-form:focus-within {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.12);
+}
+
+.search-icon {
+  margin-left: 16px;
+  font-size: 18px;
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+
+.search-input {
+  flex: 1;
+  padding: 14px 16px;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 15px;
+  color: var(--text-primary);
+}
+
+.search-input::placeholder {
   color: var(--text-tertiary);
 }
 
-.result-stats {
-  position: relative;
-  z-index: 1;
-  margin: 0;
-  font-size: 15px;
-  color: rgba(241, 245, 249, 0.7);
+.search-btn {
+  padding: 14px 28px;
+  background: var(--primary);
+  border: none;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.25s var(--ease-out);
+  flex-shrink: 0;
 }
 
-.stats-count {
-  color: var(--primary-light);
-  font-weight: 700;
-  font-size: 18px;
-  margin: 0 4px;
+.search-btn:hover {
+  background: var(--primary-dark);
 }
 
 /* ========== 内容区 ========== */
 .content-wrapper {
   max-width: 960px;
   margin: 0 auto;
-  padding: 0 32px 80px;
-  background: rgba(10, 14, 26, 0.3);
+  padding: 48px 32px 96px;
 }
 
-/* ========== 结果列表（横向布局，非卡片） ========== */
+/* 结果统计 */
+.search-stats {
+  margin-bottom: 32px;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.search-stats strong {
+  color: var(--primary);
+  font-weight: 700;
+}
+
+/* ========== 文章列表 ========== */
 .article-list {
   display: flex;
   flex-direction: column;
+  gap: 0;
 }
 
 .article-row {
   position: relative;
   display: flex;
-  padding: 32px 0 32px 28px;
-  border-bottom: 1px solid var(--border);
+  align-items: stretch;
+  padding: 28px 0;
+  border-bottom: 1px solid rgba(30, 41, 59, 0.5);
   cursor: pointer;
-  /* 入场前隐藏 */
+  transition:
+    padding-left 0.3s var(--ease-out),
+    background 0.25s var(--ease-out);
   opacity: 0;
   transform: translateY(24px);
   transition:
     opacity 0.6s var(--ease-out),
     transform 0.6s var(--ease-out),
-    padding-left 0.3s var(--ease-out);
-  transition-delay: calc(var(--row-index) * 80ms);
+    padding-left 0.3s var(--ease-out),
+    background 0.25s var(--ease-out);
 }
 
-/* 进入视口后揭示 */
 .article-row.visible {
   opacity: 1;
   transform: translateY(0);
 }
 
-/* 悬浮：左移 + 强调条展开 */
 .article-row:hover {
-  padding-left: 36px;
+  padding-left: 16px;
+  background: rgba(220, 38, 38, 0.04);
 }
 
-/* 主色强调条：左侧从 0 展开到 4px */
+/* 主色强调条 */
 .accent-bar {
   position: absolute;
   left: 0;
-  top: 32px;
-  bottom: 32px;
-  width: 0;
-  background: linear-gradient(to bottom, var(--primary), var(--primary-light));
-  border-radius: 2px;
-  transition: width 0.3s var(--ease-spring);
+  top: 28px;
+  bottom: 28px;
+  width: 3px;
+  background: var(--primary);
+  border-radius: 0 3px 3px 0;
+  transform: scaleY(0.3);
+  opacity: 0;
+  transition:
+    transform 0.35s var(--ease-spring),
+    opacity 0.25s var(--ease-out);
 }
 
 .article-row:hover .accent-bar {
-  width: 4px;
+  transform: scaleY(1);
+  opacity: 1;
 }
 
-/* 文章主体 */
 .article-body {
   flex: 1;
   min-width: 0;
 }
 
-/* 元信息行 */
 .article-meta {
   display: flex;
   align-items: center;
-  gap: 14px;
-  margin-bottom: 12px;
-  font-size: 12px;
+  gap: 12px;
+  margin-bottom: 10px;
+  font-size: 13px;
   color: var(--text-tertiary);
-  letter-spacing: 0.5px;
 }
 
 .meta-category {
-  padding: 3px 10px;
-  font-weight: 600;
+  padding: 2px 10px;
+  background: rgba(220, 38, 38, 0.15);
   color: var(--primary);
-  background: var(--primary-bg);
-  border-radius: 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
 }
 
-.meta-date {
-  font-variant-numeric: tabular-nums;
+.meta-date,
+.meta-views {
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
-/* 标题 */
 .article-title {
-  margin: 0 0 12px;
-  font-size: 22px;
+  margin: 0 0 10px;
+  font-size: 20px;
   font-weight: 700;
   color: var(--text-primary);
-  line-height: 1.4;
-  letter-spacing: -0.5px;
   transition: color 0.25s var(--ease-out);
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
 }
 
 .article-row:hover .article-title {
   color: var(--primary);
 }
 
-/* 摘要 */
 .article-excerpt {
-  margin: 0 0 16px;
+  margin: 0 0 12px;
   font-size: 14px;
-  color: var(--text-secondary);
   line-height: 1.7;
+  color: var(--text-secondary);
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
 
-/* 阅读链接 */
+/* 高亮关键词 */
+:deep(.article-title mark),
+:deep(.article-excerpt mark) {
+  background: rgba(220, 38, 38, 0.25);
+  color: #fca5a5;
+  padding: 1px 3px;
+  border-radius: 3px;
+}
+
 .article-read {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   font-size: 13px;
   font-weight: 600;
+  color: var(--text-tertiary);
+  transition:
+    color 0.25s var(--ease-out),
+    gap 0.25s var(--ease-out);
+}
+
+.article-row:hover .article-read {
   color: var(--primary);
-  letter-spacing: 0.5px;
+  gap: 10px;
 }
 
 .read-arrow {
-  transition: transform 0.3s var(--ease-spring);
+  transition: transform 0.25s var(--ease-out);
 }
 
 .article-row:hover .read-arrow {
-  transform: translateX(6px);
-}
-
-/* 关键词高亮（通过 v-html 渲染） */
-.article-title :deep(mark.highlight),
-.article-excerpt :deep(mark.highlight) {
-  background: rgba(220, 38, 38, 0.15);
-  color: var(--primary-dark);
-  padding: 1px 4px;
-  border-radius: 3px;
-  font-weight: 600;
-}
-
-/* ========== 骨架屏 ========== */
-.skeleton-row {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 24px 0;
-  border-bottom: 1px solid var(--border);
-}
-/* 骨架屏适配暗色 */
-.skeleton-line {
-  height: 14px;
-  border-radius: 6px;
-  background: #1a2035;
-}
-
-.w-40 {
-  width: 40%;
-}
-.w-70 {
-  width: 70%;
-}
-.w-90 {
-  width: 90%;
-}
-
-/* ========== 空状态 ========== */
-.empty-state {
-  text-align: center;
-  padding: 80px 20px;
-}
-
-.empty-icon {
-  display: flex;
-  justify-content: center;
-  margin-bottom: 20px;
-  color: var(--text-tertiary);
-}
-
-.empty-title {
-  margin: 0 0 8px;
-  font-size: 20px;
-  font-weight: 700;
-  color: var(--text-secondary);
-}
-
-.empty-desc {
-  margin: 0;
-  font-size: 14px;
-  color: var(--text-tertiary);
+  transform: translateX(3px);
 }
 
 /* ========== 分页 ========== */
 .pagination-wrapper {
   display: flex;
   justify-content: center;
-  margin-top: 56px;
+  margin-top: 48px;
+}
+
+:deep(.el-pagination) {
+  --el-pagination-bg-color: rgba(26, 32, 53, 0.6);
+  --el-pagination-text-color: var(--text-secondary);
+  --el-pagination-button-bg-color: rgba(26, 32, 53, 0.6);
+  --el-pagination-button-disabled-bg-color: rgba(26, 32, 53, 0.3);
+}
+
+:deep(.el-pager li) {
+  border-radius: 8px;
+  font-weight: 600;
+}
+
+:deep(.el-pager li.is-active) {
+  background: var(--primary);
+  color: #fff;
 }
 
 /* ========== 响应式 ========== */
 @media (max-width: 768px) {
-  .search-header {
-    padding: 48px 20px 32px;
+  .hero {
+    padding: 80px 20px 56px;
   }
   .content-wrapper {
-    padding: 0 16px 56px;
+    padding: 32px 20px 64px;
+  }
+  .search-btn {
+    padding: 14px 18px;
+    font-size: 13px;
   }
   .article-title {
-    font-size: 18px;
-  }
-  .article-row {
-    padding-left: 20px;
-  }
-  .article-row:hover {
-    padding-left: 24px;
+    font-size: 17px;
   }
 }
 </style>

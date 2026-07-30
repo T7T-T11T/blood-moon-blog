@@ -51,7 +51,6 @@
  * 依赖库：echarts
  */
 import { ref, onMounted, onBeforeUnmount, nextTick, markRaw } from 'vue';
-import * as echarts from 'echarts';
 import { Document, View, Folder, PriceTag, ChatDotRound } from '@element-plus/icons-vue';
 import { getDashboardStatsAPI } from '@/api/dashboard';
 import { getArticles } from '@/api/articles';
@@ -68,6 +67,9 @@ const barChartRef = ref(null);
 let pieChart = null;
 let lineChart = null;
 let barChart = null;
+
+/** echarts 模块引用（路由级懒加载） */
+let echarts = null;
 
 /** 关键指标配置（根据统计数据计算得出） */
 const metrics = ref([
@@ -130,6 +132,10 @@ async function loadStats() {
 
     // 等待 DOM 渲染后初始化图表
     await nextTick();
+    // 路由级懒加载 echarts，仅首次使用时加载
+    if (!echarts) {
+      echarts = await import('echarts');
+    }
     initPieChart(stats.articleStats);
     initLineChart(stats.publishTrend);
     initBarChart(topArticles);
@@ -267,13 +273,27 @@ function handleResize() {
   barChart?.resize();
 }
 
+let resizeObserver = null;
+
 onMounted(() => {
   loadStats();
   window.addEventListener('resize', handleResize);
+
+  // 使用 ResizeObserver 监听图表容器尺寸变化（比 window.resize 更精准）
+  if (window.ResizeObserver) {
+    resizeObserver = new ResizeObserver(() => {
+      handleResize();
+    });
+    const containers = [pieChartRef.value, lineChartRef.value, barChartRef.value];
+    containers.forEach((el) => {
+      if (el) resizeObserver.observe(el);
+    });
+  }
 });
 
 onBeforeUnmount(() => {
   window.removeEventListener('resize', handleResize);
+  resizeObserver?.disconnect();
   // 释放 echarts 实例避免内存泄漏
   pieChart?.dispose();
   lineChart?.dispose();

@@ -3,13 +3,21 @@
  * 作用：封装文章标签的公开浏览和后台管理接口
  */
 import request from './request';
+import { listCache } from './cache';
 
 /**
- * 获取标签列表（公开）
+ * 获取标签列表（公开，缓存 60s）
  * @returns {Promise} 标签列表
  */
 export function getTags() {
-  return request.get('/tags');
+  const key = 'getTags';
+  const cached = listCache.get(key);
+  if (cached) return Promise.resolve(cached);
+
+  return request.get('/tags').then((res) => {
+    listCache.set(key, res);
+    return res;
+  });
 }
 
 /**

@@ -15,7 +15,7 @@
       <div class="navbar-inner">
         <!-- 品牌：仅 Logo 字母图标 -->
         <router-link to="/" class="brand" @click="closeMobileMenu">
-          <img src="@/assets/blood-moon-logo.jpg" alt="logo" class="brand-mark" />
+          <img src="@/assets/blood-moon-logo.webp" alt="logo" class="brand-mark" />
         </router-link>
 
         <!-- 桌面端导航 -->
@@ -46,6 +46,16 @@
           <router-link to="/admin" class="admin-entry" title="管理后台">
             <el-icon><Setting /></el-icon>
           </router-link>
+          <button
+            class="theme-toggle"
+            :title="themeStore.theme === 'dark' ? '切换亮色主题' : '切换暗色主题'"
+            @click="themeStore.toggleTheme()"
+          >
+            <el-icon>
+              <Sunny v-if="themeStore.theme === 'dark'" />
+              <Moon v-else />
+            </el-icon>
+          </button>
           <button
             class="menu-toggle"
             :class="{ open: mobileMenuOpen }"
@@ -106,6 +116,10 @@
         <span class="footer-copy">© {{ currentYear }}</span>
         <span v-if="siteDescription" class="footer-divider">·</span>
         <span v-if="siteDescription" class="footer-desc">{{ siteDescription }}</span>
+        <span class="footer-divider">·</span>
+        <a href="/api/rss" target="_blank" class="footer-rss" title="RSS 订阅">
+          <el-icon><Connection /></el-icon> RSS
+        </a>
       </div>
     </footer>
 
@@ -117,25 +131,27 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { Search, Setting } from '@element-plus/icons-vue';
+import { Search, Setting, Sunny, Moon, Connection } from '@element-plus/icons-vue';
 import { getSettings } from '../api/settings';
-import heroBg from '../assets/hero-bg.jpg';
+import heroBg from '../assets/hero-bg.webp';
 import MusicPlayer from '../components/MusicPlayer.vue';
+import { useThemeStore } from '../stores/theme';
 
 const route = useRoute();
 const router = useRouter();
+const themeStore = useThemeStore();
 
 /**
  * 站点配置（getSettings 失败时使用默认值）
  * @type {import('vue').Ref<Object>}
  */
 const settings = ref({
-  siteName: '血月博客',
+  siteName: '寿冬与秋',
   siteDescription: '分享技术，记录成长'
 });
 
 /** 站点名（兜底默认值） */
-const siteName = computed(() => settings.value.siteName || '血月博客');
+const siteName = computed(() => settings.value.siteName || '寿冬与秋');
 
 /** 站点描述（兜底默认值） */
 const siteDescription = computed(() => settings.value.siteDescription || '');
@@ -506,6 +522,32 @@ onUnmounted(() => {
   transform: rotate(45deg);
 }
 
+/* 主题切换按钮 */
+.theme-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  color: var(--text-secondary);
+  background: rgba(26, 32, 53, 0.6);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  font-size: 18px;
+  cursor: pointer;
+  transition:
+    color 0.25s var(--ease-out),
+    border-color 0.25s var(--ease-out),
+    background 0.25s var(--ease-out);
+}
+
+.theme-toggle:hover {
+  color: #f59e0b;
+  border-color: #f59e0b;
+  background: rgba(245, 158, 11, 0.1);
+}
+
 /* 汉堡按钮（移动端） */
 .menu-toggle {
   display: none;
@@ -597,7 +639,7 @@ onUnmounted(() => {
 .footer {
   border-top: 1px solid var(--border);
   background: var(--bg-sidebar);
-  padding-bottom: 60px; /* 为底部音乐播放器留出空间 */
+  padding-bottom: 80px; /* 为底部居中播放器留出空间 */
 }
 
 .footer-inner {
@@ -620,6 +662,20 @@ onUnmounted(() => {
 
 .footer-divider {
   color: var(--text-tertiary);
+}
+
+.footer-rss {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-tertiary);
+  text-decoration: none;
+  font-size: 13px;
+  transition: color 0.2s;
+}
+
+.footer-rss:hover {
+  color: #f59e0b;
 }
 
 /* ========== 路由过渡动画 ========== */

@@ -32,13 +32,7 @@
         </div>
 
         <!-- 加载骨架 -->
-        <div v-if="loading && articles.length === 0" class="article-list">
-          <div v-for="n in 5" :key="n" class="article-row skeleton-row">
-            <div class="skeleton-line w-70"></div>
-            <div class="skeleton-line w-90"></div>
-            <div class="skeleton-line w-40"></div>
-          </div>
-        </div>
+        <ArticleSkeleton v-if="loading && articles.length === 0" :count="5" />
 
         <!-- 文章列表（横向布局） -->
         <div v-else-if="articles.length > 0" class="article-list">
@@ -151,8 +145,7 @@ import { useRouter } from 'vue-router';
 import { View } from '@element-plus/icons-vue';
 import { getPublicArticles, getHotArticles } from '../../api/articles';
 import { getSettings } from '../../api/settings';
-// Hero 背景图
-import heroBg from '../../assets/hero-bg.jpg';
+import ArticleSkeleton from '../../components/front/ArticleSkeleton.vue';
 
 const router = useRouter();
 
@@ -332,57 +325,6 @@ onUnmounted(() => {
   position: relative;
   min-height: 100vh;
   isolation: isolate;
-}
-
-/* ========== 固定背景层（全局唯一，不随滚动） ========== */
-.hero-bg {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  z-index: 0;
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  background-attachment: fixed;
-}
-
-/* 暗色渐变遮罩（固定不随滚动） */
-.hero-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  z-index: 1;
-  background: linear-gradient(
-    180deg,
-    rgba(10, 14, 26, 0.55) 0%,
-    rgba(10, 14, 26, 0.35) 30%,
-    rgba(10, 14, 26, 0.55) 70%,
-    rgba(10, 14, 26, 0.95) 100%
-  );
-  pointer-events: none;
-}
-
-/* 血月光晕（固定不闪烁） */
-.moon-glow {
-  position: fixed;
-  top: 18%;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 320px;
-  height: 320px;
-  background: radial-gradient(
-    circle,
-    rgba(220, 38, 38, 0.15) 0%,
-    rgba(220, 38, 38, 0.05) 40%,
-    transparent 70%
-  );
-  border-radius: 50%;
-  z-index: 2;
-  pointer-events: none;
 }
 
 /* ========== Hero 全屏区域 ========== */
@@ -669,31 +611,6 @@ onUnmounted(() => {
   transform: translateX(6px);
 }
 
-/* ========== 骨架屏 ========== */
-.skeleton-row {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 24px 0;
-  border-bottom: 1px solid var(--border);
-}
-
-.skeleton-line {
-  height: 14px;
-  border-radius: 6px;
-  background: #1a2035;
-}
-
-.w-40 {
-  width: 40%;
-}
-.w-70 {
-  width: 70%;
-}
-.w-90 {
-  width: 90%;
-}
-
 /* ========== 空状态 ========== */
 .empty-state {
   text-align: center;
@@ -895,9 +812,6 @@ onUnmounted(() => {
     grid-template-columns: 1fr 280px;
     gap: 40px;
   }
-  .hero-bg {
-    background-attachment: fixed;
-  }
 }
 
 @media (max-width: 768px) {
@@ -931,11 +845,6 @@ onUnmounted(() => {
   }
   .article-row:hover {
     padding-left: 24px;
-  }
-  .moon-glow {
-    width: 200px;
-    height: 200px;
-    top: 10%;
   }
 }
 </style>

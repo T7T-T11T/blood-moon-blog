@@ -1,12 +1,14 @@
 {
   "name": "task-manager-backend",
-  "version": "1.8.0",
+  "version": "1.9.0",
   "description": "任务管理系统后端 - Express + MySQL",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "init-admin": "node scripts/init-admin.js"
+    "init-admin": "node scripts/init-admin.js",
+    "lint": "eslint . --ext .js",
+    "lint:fix": "eslint . --ext .js --fix"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
@@ -18,5 +20,8 @@
     "jsonwebtoken": "^9.0.2",
     "multer": "^2.2.0",
     "mysql2": "^3.6.0"
+  },
+  "devDependencies": {
+    "eslint": "^8.57.0"
   }
 }

@@ -1,196 +1,328 @@
-<!--
-  404 页面
-  作用：访问不存在的路由时展示
-  设计：全屏居中 —— 大号 404 渐变文字 + 浮动粒子背景
-  动画：404 弹性入场 + 渐变流动 + 粒子上升（纯 CSS 实现）
--->
+/** * NotFound.vue - 404 页面（创意设计 + 实用导航） * * 增强内容：搜索入口、随机推荐文章列表 */
 <template>
   <div class="not-found-page">
-    <!-- 浮动粒子背景 -->
-    <div class="particles">
-      <span
-        v-for="(p, i) in particles"
-        :key="i"
-        class="particle"
-        :style="{
-          left: p.left,
-          width: p.size,
-          height: p.size,
-          animationDuration: p.duration,
-          animationDelay: p.delay
-        }"
-      ></span>
-    </div>
+    <div class="nf-container">
+      <!-- 大号 404 -->
+      <h1 class="nf-code">404</h1>
+      <p class="nf-title">页面不见了</p>
+      <p class="nf-subtitle">
+        你访问的页面{{ routePath ? `「${routePath}」` : '' }}不存在或已被移除
+      </p>
 
-    <div class="content">
-      <!-- 404 数字：弹性入场 + 渐变流动 -->
-      <div class="error-code">404</div>
-      <h1 class="error-title animate-fade-in-up">页面不存在</h1>
-      <p class="error-desc animate-fade-in-up delay-200">您访问的页面已被移除，或从未存在过</p>
-      <button class="back-btn animate-fade-in-up delay-300" @click="goHome">返回首页</button>
+      <!-- 操作按钮 -->
+      <div class="nf-actions">
+        <router-link to="/" class="nf-btn primary">返回首页</router-link>
+        <button class="nf-btn secondary" @click="goBack">返回上一页</button>
+      </div>
+
+      <!-- 搜索入口 -->
+      <div class="nf-search" @keydown.enter="doSearch">
+        <el-icon class="search-icon"><Search /></el-icon>
+        <input
+          v-model="searchQuery"
+          type="text"
+          class="search-input"
+          placeholder="搜索文章…"
+          maxlength="100"
+        />
+        <button class="search-btn" :disabled="!searchQuery.trim()" @click="doSearch">
+          <el-icon><Search /></el-icon>
+        </button>
+      </div>
+
+      <!-- 随机推荐文章 -->
+      <div v-if="articles.length > 0" class="nf-articles">
+        <h2 class="nf-articles-title">或许你感兴趣</h2>
+        <div class="nf-article-list">
+          <router-link
+            v-for="article in articles"
+            :key="article.id"
+            :to="`/article/${article.id}`"
+            class="nf-article-item"
+          >
+            <span class="nf-article-name">{{ article.title }}</span>
+            <span class="nf-article-date">{{ formatDate(article.created_at) }}</span>
+          </router-link>
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup>
-/**
- * 404 页面逻辑
- * - 预生成浮动粒子配置
- * - 提供返回首页入口
- */
-import { useRouter } from 'vue-router';
+import { ref, onMounted, computed } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import { Search } from '@element-plus/icons-vue';
+import { getPublicArticles } from '../api/articles';
 
+const route = useRoute();
 const router = useRouter();
 
-/**
- * 粒子配置：预生成位置、大小、动画时长与延迟
- * 使用稳定算法（非随机）确保渲染一致，避免每次重算
- */
-const particles = Array.from({ length: 12 }, (_, i) => ({
-  left: ((i * 37) % 100) + '%',
-  size: 4 + (i % 4) * 3 + 'px',
-  duration: 12 + (i % 5) * 4 + 's',
-  delay: (i % 6) * -2 + 's'
-}));
+const routePath = computed(() => {
+  const p = route.path;
+  return p && p !== '/404' ? p : '';
+});
 
-/**
- * 返回首页
- */
-function goHome() {
-  router.push('/');
+const searchQuery = ref('');
+const articles = ref([]);
+
+function goBack() {
+  router.back();
 }
+
+function doSearch() {
+  const q = searchQuery.value.trim();
+  if (q) {
+    router.push({ path: '/search', query: { q } });
+  }
+}
+
+function formatDate(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return '';
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${dd}`;
+}
+
+async function loadRecommended() {
+  try {
+    const { data } = await getPublicArticles({ page: 1, page_size: 6 });
+    articles.value = Array.isArray(data) ? data : (data?.list ?? []);
+    // 随机打乱顺序呈现
+    articles.value = articles.value.sort(() => Math.random() - 0.5);
+  } catch (e) {
+    console.error('加载推荐文章失败:', e);
+  }
+}
+
+onMounted(() => {
+  loadRecommended();
+});
 </script>
 
 <style scoped>
-/* ========== 页面容器：全屏居中 ========== */
+/* ========== 404 容器 ========== */
 .not-found-page {
-  position: relative;
-  min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
-  background: linear-gradient(135deg, #f0fdfa 0%, #ecfeff 50%, #f0fdfa 100%);
+  min-height: 80vh;
+  padding: 48px 24px;
 }
 
-/* ========== 浮动粒子 ========== */
-.particles {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-
-.particle {
-  position: absolute;
-  bottom: -20px;
-  border-radius: 50%;
-  background: rgba(13, 148, 136, 0.15);
-  animation-name: rise;
-  animation-timing-function: linear;
-  animation-iteration-count: infinite;
-}
-
-/* ========== 内容区 ========== */
-.content {
-  position: relative;
-  z-index: 2;
+.nf-container {
   text-align: center;
-  padding: 40px;
+  max-width: 560px;
+  width: 100%;
 }
 
-/* 404 数字：弹性入场 + 渐变流动（两段动画并行） */
-.error-code {
-  font-size: 180px;
+.nf-code {
+  margin: 0 0 8px;
+  font-size: clamp(96px, 16vw, 180px);
   font-weight: 900;
   line-height: 1;
-  letter-spacing: -4px;
-  background: linear-gradient(135deg, #0d9488, #14b8a6, #5eead4, #0d9488);
-  background-size: 300% 300%;
+  background: linear-gradient(
+    180deg,
+    var(--primary) 0%,
+    var(--primary-light) 50%,
+    var(--primary-dark) 100%
+  );
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
-  margin-bottom: 20px;
-  /* bounceIn：弹性入场（复用全局关键帧）；gradientFlow：渐变持续流动 */
-  animation:
-    bounceIn 0.6s var(--ease-spring) both,
-    gradientFlow 6s ease infinite;
+  letter-spacing: -6px;
 }
 
-.error-title {
-  font-size: 32px;
+.nf-title {
+  margin: 0 0 12px;
+  font-size: clamp(22px, 3vw, 32px);
   font-weight: 700;
   color: var(--text-primary);
-  margin: 0 0 14px;
 }
 
-.error-desc {
-  font-size: 16px;
-  color: var(--text-secondary);
-  margin: 0 0 40px;
-}
-
-/* ========== 返回按钮 ========== */
-.back-btn {
-  display: inline-block;
-  padding: 14px 40px;
+.nf-subtitle {
+  margin: 0 auto 32px;
+  max-width: 400px;
   font-size: 15px;
+  line-height: 1.6;
+  color: var(--text-tertiary);
+}
+
+/* ========== 操作按钮 ========== */
+.nf-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin-bottom: 40px;
+}
+
+.nf-btn {
+  padding: 10px 28px;
+  font-size: 14px;
   font-weight: 600;
-  letter-spacing: 2px;
-  color: #fff;
-  background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%);
-  border: none;
-  border-radius: 12px;
+  border-radius: 24px;
+  text-decoration: none;
   cursor: pointer;
-  transition: all 0.3s var(--ease-out);
+  transition:
+    background 0.25s var(--ease-out),
+    transform 0.25s var(--ease-spring),
+    box-shadow 0.25s var(--ease-out);
+  border: none;
+  display: inline-flex;
+  align-items: center;
 }
 
-.back-btn:hover {
+.nf-btn.primary {
+  color: #fff;
+  background: var(--primary);
+}
+
+.nf-btn.primary:hover {
+  background: var(--primary-dark);
   transform: translateY(-2px);
-  box-shadow: 0 12px 28px rgba(13, 148, 136, 0.35);
+  box-shadow: 0 8px 24px rgba(220, 38, 38, 0.35);
 }
 
-.back-btn:active {
-  transform: translateY(0) scale(0.98);
+.nf-btn.secondary {
+  color: var(--text-secondary);
+  background: var(--bg-body);
+  border: 1px solid var(--border);
 }
 
-/* ========== 关键帧动画 ========== */
-/* 渐变流动：背景位置循环位移 */
-@keyframes gradientFlow {
-  0%,
-  100% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
+.nf-btn.secondary:hover {
+  color: var(--primary);
+  border-color: var(--primary);
+  transform: translateY(-2px);
 }
 
-/* 粒子上升：从底部升至顶部并淡出 */
-@keyframes rise {
-  0% {
-    transform: translateY(0) translateX(0);
-    opacity: 0;
-  }
-  10% {
-    opacity: 1;
-  }
-  90% {
-    opacity: 1;
-  }
-  100% {
-    transform: translateY(-110vh) translateX(30px);
-    opacity: 0;
-  }
+/* ========== 搜索入口 ========== */
+.nf-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 auto 48px;
+  max-width: 400px;
+  padding: 10px 16px;
+  background: var(--bg-body);
+  border: 1px solid var(--border);
+  border-radius: 28px;
+  transition:
+    border-color 0.25s var(--ease-out),
+    box-shadow 0.25s var(--ease-out);
 }
 
-/* ========== 响应式 ========== */
-@media (max-width: 480px) {
-  .error-code {
-    font-size: 120px;
-  }
+.nf-search:focus-within {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.12);
+}
 
-  .error-title {
-    font-size: 24px;
-  }
+.search-icon {
+  flex-shrink: 0;
+  font-size: 16px;
+  color: var(--text-tertiary);
+}
+
+.search-input {
+  flex: 1;
+  min-width: 0;
+  height: 28px;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 15px;
+  color: var(--text-primary);
+}
+
+.search-input::placeholder {
+  color: var(--text-tertiary);
+}
+
+.search-btn {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  font-size: 14px;
+  cursor: pointer;
+  transition:
+    background 0.25s var(--ease-out),
+    transform 0.25s var(--ease-spring);
+}
+
+.search-btn:hover:not(:disabled) {
+  background: var(--primary-dark);
+  transform: scale(1.08);
+}
+
+.search-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ========== 推荐文章 ========== */
+.nf-articles {
+  margin-top: 8px;
+}
+
+.nf-articles-title {
+  margin: 0 0 20px;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  letter-spacing: 1px;
+}
+
+.nf-article-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.nf-article-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 18px;
+  text-decoration: none;
+  border-radius: 10px;
+  transition: background 0.2s var(--ease-out);
+}
+
+.nf-article-item:hover {
+  background: var(--bg-body);
+}
+
+.nf-article-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: color 0.2s var(--ease-out);
+}
+
+.nf-article-item:hover .nf-article-name {
+  color: var(--primary);
+}
+
+.nf-article-date {
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--text-tertiary);
 }
 </style>

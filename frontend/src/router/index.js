@@ -27,8 +27,9 @@
  * - /login                 管理员登录
  */
 
-import { createRouter, createWebHashHistory } from 'vue-router';
+import { createRouter, createWebHistory } from 'vue-router';
 import { useUserStore } from '../stores/user';
+import { trackPageView } from '../utils/tracker';
 
 const routes = [
   // ========== 认证路由 ==========
@@ -173,6 +174,12 @@ const routes = [
         name: 'Profile',
         component: () => import('../views/admin/Profile.vue'),
         meta: { title: '个人中心', requiresAuth: true }
+      },
+      {
+        path: 'media',
+        name: 'Media',
+        component: () => import('../views/admin/Media.vue'),
+        meta: { title: '媒体库', requiresAuth: true }
       }
     ]
   },
@@ -191,7 +198,7 @@ const routes = [
 ];
 
 const router = createRouter({
-  history: createWebHashHistory(),
+  history: createWebHistory(),
   routes,
   scrollBehavior(to, from, savedPosition) {
     if (savedPosition) {
@@ -213,6 +220,9 @@ router.beforeEach((to, from, next) => {
   // 动态设置页面标题
   const title = to.meta.title ? `${to.meta.title} - 个人博客` : '个人博客';
   document.title = title;
+
+  // 记录页面访问（PV/UV）
+  trackPageView(to.path, from.path);
 
   const store = useUserStore();
 

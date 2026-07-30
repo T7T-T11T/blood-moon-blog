@@ -13,11 +13,17 @@ import request from './request';
 
 /**
  * 获取文章的已通过评论（公开接口）
+ * 静默模式：接口异常时不弹窗，返回空数组确保正常渲染空状态
  * @param {number} articleId - 文章ID
  * @returns {Promise} 评论树形列表
  */
-export function getComments(articleId) {
-  return request.get(`/comments/${articleId}`);
+export async function getComments(articleId) {
+  try {
+    return await request.get(`/comments/${articleId}`, { silent: true });
+  } catch (e) {
+    console.warn('[评论API] 获取评论失败，返回空列表:', e?.response?.data?.message || e?.message);
+    return { code: 200, data: [] };
+  }
 }
 
 /**
@@ -60,8 +66,14 @@ export function deleteComment(id) {
 
 /**
  * 获取评论统计数据（待审核数量）
+ * 静默模式：接口异常时不弹窗，返回零值确保仪表盘正常渲染
  * @returns {Promise} 统计数据 { pending, approved, rejected }
  */
-export function getCommentStats() {
-  return request.get('/comments/stats');
+export async function getCommentStats() {
+  try {
+    return await request.get('/comments/stats', { silent: true });
+  } catch (e) {
+    console.warn('[评论API] 获取统计失败，返回零值:', e?.response?.data?.message || e?.message);
+    return { code: 200, data: { pending: 0, approved: 0, rejected: 0 } };
+  }
 }

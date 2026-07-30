@@ -278,6 +278,7 @@ router.delete('/:id', authMiddleware, async (req, res) => {
 });
 
 /** 处理 multer 上传错误 */
+// eslint-disable-next-line no-unused-vars
 router.use((err, req, res, next) => {
   if (err instanceof multer.MulterError) {
     if (err.code === 'LIMIT_FILE_SIZE') {

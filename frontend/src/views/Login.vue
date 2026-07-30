@@ -18,13 +18,12 @@
       <div class="brand-inner">
         <div class="brand-mark">
           <div class="moon-icon"></div>
-          <span class="brand-name">血月博客</span>
         </div>
         <h1 class="brand-title">
           暗夜之下<br />
           笔墨不灭
         </h1>
-        <p class="brand-tagline">在血月的光辉下，记录属于你的思考与故事</p>
+        <p class="brand-tagline">在深夜的光辉下，记录属于你的思考与故事</p>
       </div>
     </aside>
 
@@ -61,7 +60,7 @@
           </el-button>
         </el-form>
 
-        <p class="form-footer">© 2026 血月博客 · 暗夜哥特风</p>
+        <p class="form-footer">© 2026 管理后台 · 暗夜</p>
       </div>
     </main>
   </div>
@@ -155,7 +154,7 @@ async function handleLogin() {
 /* ========== 左侧品牌展示区 ========== */
 .brand-panel {
   position: relative;
-  flex: 1.2;
+  flex: 0.85;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -168,7 +167,7 @@ async function handleLogin() {
 .brand-bg {
   position: absolute;
   inset: 0;
-  background: url('@/assets/login-black-cat.jpg') center/cover no-repeat;
+  background: url('@/assets/login-black-cat.webp') center/cover no-repeat;
   z-index: 0;
 }
 
@@ -266,7 +265,7 @@ async function handleLogin() {
 
 .form-card {
   width: 100%;
-  max-width: 400px;
+  max-width: 460px;
   padding: 48px 40px;
   background: linear-gradient(180deg, rgba(18, 24, 40, 0.9) 0%, rgba(14, 20, 36, 0.9) 100%);
   border: 1px solid rgba(226, 232, 240, 0.08);
@@ -296,7 +295,7 @@ async function handleLogin() {
   margin: 0;
 }
 
-/* ========== 表单输入样式（暗色主题 - 修复白色背景问题） ========== */
+/* ========== 表单输入样式（暗夜血月主题） ========== */
 
 /* 关键：强制覆盖 Element Plus 默认亮色样式 */
 .login-form :deep(.el-input) {
@@ -308,57 +307,115 @@ async function handleLogin() {
   --el-input-focus-border-color: #dc2626;
 }
 
-/* 输入框容器：强制暗色背景 */
+/* 输入框容器：暗色渐变背景 + 微妙内发光 */
 .login-form :deep(.el-input__wrapper) {
   padding: 8px 16px;
-  background-color: #0f1624 !important;
+  background: linear-gradient(180deg, #101824 0%, #0d1320 100%) !important;
   background-image: none !important;
   border-radius: 10px;
-  box-shadow: none !important;
-  border: 1px solid #1e293b;
-  transition: all 0.3s ease;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.03),
+    0 1px 3px rgba(0, 0, 0, 0.4) !important;
+  border: 1px solid rgba(226, 232, 240, 0.08);
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* hover：边框微微提亮 */
 .login-form :deep(.el-input__wrapper:hover) {
-  border-color: #475569;
-  background-color: #0f1624 !important;
+  border-color: rgba(220, 38, 38, 0.25);
+  background: linear-gradient(180deg, #111a28 0%, #0e1522 100%) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 2px 8px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(220, 38, 38, 0.06) !important;
 }
 
+/* 聚焦态：血月红光晕 + 边框点亮 */
 .login-form :deep(.el-input__wrapper.is-focus) {
-  background-color: #0f1624 !important;
+  background: linear-gradient(180deg, #111a28 0%, #0e1522 100%) !important;
   border-color: #dc2626;
-  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.15) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 0 12px rgba(220, 38, 38, 0.25),
+    0 0 0 4px rgba(220, 38, 38, 0.12),
+    0 4px 16px rgba(0, 0, 0, 0.5) !important;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* 输入框内部文字：强制亮色 */
 .login-form :deep(.el-input__inner) {
   height: 42px;
   font-size: 15px;
-  color: #f1f5f9 !important;
+  color: #f8fafc !important;
   background: transparent !important;
-  -webkit-text-fill-color: #f1f5f9;
+  -webkit-text-fill-color: #f8fafc !important;
+  caret-color: #dc2626;
 }
 
 .login-form :deep(.el-input__inner::placeholder) {
   color: #475569 !important;
   -webkit-text-fill-color: #475569;
+  transition: color 0.3s ease;
 }
 
-/* 前缀/后缀图标 */
+.login-form :deep(.el-input__wrapper input) {
+  color: #f8fafc !important;
+  -webkit-text-fill-color: #f8fafc !important;
+}
+
+/* Chrome 自动填充时保持暗色 */
+.login-form :deep(.el-input__wrapper input:-webkit-autofill),
+.login-form :deep(.el-input__wrapper input:-webkit-autofill:hover),
+.login-form :deep(.el-input__wrapper input:-webkit-autofill:focus) {
+  -webkit-box-shadow: 0 0 0 1000px #101824 inset !important;
+  -webkit-text-fill-color: #f8fafc !important;
+}
+
+/* 前缀图标：默认暗灰，聚焦时染红 */
 .login-form :deep(.el-input__prefix .el-icon),
+.login-form :deep(.el-input__prefix .el-input__icon) {
+  color: #475569 !important;
+  transition:
+    color 0.35s ease,
+    filter 0.35s ease;
+}
+
+.login-form :deep(.el-input__wrapper.is-focus .el-input__prefix .el-icon),
+.login-form :deep(.el-input__wrapper.is-focus .el-input__prefix .el-input__icon) {
+  color: #dc2626 !important;
+  filter: drop-shadow(0 0 6px rgba(220, 38, 38, 0.5));
+}
+
+/* 后缀图标 + 密码切换图标 */
 .login-form :deep(.el-input__suffix .el-icon),
 .login-form :deep(.el-input__suffix-icon) {
   color: #475569 !important;
+  transition: color 0.35s ease;
+}
+
+.login-form :deep(.el-input__wrapper.is-focus .el-input__suffix .el-icon),
+.login-form :deep(.el-input__wrapper.is-focus .el-input__suffix-icon) {
+  color: #b91c1c !important;
 }
 
 /* 清除按钮 */
 .login-form :deep(.el-input__clear) {
   color: #64748b !important;
+  transition: color 0.25s ease;
+}
+
+.login-form :deep(.el-input__clear:hover) {
+  color: #dc2626 !important;
 }
 
 /* 密码可见切换图标 */
 .login-form :deep(.el-input__password) {
   color: #475569 !important;
+  transition: color 0.35s ease;
+}
+
+.login-form :deep(.el-input__wrapper.is-focus .el-input__password) {
+  color: #b91c1c !important;
 }
 
 .login-form :deep(.el-form-item) {

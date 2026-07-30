@@ -94,7 +94,7 @@
  * 作用：并行加载文章/分类/标签/热门/最新数据，展示统计概览、热门与最新文章列表及快捷操作入口。
  * 依赖 API：getPublicArticles / getCategories / getTags / getHotArticles / getLatestArticles
  */
-import { ref, computed, onMounted, markRaw } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount, markRaw } from 'vue';
 import {
   Document,
   View,
@@ -105,12 +105,14 @@ import {
   EditPen,
   Link
 } from '@element-plus/icons-vue';
-import { getPublicArticles, getHotArticles, getLatestArticles } from '@/api/articles';
-import { getCategories } from '@/api/categories';
-import { getTags } from '@/api/tags';
+import { getHotArticles } from '@/api/articles';
+import { getDashboardStatsAPI } from '@/api/dashboard';
+import { getVisitStats } from '@/api/visits';
+import { DataLine } from '@element-plus/icons-vue';
 
 /** 统计数据 */
 const stats = ref({ articles: 0, views: 0, categories: 0, tags: 0 });
+const visitStats = ref({ today_pv: 0, today_uv: 0, total_pv: 0, total_uv: 0 });
 
 /** 热门文章列表 */
 const hotArticles = ref([]);
@@ -131,7 +133,15 @@ const statCards = computed(() => [
   { label: '总文章', value: stats.value.articles, icon: markRaw(Document), theme: 'teal' },
   { label: '总阅读', value: stats.value.views, icon: markRaw(View), theme: 'blue' },
   { label: '分类数', value: stats.value.categories, icon: markRaw(Folder), theme: 'amber' },
-  { label: '标签数', value: stats.value.tags, icon: markRaw(PriceTag), theme: 'violet' }
+  { label: '标签数', value: stats.value.tags, icon: markRaw(PriceTag), theme: 'violet' },
+  { label: '今日PV', value: visitStats.value.today_pv, icon: markRaw(DataLine), theme: 'green' },
+  { label: '今日UV', value: visitStats.value.today_uv, icon: markRaw(View), theme: 'cyan' },
+  {
+    label: '总访问(PV)',
+    value: visitStats.value.total_pv,
+    icon: markRaw(TrendCharts),
+    theme: 'indigo'
+  }
 ]);
 
 /**
@@ -149,31 +159,20 @@ function formatDate(dateStr) {
  * 使用 Promise.allSettled 保证单个接口失败不影响其他数据展示
  */
 async function loadDashboard() {
-  const [articlesRes, categoriesRes, tagsRes, hotRes, latestRes] = await Promise.allSettled([
-    getPublicArticles({ page_size: 1 }),
-    getCategories(),
-    getTags(),
+  const [dashboardRes, hotRes, visitRes] = await Promise.allSettled([
+    getDashboardStatsAPI(),
     getHotArticles(5),
-    getLatestArticles(5)
+    getVisitStats()
   ]);
 
-  // 文章总数与阅读量
-  if (articlesRes.status === 'fulfilled' && articlesRes.value.code === 200) {
-    stats.value.articles = articlesRes.value.data.pagination?.total || 0;
-    stats.value.views = (articlesRes.value.data.list || []).reduce(
-      (sum, a) => sum + (a.view_count || 0),
-      0
-    );
-  }
-
-  // 分类数
-  if (categoriesRes.status === 'fulfilled' && categoriesRes.value.code === 200) {
-    stats.value.categories = categoriesRes.value.data.length;
-  }
-
-  // 标签数
-  if (tagsRes.status === 'fulfilled' && tagsRes.value.code === 200) {
-    stats.value.tags = tagsRes.value.data.length;
+  // 仪表盘统计：文章数、总阅读、分类数、标签数、最新文章
+  if (dashboardRes.status === 'fulfilled' && dashboardRes.value.code === 200) {
+    const d = dashboardRes.value.data;
+    stats.value.articles = d.articleStats.total;
+    stats.value.views = d.articleStats.total_views;
+    stats.value.categories = d.categoryCount;
+    stats.value.tags = d.tagCount;
+    latestArticles.value = d.latestArticles || [];
   }
 
   // 热门文章
@@ -181,14 +180,33 @@ async function loadDashboard() {
     hotArticles.value = hotRes.value.data || [];
   }
 
-  // 最新文章
-  if (latestRes.status === 'fulfilled' && latestRes.value.code === 200) {
-    latestArticles.value = latestRes.value.data || [];
+  // 访问统计
+  if (visitRes.status === 'fulfilled' && visitRes.value.code === 200) {
+    visitStats.value = visitRes.value.data;
   }
 }
 
 onMounted(() => {
   loadDashboard();
+  // 每 30 秒轮询刷新，仅在页面可见时执行
+  const dashboardTimer = setInterval(() => {
+    if (document.visibilityState === 'visible') {
+      loadDashboard();
+    }
+  }, 30000);
+
+  // 页面恢复可见时立即刷新
+  const handleVisibility = () => {
+    if (document.visibilityState === 'visible') {
+      loadDashboard();
+    }
+  };
+  document.addEventListener('visibilitychange', handleVisibility);
+
+  onBeforeUnmount(() => {
+    clearInterval(dashboardTimer);
+    document.removeEventListener('visibilitychange', handleVisibility);
+  });
 });
 </script>
 

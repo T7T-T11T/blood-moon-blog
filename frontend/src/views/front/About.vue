@@ -1,9 +1,3 @@
-/** * @file About.vue * @description 关于我页面（杂志风个人主页，卡片化舍弃） * * 作用： * - 大号
-Hero：博主姓名为最大字号 + 简介 * - 内容分区：简介、技能标签、联系方式（GitHub / 邮箱） * -
-大量留白，克制排版 * * 数据获取： * - getSettings() 返回键值对对象 * -
-字段同时兼容驼峰与下划线命名（siteName / site_name 等） * * 动效（2-3 组）： * - 入场：Hero 文案
-fade-in-up 错峰 * - 滚动：各分区进入视口时 fade-in-up 错峰（Intersection Observer） * -
-悬浮：技能标签上移、联系方式箭头右移 */
 <template>
   <div ref="rootRef" class="about-page">
     <!-- ============ Hero 区域：博主姓名为最大字号 ============ -->
@@ -13,66 +7,79 @@ fade-in-up 错峰 * - 滚动：各分区进入视口时 fade-in-up 错峰（Inte
         <h1 class="hero-title animate-fade-in-up">{{ authorName }}</h1>
         <p class="hero-tagline animate-fade-in-up delay-100">{{ siteDescription }}</p>
       </div>
-      <!-- 装饰光斑（纯视觉） -->
       <div class="hero-orb" aria-hidden="true"></div>
     </section>
 
-    <!-- ============ 主体内容 ============ -->
-    <div class="content-wrapper">
-      <!-- 简介 -->
-      <section class="block reveal">
-        <h2 class="block-title">简介</h2>
-        <p class="block-text">{{ authorBio }}</p>
-      </section>
+    <!-- ============ 主体内容（AsyncData 统一状态管理） ============ -->
+    <AsyncData
+      :loading="loading"
+      :error="error"
+      :empty="false"
+      error-message="加载个人信息失败，请稍后重试"
+      retry-text="重试"
+      @retry="loadSettings"
+    >
+      <div class="content-wrapper">
+        <!-- 简介 -->
+        <section class="block reveal">
+          <h2 class="block-title">简介</h2>
+          <p class="block-text">{{ authorBio }}</p>
+        </section>
 
-      <!-- 技能 / 兴趣 -->
-      <section class="block reveal">
-        <h2 class="block-title">技能 / 兴趣</h2>
-        <div class="skill-list">
-          <span v-for="skill in skills" :key="skill" class="skill-tag">{{ skill }}</span>
-        </div>
-      </section>
+        <!-- 技能 / 兴趣 -->
+        <section class="block reveal">
+          <h2 class="block-title">技能 / 兴趣</h2>
+          <div class="skill-list">
+            <span v-for="skill in skills" :key="skill" class="skill-tag">{{ skill }}</span>
+          </div>
+        </section>
 
-      <!-- 联系方式 -->
-      <section v-if="hasContact" class="block reveal">
-        <h2 class="block-title">联系方式</h2>
-        <ul class="contact-list">
-          <!-- GitHub -->
-          <li v-if="githubUrl" class="contact-item">
-            <a :href="githubUrl" target="_blank" rel="noopener noreferrer" class="contact-link">
-              <span class="contact-label">GitHub</span>
-              <span class="contact-value">{{ githubHandle }}</span>
-              <span class="contact-arrow" aria-hidden="true">→</span>
-            </a>
-          </li>
-          <!-- 邮箱 -->
-          <li v-if="authorEmail" class="contact-item">
-            <a :href="`mailto:${authorEmail}`" class="contact-link">
-              <span class="contact-label">Email</span>
-              <span class="contact-value">{{ authorEmail }}</span>
-              <span class="contact-arrow" aria-hidden="true">→</span>
-            </a>
-          </li>
-        </ul>
-      </section>
-    </div>
+        <!-- 联系方式 -->
+        <section v-if="hasContact" class="block reveal">
+          <h2 class="block-title">联系方式</h2>
+          <ul class="contact-list">
+            <li v-if="githubUrl" class="contact-item">
+              <a :href="githubUrl" target="_blank" rel="noopener noreferrer" class="contact-link">
+                <span class="contact-label">GitHub</span>
+                <span class="contact-value">{{ githubHandle }}</span>
+                <span class="contact-arrow" aria-hidden="true">→</span>
+              </a>
+            </li>
+            <li v-if="authorEmail" class="contact-item">
+              <a :href="`mailto:${authorEmail}`" class="contact-link">
+                <span class="contact-label">Email</span>
+                <span class="contact-value">{{ authorEmail }}</span>
+                <span class="contact-arrow" aria-hidden="true">→</span>
+              </a>
+            </li>
+          </ul>
+        </section>
+      </div>
+    </AsyncData>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue';
 import { getSettings } from '../../api/settings';
+import AsyncData from '../../components/common/AsyncData.vue';
 
-/** 组件根节点引用（用于作用域内的滚动观察） */
+/** 根元素引用，用于 IntersectionObserver 初始化 */
 const rootRef = ref(null);
-
-/** 网站设置（键值对对象） */
+/** 网站设置键值对 */
 const settings = ref({});
+/** 加载状态 */
+const loading = ref(true);
+/** 错误状态 */
+const error = ref(false);
+/** 数据是否已加载完成（用于控制内容显示） */
+const loaded = ref(false);
 
-/** Intersection Observer 实例（滚动揭示动画） */
+/** IntersectionObserver 实例 */
 let observer = null;
+/** 安全超时定时器，确保内容在数据加载后立即可见 */
+let revealTimeout = null;
 
-/** 静态技能 / 兴趣标签 */
 const skills = [
   'Vue 3',
   'JavaScript',
@@ -85,40 +92,25 @@ const skills = [
 ];
 
 /**
- * 通用取值器：同时兼容驼峰与下划线命名
- * 用于应对后端设置键名风格不确定的情况
- * @param {string} camel - 驼峰键名，如 authorName
- * @param {string} snake - 下划线键名，如 author_name
- * @returns {string} 命中值，无则空字符串
+ * 从设置对象中按优先级获取值
+ * 先尝试驼峰命名键，再尝试蛇形命名键
+ * @param {string} camel - 驼峰命名键名
+ * @param {string} snake - 蛇形命名键名
+ * @returns {string} 设置值，不存在返回空字符串
  */
 function pick(camel, snake) {
   const v = settings.value[camel] ?? settings.value[snake];
   return v == null ? '' : String(v);
 }
 
-/** 博主姓名 */
 const authorName = computed(() => pick('authorName', 'author_name') || '匿名博主');
-
-/** 博主简介 */
 const authorBio = computed(() => pick('authorBio', 'author_bio') || '热爱技术，喜欢分享。');
-
-/** 站点描述 */
 const siteDescription = computed(
   () => pick('siteDescription', 'site_description') || '分享技术，记录成长'
 );
-
-/** 博主邮箱 */
 const authorEmail = computed(() => pick('email', 'author_email'));
-
-/** GitHub 账号（可为完整 URL 或用户名） */
 const authorGithub = computed(() => pick('githubUrl', 'author_github'));
 
-/**
- * GitHub 完整访问 URL
- * - 已是完整 URL 直接使用
- * - 否则拼接 https://github.com/ 前缀
- * @returns {string} GitHub 主页地址
- */
 const githubUrl = computed(() => {
   const gh = authorGithub.value;
   if (!gh) return '';
@@ -126,30 +118,27 @@ const githubUrl = computed(() => {
   return `https://github.com/${gh}`;
 });
 
-/**
- * GitHub 展示文本（URL 时取最后一段路径作为显示名）
- * @returns {string} 用户名或原值
- */
 const githubHandle = computed(() => {
   const gh = authorGithub.value;
   if (!gh) return '';
   if (/^https?:\/\//i.test(gh)) {
-    // 取 URL 末尾路径段
     const parts = gh.replace(/\/+$/, '').split('/');
     return parts[parts.length - 1] || gh;
   }
   return gh;
 });
 
-/** 是否存在任一联系方式（控制联系方式区块展示） */
 const hasContact = computed(() => Boolean(githubUrl.value || authorEmail.value));
 
 /**
  * 加载网站设置
- * 失败时使用默认值，不阻断页面渲染
- * @returns {Promise<void>}
+ * 从后端获取设置项，初始化 IntersectionObserver 实现滚动动画
+ * 数据加载完成后设置 loaded 标记，并启动安全超时
  */
 async function loadSettings() {
+  loading.value = true;
+  error.value = false;
+  loaded.value = false;
   try {
     const { data } = await getSettings();
     if (data && typeof data === 'object') {
@@ -159,12 +148,21 @@ async function loadSettings() {
     initObserver();
   } catch (e) {
     console.error('加载网站设置失败:', e);
+    error.value = true;
+  } finally {
+    loading.value = false;
+    loaded.value = true;
+    // 安全超时：2秒后强制显示所有内容，防止 Observer 未触发导致内容不可见
+    if (revealTimeout) clearTimeout(revealTimeout);
+    revealTimeout = setTimeout(() => {
+      document.querySelectorAll('.about-page .reveal').forEach((el) => el.classList.add('visible'));
+    }, 2000);
   }
 }
 
 /**
- * 初始化 Intersection Observer
- * 监听组件内所有 .reveal 元素，进入视口时添加 visible 类触发动画
+ * 初始化滚动显示动画
+ * 使用 IntersectionObserver 监听带 .reveal 类的元素，可见时添加 .visible 类
  */
 function initObserver() {
   if (observer) observer.disconnect();
@@ -183,17 +181,24 @@ function initObserver() {
   rootRef.value.querySelectorAll('.reveal').forEach((el) => observer.observe(el));
 }
 
+/**
+ * 组件挂载时加载数据
+ */
 onMounted(() => {
   loadSettings();
 });
 
+/**
+ * 组件卸载时清理资源
+ */
 onUnmounted(() => {
   if (observer) observer.disconnect();
+  if (revealTimeout) clearTimeout(revealTimeout);
 });
 </script>
 
 <style scoped>
-/* ========== Hero 区域：黑红血月主题 ========== */
+/* ========== Hero 区域 ========== */
 .hero {
   position: relative;
   padding: 140px 32px 100px;
@@ -208,10 +213,8 @@ onUnmounted(() => {
   color: #fff;
   isolation: isolate;
   border-bottom: 1px solid var(--border);
-  transition: opacity 0.8s ease-out;
 }
 
-/* 血月背景光晕 */
 .hero::before {
   content: '';
   position: absolute;
@@ -247,7 +250,6 @@ onUnmounted(() => {
   color: rgba(248, 113, 113, 0.8);
 }
 
-/* 博主姓名为最大字号 */
 .hero-title {
   margin: 0 0 28px;
   font-size: clamp(56px, 10vw, 104px);
@@ -270,7 +272,6 @@ onUnmounted(() => {
   letter-spacing: 1px;
 }
 
-/* Hero 装饰光斑（暗红调） */
 .hero-orb {
   position: absolute;
   top: -120px;
@@ -291,12 +292,10 @@ onUnmounted(() => {
   background: rgba(10, 14, 26, 0.3);
 }
 
-/* 内容分区：使用分隔线 + 大留白，舍弃卡片 */
 .block {
   padding-bottom: 64px;
   margin-bottom: 64px;
   border-bottom: 1px solid var(--border);
-  /* 入场前隐藏 */
   opacity: 0;
   transform: translateY(28px);
   transition:
@@ -309,7 +308,6 @@ onUnmounted(() => {
   margin-bottom: 0;
   padding-bottom: 0;
 }
-
 .block.visible {
   opacity: 1;
   transform: translateY(0);
@@ -357,17 +355,15 @@ onUnmounted(() => {
   color: #fff;
 }
 
-/* ========== 联系方式列表 ========== */
+/* ========== 联系方式 ========== */
 .contact-list {
   list-style: none;
   margin: 0;
   padding: 0;
 }
-
 .contact-item {
   border-bottom: 1px solid var(--border);
 }
-
 .contact-item:last-child {
   border-bottom: none;
 }

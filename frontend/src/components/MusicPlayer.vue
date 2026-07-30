@@ -145,9 +145,6 @@ const progressPercent = computed(() => {
 /** 是否收起为迷你模式 */
 const collapsed = ref(false);
 
-/** 用户是否已交互过（用于解决浏览器自动播放限制） */
-const hasUserInteracted = ref(false);
-
 /**
  * 格式化时间为 mm:ss 格式
  * @param {number} sec - 秒数
@@ -162,22 +159,19 @@ function formatTime(sec) {
 
 /**
  * 获取音乐列表
- * 从后端拉取已启用的音乐，初始化播放索引
+ * 从后端拉取已启用的音乐，加载完成后自动播放第一首
  */
 async function fetchMusicList() {
   try {
     const res = await getMusicList();
     if (res.code === 200 && res.data?.length > 0) {
       musicList.value = res.data;
-      // 设置第一首为当前曲目
+      // 设置第一首为当前曲目并自动播放
       if (currentIndex.value === -1 && musicList.value.length > 0) {
         currentIndex.value = 0;
-        // 用户已交互过则自动播放
-        if (hasUserInteracted.value) {
-          nextTick(() => {
-            playCurrent();
-          });
-        }
+        nextTick(() => {
+          playCurrent();
+        });
       }
     }
   } catch (e) {
@@ -204,7 +198,6 @@ async function playCurrent() {
 function togglePlay() {
   if (!audioRef.value) return;
   if (audioRef.value.paused) {
-    hasUserInteracted.value = true;
     audioRef.value.play();
   } else {
     audioRef.value.pause();
@@ -219,7 +212,7 @@ function prevTrack() {
   currentIndex.value =
     currentIndex.value <= 0 ? musicList.value.length - 1 : currentIndex.value - 1;
   nextTick(() => {
-    if (hasUserInteracted.value) playCurrent();
+    playCurrent();
   });
 }
 
@@ -231,7 +224,7 @@ function nextTrack() {
   currentIndex.value =
     currentIndex.value >= musicList.value.length - 1 ? 0 : currentIndex.value + 1;
   nextTick(() => {
-    if (hasUserInteracted.value) playCurrent();
+    playCurrent();
   });
 }
 
@@ -277,46 +270,18 @@ function onLoadedMetadata() {
  * 监听音频URL变化，自动播放
  */
 watch(audioUrl, () => {
-  if (audioRef.value && hasUserInteracted.value) {
+  if (audioRef.value) {
     nextTick(() => {
       playCurrent();
     });
   }
 });
-
-/**
- * 用户首次交互检测
- * 浏览器要求用户必须先与页面交互才能自动播放音频
- */
-function handleFirstInteraction() {
-  if (!hasUserInteracted.value && musicList.value.length > 0) {
-    hasUserInteracted.value = true;
-    if (currentIndex.value === -1) {
-      currentIndex.value = 0;
-    }
-    nextTick(() => {
-      playCurrent();
-    });
-  }
-  // 移除一次性监听
-  document.removeEventListener('click', handleFirstInteraction);
-  document.removeEventListener('keydown', handleFirstInteraction);
-  document.removeEventListener('touchstart', handleFirstInteraction);
-}
 
 onMounted(() => {
   fetchMusicList();
-  // 添加用户交互监听（解决浏览器自动播放限制）
-  document.addEventListener('click', handleFirstInteraction);
-  document.addEventListener('keydown', handleFirstInteraction);
-  document.addEventListener('touchstart', handleFirstInteraction);
 });
 
 onUnmounted(() => {
-  // 清理事件监听
-  document.removeEventListener('click', handleFirstInteraction);
-  document.removeEventListener('keydown', handleFirstInteraction);
-  document.removeEventListener('touchstart', handleFirstInteraction);
   if (audioRef.value) {
     audioRef.value.pause();
   }
@@ -327,18 +292,21 @@ onUnmounted(() => {
 /* ========== 播放器容器 ========== */
 .music-player {
   position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
   z-index: 9999;
   display: flex;
   align-items: center;
   gap: 16px;
   padding: 10px 24px;
-  background: linear-gradient(180deg, rgba(10, 5, 8, 0.85), rgba(15, 8, 12, 0.95));
-  border-top: 1px solid rgba(220, 38, 38, 0.2);
+  background: linear-gradient(180deg, rgba(10, 5, 8, 0.88), rgba(15, 8, 12, 0.96));
+  border: 1px solid rgba(220, 38, 38, 0.2);
+  border-radius: 40px;
   backdrop-filter: blur(16px);
-  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.4);
+  box-shadow:
+    0 4px 24px rgba(0, 0, 0, 0.5),
+    0 0 20px rgba(220, 38, 38, 0.1);
   transition: all 0.3s ease;
   animation: player-slide-up 0.5s ease-out;
 }
@@ -346,19 +314,19 @@ onUnmounted(() => {
 @keyframes player-slide-up {
   from {
     opacity: 0;
-    transform: translateY(100%);
+    transform: translateX(-50%) translateY(100%);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateX(-50%) translateY(0);
   }
 }
 
-/* 收起状态：右下角小圆按钮 */
+/* 收起状态：底部居中迷你圆按钮 */
 .music-player.collapsed {
-  left: auto;
-  right: 24px;
   bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
   padding: 0;
   border: none;
   background: transparent;
@@ -536,12 +504,12 @@ onUnmounted(() => {
 /* ========== 响应式：移动端 ========== */
 @media (max-width: 768px) {
   .music-player {
-    padding: 8px 12px;
+    padding: 8px 16px;
     gap: 10px;
   }
 
   .player-progress {
-    max-width: 120px;
+    max-width: 100px;
   }
 
   .player-artist {

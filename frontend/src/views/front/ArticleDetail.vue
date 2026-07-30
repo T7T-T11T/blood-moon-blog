@@ -1,12 +1,10 @@
-/** * @file ArticleDetail.vue * @description 文章详情页 - 沉浸式阅读体验 * * 作用： * -
-顶部固定阅读进度条（随滚动填充） * - 文章头部：大标题 + 元信息 + 摘要 * - Markdown 正文（marked
-渲染，max-width 800px） * - 标签、上一篇/下一篇导航 * - 树形评论列表 + 回复表单 * - 返回顶部浮动按钮
-* * 设计： * - 主色青绿色 #0d9488 * - 阅读优先：800px 内容宽度、行高 1.8 * - 三组动效：阅读进度条 /
-内容滚动揭示 / 返回顶部按钮 */
+/** * ArticleDetail.vue - 文章详情页（沉浸式阅读体验） * * 功能： * - 文章正文渲染 * - 右侧 TOC
+目录导航（桌面端固定悬浮，移动端折叠下拉） * - 阅读进度条 + 返回顶部（ReadingProgress 组件） * -
+文章内图片懒加载（基于 IntersectionObserver 后处理） * - 评论区 */
 <template>
   <div class="article-detail">
-    <!-- 阅读进度条：固定顶部，随滚动填充 -->
-    <div class="progress-bar" :style="{ width: progress + '%' }"></div>
+    <!-- 阅读进度条 + 返回顶部 -->
+    <ReadingProgress />
 
     <!-- 返回按钮 -->
     <div class="back-bar">
@@ -16,11 +14,36 @@
       </button>
     </div>
 
+    <!-- 移动端 TOC 下拉 -->
+    <div v-if="tocItems.length > 0" class="toc-mobile">
+      <button class="toc-mobile-toggle" @click="tocMobileOpen = !tocMobileOpen">
+        <el-icon><List /></el-icon>
+        <span>目录</span>
+        <el-icon class="toc-chevron" :class="{ open: tocMobileOpen }"><ArrowDown /></el-icon>
+      </button>
+      <transition name="toc-slide">
+        <nav v-if="tocMobileOpen" class="toc-mobile-dropdown">
+          <a
+            v-for="item in tocItems"
+            :key="item.id"
+            :href="`#${item.id}`"
+            class="toc-mobile-item"
+            :class="{
+              'toc-h2': item.level === 2,
+              'toc-h3': item.level === 3,
+              active: activeTocId === item.id
+            }"
+            @click.prevent="scrollToHeading(item.id)"
+          >
+            {{ item.text }}
+          </a>
+        </nav>
+      </transition>
+    </div>
+
     <!-- 文章正文 -->
     <article v-if="article" class="article-content">
-      <!-- 文章头部 -->
       <header class="article-header reveal">
-        <!-- 元信息 -->
         <div class="article-meta">
           <router-link
             v-if="article.category_slug"
@@ -38,23 +61,23 @@
             {{ article.view_count }} 阅读
           </span>
         </div>
-
-        <!-- 大标题 -->
         <h1 class="article-title">{{ article.title }}</h1>
-
-        <!-- 摘要 -->
         <p v-if="article.summary" class="article-summary">{{ article.summary }}</p>
       </header>
 
-      <!-- 封面图 -->
-      <figure v-if="article.cover_image" class="article-cover reveal">
-        <img :src="article.cover_image" :alt="article.title" loading="lazy" />
+      <figure v-if="article.cover_image && !coverImageError" class="article-cover reveal">
+        <img
+          :src="article.cover_image"
+          :alt="article.title"
+          loading="lazy"
+          @error="coverImageError = true"
+        />
       </figure>
 
-      <!-- Markdown 正文 -->
-      <div class="article-body reveal" v-html="renderedContent"></div>
+      <!-- Markdown 正文（含 id 锚点的标题） -->
+      <!-- eslint-disable-next-line vue/no-v-html -->
+      <div ref="articleBodyRef" class="article-body reveal" v-html="renderedContent"></div>
 
-      <!-- 标签 -->
       <section v-if="article.tags && article.tags.length > 0" class="article-tags reveal">
         <router-link
           v-for="tag in article.tags"
@@ -66,7 +89,6 @@
         </router-link>
       </section>
 
-      <!-- 分享栏 -->
       <section class="share-bar reveal">
         <span class="share-label">分享到</span>
         <button class="share-btn wechat" @click="shareWechat">
@@ -83,17 +105,31 @@
         </button>
       </section>
 
-      <!-- 上一篇 / 下一篇 -->
+      <section class="interaction-bar reveal">
+        <button class="interact-btn like-btn" :class="{ active: liked }" @click="handleToggleLike">
+          <el-icon><StarFilled v-if="liked" /><Star v-else /></el-icon>
+          <span>{{ liked ? '已点赞' : '点赞' }}</span>
+          <span v-if="likeCount > 0" class="interact-count">{{ likeCount }}</span>
+        </button>
+        <button
+          class="interact-btn fav-btn"
+          :class="{ active: favorited }"
+          @click="handleToggleFavorite"
+        >
+          <el-icon><StarFilled v-if="favorited" /><Star v-else /></el-icon>
+          <span>{{ favorited ? '已收藏' : '收藏' }}</span>
+        </button>
+      </section>
+
       <footer class="article-footer reveal">
         <router-link
           v-if="article.prev_article"
           :to="`/article/${article.prev_article.id}`"
           class="nav-card prev"
         >
-          <span class="nav-direction">
-            <el-icon><ArrowLeft /></el-icon>
-            上一篇
-          </span>
+          <span class="nav-direction"
+            ><el-icon><ArrowLeft /></el-icon>上一篇</span
+          >
           <span class="nav-title">{{ article.prev_article.title }}</span>
         </router-link>
         <div v-else class="nav-card placeholder"></div>
@@ -103,124 +139,46 @@
           :to="`/article/${article.next_article.id}`"
           class="nav-card next"
         >
-          <span class="nav-direction">
-            下一篇
-            <el-icon><ArrowRight /></el-icon>
-          </span>
+          <span class="nav-direction"
+            >下一篇<el-icon><ArrowRight /></el-icon
+          ></span>
           <span class="nav-title">{{ article.next_article.title }}</span>
         </router-link>
         <div v-else class="nav-card placeholder"></div>
       </footer>
     </article>
 
+    <!-- 桌面端 TOC 侧边栏 -->
+    <aside v-if="tocItems.length > 0" class="toc-sidebar">
+      <div class="toc-sidebar-inner">
+        <h4 class="toc-title">目录</h4>
+        <nav class="toc-nav">
+          <a
+            v-for="item in tocItems"
+            :key="item.id"
+            :href="`#${item.id}`"
+            class="toc-link"
+            :class="{
+              'toc-h2': item.level === 2,
+              'toc-h3': item.level === 3,
+              active: activeTocId === item.id
+            }"
+            @click.prevent="scrollToHeading(item.id)"
+          >
+            {{ item.text }}
+          </a>
+        </nav>
+      </div>
+    </aside>
+
     <!-- 评论区 -->
-    <section v-if="article" class="comment-section reveal">
-      <h2 class="section-title">
-        评论
-        <span class="comment-count">{{ commentCount }}</span>
-      </h2>
-
-      <!-- 评论表单 -->
-      <div class="comment-form-wrapper">
-        <div v-if="replyTo" class="reply-tip">
-          <span>回复 @{{ replyTo.nickname }}</span>
-          <button class="cancel-btn" @click="cancelReply">取消</button>
-        </div>
-        <div class="comment-form">
-          <input
-            v-model="commentForm.nickname"
-            type="text"
-            class="form-input"
-            placeholder="昵称 *"
-            maxlength="30"
-          />
-          <textarea
-            v-model="commentForm.content"
-            class="form-textarea"
-            placeholder="写下你的评论..."
-            rows="4"
-            maxlength="500"
-          ></textarea>
-          <div class="form-actions">
-            <button class="submit-btn" :disabled="!canSubmit || submitting" @click="submitComment">
-              {{ submitting ? '提交中…' : '发表评论' }}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- 评论列表 -->
-      <div v-if="comments.length > 0" class="comment-list">
-        <div v-for="comment in comments" :key="comment.id" class="comment-item">
-          <div class="comment-main">
-            <div class="comment-avatar">
-              <img
-                v-if="comment.avatar_url"
-                :src="comment.avatar_url"
-                :alt="comment.nickname"
-                class="avatar-img"
-              />
-              <div v-else class="avatar-placeholder">
-                {{ comment.nickname.charAt(0).toUpperCase() }}
-              </div>
-            </div>
-            <div class="comment-body">
-              <div class="comment-header">
-                <span class="comment-nickname">{{ comment.nickname }}</span>
-                <span class="comment-time">{{ formatDate(comment.created_at) }}</span>
-              </div>
-              <div class="comment-content">{{ comment.content }}</div>
-              <button class="reply-btn" @click="setReplyTo(comment)">回复</button>
-            </div>
-          </div>
-
-          <!-- 子评论：递归渲染 children -->
-          <div v-if="comment.children && comment.children.length > 0" class="comment-children">
-            <div v-for="child in comment.children" :key="child.id" class="comment-item child">
-              <div class="comment-main">
-                <div class="comment-avatar">
-                  <img
-                    v-if="child.avatar_url"
-                    :src="child.avatar_url"
-                    :alt="child.nickname"
-                    class="avatar-img"
-                  />
-                  <div v-else class="avatar-placeholder">
-                    {{ child.nickname.charAt(0).toUpperCase() }}
-                  </div>
-                </div>
-                <div class="comment-body">
-                  <div class="comment-header">
-                    <span class="comment-nickname">{{ child.nickname }}</span>
-                    <span class="comment-time">{{ formatDate(child.created_at) }}</span>
-                  </div>
-                  <div class="comment-content">{{ child.content }}</div>
-                  <button class="reply-btn" @click="setReplyTo(child)">回复</button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 评论空状态 -->
-      <div v-else class="comment-empty">
-        <p class="empty-text">暂无评论，快来抢沙发吧！</p>
-      </div>
-    </section>
+    <CommentSection v-if="article" :article-id="route.params.id" />
 
     <!-- 错误状态 -->
     <div v-if="!loading && !article" class="error-state">
       <p class="error-text">文章不存在或已被删除</p>
       <button class="back-home-btn" @click="goHome">返回首页</button>
     </div>
-
-    <!-- 返回顶部浮动按钮 -->
-    <transition name="fade-scale">
-      <button v-if="showBackTop" class="back-top" aria-label="返回顶部" @click="scrollToTop">
-        <el-icon><Top /></el-icon>
-      </button>
-    </transition>
   </div>
 </template>
 
@@ -235,128 +193,160 @@ import {
   ArrowRight,
   Clock,
   View,
-  Top,
   ChatDotRound,
   Share,
-  Link
+  Link,
+  List,
+  ArrowDown,
+  Star,
+  StarFilled
 } from '@element-plus/icons-vue';
 import { getArticleDetail } from '../../api/articles';
-import { getComments, postComment } from '../../api/comments';
+import { toggleLike, getLikeStatus, getLikeCount } from '../../api/likes';
+import { toggleFavorite, getFavoriteStatus } from '../../api/favorites';
+import { useUserStore } from '../../stores/user';
+import CommentSection from '../../components/front/CommentSection.vue';
+import ReadingProgress from '../../components/front/ReadingProgress.vue';
 
 const route = useRoute();
 const router = useRouter();
+const userStore = useUserStore();
 
-/** 文章数据 */
 const article = ref(null);
-
-/** 评论树形列表 */
-const comments = ref([]);
-
-/** 加载状态 */
 const loading = ref(true);
+const coverImageError = ref(false);
+const articleBodyRef = ref(null);
 
-/** 评论提交中状态 */
-const submitting = ref(false);
+// ---- 点赞/收藏 ----
+const liked = ref(false);
+const likeCount = ref(0);
+const favorited = ref(false);
 
-/** 当前回复目标（null 表示顶级评论） */
-const replyTo = ref(null);
+async function handleToggleLike() {
+  if (!userStore.token) {
+    ElMessage.warning('请先登录');
+    return;
+  }
+  try {
+    await toggleLike(article.value.id);
+    liked.value = !liked.value;
+    likeCount.value += liked.value ? 1 : -1;
+    ElMessage.success(liked.value ? '已点赞' : '已取消点赞');
+  } catch {
+    ElMessage.error('操作失败');
+  }
+}
 
-/** 阅读进度（0-100） */
-const progress = ref(0);
+async function handleToggleFavorite() {
+  if (!userStore.token) {
+    ElMessage.warning('请先登录');
+    return;
+  }
+  try {
+    await toggleFavorite(article.value.id);
+    favorited.value = !favorited.value;
+    ElMessage.success(favorited.value ? '已收藏' : '已取消收藏');
+  } catch {
+    ElMessage.error('操作失败');
+  }
+}
 
-/** 是否显示返回顶部按钮 */
-const showBackTop = ref(false);
+async function fetchInteractionStatus() {
+  if (!userStore.token || !article.value) return;
+  try {
+    const [likeRes, favRes, countRes] = await Promise.all([
+      getLikeStatus(article.value.id).catch(() => ({ data: { liked: false } })),
+      getFavoriteStatus(article.value.id).catch(() => ({ data: { favorited: false } })),
+      getLikeCount(article.value.id).catch(() => ({ data: { count: 0 } }))
+    ]);
+    liked.value = likeRes.data?.liked || false;
+    favorited.value = favRes.data?.favorited || false;
+    likeCount.value = countRes.data?.count || 0;
+  } catch {
+    // 静默失败
+  }
+}
 
-/** Intersection Observer 实例 */
-let observer = null;
+// ---- TOC 相关 ----
+const tocMobileOpen = ref(false);
+const activeTocId = ref('');
 
-/** 评论表单 */
-const commentForm = ref({
-  nickname: '',
-  content: ''
-});
+/** 从 Markdown 原文提取 h2/h3 标题并生成唯一 id */
+const tocItems = computed(() => {
+  if (!article.value || !article.value.content) return [];
+  const headings = [];
+  const lines = article.value.content.split('\n');
+  let h2Index = 0;
+  let h3Index = 0;
 
-/**
- * 渲染后的 Markdown HTML（经过 DOMPurify 消毒，防止 XSS 攻击）
- * @returns {string}
- */
-const renderedContent = computed(() => {
-  if (!article.value || !article.value.content) return '';
-  return DOMPurify.sanitize(marked(article.value.content));
-});
-
-/**
- * 评论总数（含子回复）
- * @returns {number}
- */
-const commentCount = computed(() => {
-  let count = 0;
-  for (const comment of comments.value) {
-    count += 1;
-    if (comment.children && Array.isArray(comment.children)) {
-      count += comment.children.length;
+  for (const line of lines) {
+    const h2Match = line.match(/^##\s+(.+)/);
+    const h3Match = line.match(/^###\s+(.+)/);
+    if (h2Match) {
+      h2Index++;
+      h3Index = 0;
+      const text = h2Match[1].trim();
+      headings.push({ id: `heading-${h2Index}-0`, text, level: 2 });
+    } else if (h3Match) {
+      h3Index++;
+      const text = h3Match[1].trim();
+      headings.push({ id: `heading-${h2Index}-${h3Index}`, text, level: 3 });
     }
   }
-  return count;
+  return headings;
 });
 
-/**
- * 是否可提交评论
- * @returns {boolean}
- */
-const canSubmit = computed(() => {
-  return commentForm.value.nickname.trim() !== '' && commentForm.value.content.trim() !== '';
+// ---- Reveal 动画 Observer ----
+let revealObserver = null;
+
+// ---- 图片懒加载 Observer ----
+let lazyImgObserver = null;
+
+const renderedContent = computed(() => {
+  if (!article.value || !article.value.content) return '';
+  let html = DOMPurify.sanitize(marked(article.value.content));
+
+  // 给 h2/h3 加上 id 锚点
+  let h2Count = 0;
+  let h3Count = 0;
+  html = html.replace(/<(h[23])>(.*?)<\/\1>/gi, (match, tag, text) => {
+    let id;
+    if (tag === 'h2') {
+      h2Count++;
+      h3Count = 0;
+      id = `heading-${h2Count}-0`;
+    } else {
+      h3Count++;
+      id = `heading-${h2Count}-${h3Count}`;
+    }
+    return `<${tag} id="${id}">${text}</${tag}>`;
+  });
+
+  // 将 img 标签改为懒加载占位（data-src + class）
+  html = html.replace(/<img\s/g, '<img loading="lazy" class="lazy-img" ');
+
+  return html;
 });
 
-/**
- * 格式化日期 YYYY-MM-DD
- * @param {string} dateStr
- * @returns {string}
- */
 function formatDate(dateStr) {
   if (!dateStr) return '';
   const date = new Date(dateStr);
   if (isNaN(date.getTime())) return '';
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
-/**
- * 滚动监听：更新阅读进度 + 控制返回顶部按钮显隐
- * - 进度 = 已滚动距离 / (文档总高 - 视口高) * 100
- * - 滚动超过 400px 显示返回顶部
- */
-function handleScroll() {
-  const scrollTop = window.scrollY;
-  const docHeight = document.documentElement.scrollHeight - window.innerHeight;
-  // 兜底：文档高度小于视口时进度为 0
-  progress.value = docHeight > 0 ? Math.min(100, (scrollTop / docHeight) * 100) : 0;
-  showBackTop.value = scrollTop > 400;
-}
-
-/**
- * 平滑滚动到顶部
- */
-function scrollToTop() {
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-
-/**
- * 加载文章详情
- * @returns {Promise<void>}
- */
 async function loadArticle() {
   loading.value = true;
+  coverImageError.value = false;
   try {
     const id = route.params.id;
     const { data } = await getArticleDetail(id);
     article.value = data;
-    // 文章加载后并行：加载评论 + 初始化滚动揭示
-    loadComments();
     await nextTick();
-    initObserver();
+    initRevealObserver();
+    initLazyImages();
+    updateActiveToc();
+    fetchInteractionStatus();
   } catch (e) {
     console.error('加载文章失败:', e);
     article.value = null;
@@ -365,140 +355,116 @@ async function loadArticle() {
   }
 }
 
-/**
- * 加载评论列表
- * @returns {Promise<void>}
- */
-async function loadComments() {
-  try {
-    const id = route.params.id;
-    const { data } = await getComments(id);
-    comments.value = Array.isArray(data) ? data : (data?.list ?? []);
-  } catch (e) {
-    console.error('加载评论失败:', e);
-    comments.value = [];
-  }
-}
-
-/**
- * 初始化 Intersection Observer
- * 监听 .reveal 元素，进入视口时添加 visible 类
- */
-function initObserver() {
-  if (observer) observer.disconnect();
-  observer = new IntersectionObserver(
+function initRevealObserver() {
+  if (revealObserver) revealObserver.disconnect();
+  revealObserver = new IntersectionObserver(
     (entries) => {
       entries.forEach((entry) => {
         if (entry.isIntersecting) {
           entry.target.classList.add('visible');
-          observer.unobserve(entry.target);
+          revealObserver.unobserve(entry.target);
         }
       });
     },
     { threshold: 0.05, rootMargin: '0px 0px -40px 0px' }
   );
-  document.querySelectorAll('.article-detail .reveal').forEach((el) => observer.observe(el));
+  document.querySelectorAll('.article-detail .reveal').forEach((el) => revealObserver.observe(el));
 }
 
-/**
- * 设置回复目标
- * @param {Object} comment
- */
-function setReplyTo(comment) {
-  replyTo.value = comment;
-  const formEl = document.querySelector('.comment-form-wrapper');
-  if (formEl) {
-    formEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }
+/** 对文章正文中的 img 标签设置 IntersectionObserver 懒加载 */
+function initLazyImages() {
+  if (lazyImgObserver) lazyImgObserver.disconnect();
+
+  const imgs = articleBodyRef.value?.querySelectorAll('img.lazy-img');
+  if (!imgs || imgs.length === 0) return;
+
+  lazyImgObserver = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          const img = entry.target;
+          // 已加载过的跳过
+          if (img.dataset.lazyLoaded === 'true') {
+            lazyImgObserver.unobserve(img);
+            return;
+          }
+          img.dataset.lazyLoaded = 'true';
+
+          // 如果 src 是有效 URL，淡入显示
+          if (img.src && !img.src.startsWith('data:')) {
+            img.style.opacity = '0';
+            img.style.transition = 'opacity 0.4s ease';
+            const preloader = new Image();
+            preloader.onload = () => {
+              img.style.opacity = '1';
+              img.classList.add('lazy-loaded');
+            };
+            preloader.onerror = () => {
+              img.classList.add('lazy-error');
+            };
+            preloader.src = img.src;
+          }
+          lazyImgObserver.unobserve(img);
+        }
+      });
+    },
+    { rootMargin: '200px 0px', threshold: 0.01 }
+  );
+
+  imgs.forEach((img) => {
+    lazyImgObserver.observe(img);
+  });
 }
 
-/** 取消回复 */
-function cancelReply() {
-  replyTo.value = null;
-}
+// ---- TOC 滚动监听 ----
+function updateActiveToc() {
+  const headingElements = articleBodyRef.value?.querySelectorAll('h2[id], h3[id]');
+  if (!headingElements || headingElements.length === 0) return;
 
-/**
- * 提交评论
- * @returns {Promise<void>}
- */
-async function submitComment() {
-  if (!canSubmit.value) {
-    ElMessage.warning('请填写昵称和评论内容');
-    return;
-  }
-  submitting.value = true;
-  try {
-    const id = route.params.id;
-    const payload = {
-      nickname: commentForm.value.nickname.trim(),
-      content: commentForm.value.content.trim()
-    };
-    if (replyTo.value) {
-      payload.parent_id = replyTo.value.id;
+  const scrollTop = window.scrollY + 120; // 偏移量
+
+  let currentId = '';
+  headingElements.forEach((el) => {
+    if (el.offsetTop <= scrollTop) {
+      currentId = el.id;
     }
-    await postComment(id, payload);
-    ElMessage.success('评论发表成功，等待审核');
-    commentForm.value.nickname = '';
-    commentForm.value.content = '';
-    replyTo.value = null;
-    await loadComments();
-  } catch (e) {
-    console.error('发表评论失败:', e);
-    ElMessage.error('评论发表失败，请稍后重试');
-  } finally {
-    submitting.value = false;
+  });
+  activeTocId.value = currentId;
+}
+
+function scrollToHeading(id) {
+  const el = document.getElementById(id);
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    tocMobileOpen.value = false;
   }
 }
 
-/** 返回上一页 */
+let scrollTicking = false;
+function handleScroll() {
+  if (!scrollTicking) {
+    requestAnimationFrame(() => {
+      updateActiveToc();
+      scrollTicking = false;
+    });
+    scrollTicking = true;
+  }
+}
+
 function goBack() {
   router.back();
 }
-
-/** 返回首页 */
 function goHome() {
   router.push('/');
 }
 
-/**
- * 获取当前文章完整链接
- * @returns {string}
- */
 function getArticleUrl() {
   return window.location.href;
 }
-
-/**
- * 获取文章标题
- * @returns {string}
- */
 function getArticleTitle() {
   return article.value?.title || '';
 }
 
-/** 微信分享：复制链接并提示 */
-function shareWechat() {
-  copyToClipboard(getArticleUrl());
-  ElMessage.success('链接已复制，快去微信粘贴分享吧');
-}
-
-/** 微博分享：跳转到微博分享页 */
-function shareWeibo() {
-  const url = encodeURIComponent(getArticleUrl());
-  const title = encodeURIComponent(getArticleTitle());
-  window.open(`https://service.weibo.com/share/share.php?url=${url}&title=${title}`, '_blank');
-}
-
-/** 复制链接 */
-function copyLink() {
-  copyToClipboard(getArticleUrl());
-  ElMessage.success('链接已复制到剪贴板');
-}
-
-/**
- * 复制文本到剪贴板
- * @param {string} text
- */
 function copyToClipboard(text) {
   if (navigator.clipboard) {
     navigator.clipboard.writeText(text);
@@ -512,9 +478,22 @@ function copyToClipboard(text) {
   }
 }
 
-/**
- * 监听路由 ID 变化：切换文章时重新加载
- */
+function shareWechat() {
+  copyToClipboard(getArticleUrl());
+  ElMessage.success('链接已复制，快去微信粘贴分享吧');
+}
+
+function shareWeibo() {
+  const url = encodeURIComponent(getArticleUrl());
+  const title = encodeURIComponent(getArticleTitle());
+  window.open(`https://service.weibo.com/share/share.php?url=${url}&title=${title}`, '_blank');
+}
+
+function copyLink() {
+  copyToClipboard(getArticleUrl());
+  ElMessage.success('链接已复制到剪贴板');
+}
+
 watch(
   () => route.params.id,
   (newId, oldId) => {
@@ -531,30 +510,19 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  if (revealObserver) revealObserver.disconnect();
+  if (lazyImgObserver) lazyImgObserver.disconnect();
   window.removeEventListener('scroll', handleScroll);
-  if (observer) observer.disconnect();
 });
 </script>
 
 <style scoped>
-/* ========== 容器 ========== */
+/* ========== 整体布局 ========== */
 .article-detail {
   position: relative;
   max-width: 800px;
   margin: 0 auto;
   padding: 32px 32px 80px;
-}
-
-/* ========== 阅读进度条 ========== */
-.progress-bar {
-  position: fixed;
-  top: 0;
-  left: 0;
-  height: 3px;
-  background: linear-gradient(to right, var(--primary), var(--primary-light));
-  z-index: 200;
-  transition: width 0.1s linear;
-  box-shadow: 0 0 8px rgba(220, 38, 38, 0.4);
 }
 
 /* ========== 返回按钮 ========== */
@@ -574,10 +542,10 @@ onUnmounted(() => {
   font-size: 13px;
   cursor: pointer;
   transition:
-    color 0.25s var(--ease-out),
-    border-color 0.25s var(--ease-out),
-    background 0.25s var(--ease-out),
-    transform 0.25s var(--ease-out);
+    color 0.25s,
+    border-color 0.25s,
+    background 0.25s,
+    transform 0.25s;
 }
 
 .back-btn:hover {
@@ -587,9 +555,138 @@ onUnmounted(() => {
   transform: translateX(-3px);
 }
 
-/* ========== 文章正文 ========== */
-.article-content {
-  /* 卡片化被舍弃：仅用空白与分隔线组织 */
+/* ========== 移动端 TOC 下拉 ========== */
+.toc-mobile {
+  display: none;
+  margin-bottom: 20px;
+}
+
+.toc-mobile-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 16px;
+  background: var(--bg-body);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-secondary);
+  font-size: 14px;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.toc-mobile-toggle:hover {
+  border-color: var(--primary);
+}
+
+.toc-chevron {
+  margin-left: auto;
+  transition: transform 0.25s;
+}
+.toc-chevron.open {
+  transform: rotate(180deg);
+}
+
+.toc-mobile-dropdown {
+  margin-top: 8px;
+  padding: 12px 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.toc-mobile-item {
+  display: block;
+  padding: 6px 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+  text-decoration: none;
+  border-left: 2px solid transparent;
+  padding-left: 12px;
+  transition:
+    color 0.2s,
+    border-color 0.2s;
+}
+
+.toc-mobile-item.toc-h3 {
+  padding-left: 24px;
+  font-size: 12px;
+}
+
+.toc-mobile-item:hover,
+.toc-mobile-item.active {
+  color: var(--primary);
+  border-left-color: var(--primary);
+}
+
+/* ========== 桌面端 TOC 侧边栏 ========== */
+.toc-sidebar {
+  position: fixed;
+  right: max(32px, calc((100vw - 1200px) / 2));
+  top: 120px;
+  width: 200px;
+  z-index: 50;
+  display: block;
+}
+
+.toc-sidebar-inner {
+  padding: 20px 0;
+  border-left: 1px solid var(--border);
+  padding-left: 20px;
+}
+
+.toc-title {
+  margin: 0 0 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.toc-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: calc(100vh - 250px);
+  overflow-y: auto;
+}
+
+.toc-link {
+  display: block;
+  padding: 5px 12px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  text-decoration: none;
+  border-left: 2px solid transparent;
+  margin-left: -21px;
+  padding-left: 19px;
+  transition:
+    color 0.2s,
+    border-color 0.2s,
+    background 0.2s;
+  border-radius: 0 4px 4px 0;
+  line-height: 1.4;
+}
+
+.toc-link.toc-h3 {
+  padding-left: 31px;
+  font-size: 12px;
+}
+
+.toc-link:hover {
+  color: var(--primary);
+  background: rgba(220, 38, 38, 0.05);
+}
+
+.toc-link.active {
+  color: var(--primary);
+  border-left-color: var(--primary);
+  background: rgba(220, 38, 38, 0.08);
+  font-weight: 600;
 }
 
 /* ========== 文章头部 ========== */
@@ -616,9 +713,8 @@ onUnmounted(() => {
   background: var(--primary-bg);
   border-radius: 12px;
   text-decoration: none;
-  transition: background 0.25s var(--ease-out);
+  transition: background 0.25s;
 }
-
 .meta-category:hover {
   background: rgba(220, 38, 38, 0.18);
 }
@@ -654,7 +750,6 @@ onUnmounted(() => {
   border-radius: 14px;
   overflow: hidden;
 }
-
 .article-cover img {
   width: 100%;
   height: auto;
@@ -663,7 +758,7 @@ onUnmounted(() => {
   object-fit: cover;
 }
 
-/* ========== 文章正文 Markdown ========== */
+/* ========== Markdown 正文 ========== */
 .article-body {
   font-size: 17px;
   line-height: 1.8;
@@ -682,12 +777,14 @@ onUnmounted(() => {
   font-size: 26px;
   margin: 40px 0 20px;
   color: var(--text-primary);
+  scroll-margin-top: 100px;
 }
 
 .article-body :deep(h3) {
   font-size: 22px;
   margin: 32px 0 16px;
   color: var(--text-primary);
+  scroll-margin-top: 100px;
 }
 
 .article-body :deep(p) {
@@ -699,12 +796,10 @@ onUnmounted(() => {
   padding-left: 24px;
   margin: 16px 0;
 }
-
 .article-body :deep(li) {
   margin: 8px 0;
 }
 
-/* 行内代码 */
 .article-body :deep(code) {
   padding: 2px 8px;
   background: #f1f5f9;
@@ -714,7 +809,6 @@ onUnmounted(() => {
   font-family: var(--font-mono);
 }
 
-/* 代码块 */
 .article-body :deep(pre) {
   padding: 20px;
   background: #1e293b;
@@ -725,7 +819,6 @@ onUnmounted(() => {
   font-size: 14px;
   line-height: 1.6;
 }
-
 .article-body :deep(pre code) {
   padding: 0;
   background: transparent;
@@ -733,7 +826,6 @@ onUnmounted(() => {
   font-size: inherit;
 }
 
-/* 引用块 */
 .article-body :deep(blockquote) {
   margin: 24px 0;
   padding: 16px 24px;
@@ -743,39 +835,45 @@ onUnmounted(() => {
   color: var(--text-secondary);
 }
 
-/* 链接 */
 .article-body :deep(a) {
   color: var(--primary);
   text-decoration: none;
   border-bottom: 1px dashed var(--primary);
-  transition: border-style 0.2s var(--ease-out);
+  transition: border-style 0.2s;
 }
-
 .article-body :deep(a:hover) {
   border-bottom-style: solid;
 }
 
-/* 图片 */
 .article-body :deep(img) {
   max-width: 100%;
   border-radius: 8px;
   margin: 16px 0;
 }
 
-/* 表格 */
+.article-body :deep(img.lazy-img) {
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+.article-body :deep(img.lazy-loaded) {
+  opacity: 1;
+}
+.article-body :deep(img.lazy-error) {
+  opacity: 0.3;
+  filter: grayscale(1);
+}
+
 .article-body :deep(table) {
   width: 100%;
   border-collapse: collapse;
   margin: 24px 0;
 }
-
 .article-body :deep(th),
 .article-body :deep(td) {
   border: 1px solid var(--border);
   padding: 10px 16px;
   text-align: left;
 }
-
 .article-body :deep(th) {
   background: var(--bg-body);
   font-weight: 600;
@@ -800,10 +898,9 @@ onUnmounted(() => {
   border-radius: 16px;
   text-decoration: none;
   transition:
-    background 0.25s var(--ease-out),
-    transform 0.25s var(--ease-spring);
+    background 0.25s,
+    transform 0.25s;
 }
-
 .tag-item:hover {
   background: var(--primary);
   color: #fff;
@@ -839,32 +936,76 @@ onUnmounted(() => {
   color: var(--text-secondary);
   cursor: pointer;
   transition:
-    color 0.25s var(--ease-out),
-    border-color 0.25s var(--ease-out),
-    background 0.25s var(--ease-out),
-    transform 0.25s var(--ease-out);
+    color 0.25s,
+    border-color 0.25s,
+    background 0.25s,
+    transform 0.25s;
 }
-
 .share-btn:hover {
   transform: translateY(-2px);
 }
-
 .share-btn.wechat:hover {
   color: #07c160;
   border-color: #07c160;
   background: rgba(7, 193, 96, 0.06);
 }
-
 .share-btn.weibo:hover {
   color: #e6162d;
   border-color: #e6162d;
   background: rgba(230, 22, 45, 0.06);
 }
-
 .share-btn.copy:hover {
   color: var(--primary);
   border-color: var(--primary);
   background: var(--primary-bg);
+}
+
+/* ========== 点赞/收藏栏 ========== */
+.interaction-bar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 28px;
+  padding-top: 24px;
+  justify-content: center;
+}
+
+.interact-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 24px;
+  font-size: 14px;
+  font-weight: 500;
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  background: var(--bg-hover);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.25s;
+}
+
+.interact-btn:hover {
+  transform: translateY(-2px);
+}
+
+.interact-btn.like-btn:hover,
+.interact-btn.like-btn.active {
+  color: #f59e0b;
+  border-color: #f59e0b;
+  background: rgba(245, 158, 11, 0.08);
+}
+
+.interact-btn.fav-btn:hover,
+.interact-btn.fav-btn.active {
+  color: #ef4444;
+  border-color: #ef4444;
+  background: rgba(239, 68, 68, 0.08);
+}
+
+.interact-count {
+  font-size: 12px;
+  opacity: 0.7;
 }
 
 /* ========== 上一篇 / 下一篇 ========== */
@@ -887,18 +1028,16 @@ onUnmounted(() => {
   text-decoration: none;
   color: var(--text-secondary);
   transition:
-    background 0.25s var(--ease-out),
-    color 0.25s var(--ease-out),
-    transform 0.25s var(--ease-out);
+    background 0.25s,
+    color 0.25s,
+    transform 0.25s;
   min-width: 0;
 }
-
 .nav-card:hover {
   background: var(--primary-bg);
   color: var(--primary);
   transform: translateY(-3px);
 }
-
 .nav-card.placeholder {
   background: transparent;
   pointer-events: none;
@@ -914,12 +1053,10 @@ onUnmounted(() => {
   color: var(--text-tertiary);
   text-transform: uppercase;
 }
-
 .nav-card.next {
   text-align: right;
   align-items: flex-end;
 }
-
 .nav-card.next .nav-direction {
   flex-direction: row-reverse;
 }
@@ -934,273 +1071,16 @@ onUnmounted(() => {
   line-height: 1.5;
 }
 
-/* ========== 评论区 ========== */
-.comment-section {
-  margin-top: 64px;
-  padding-top: 40px;
-  border-top: 2px solid var(--border);
-}
-
-.section-title {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin: 0 0 32px;
-  font-size: 24px;
-  font-weight: 800;
-  color: var(--text-primary);
-  letter-spacing: -0.5px;
-}
-
-.comment-count {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 28px;
-  height: 24px;
-  padding: 0 8px;
-  font-size: 13px;
-  font-weight: 600;
-  color: #fff;
-  background: var(--primary);
-  border-radius: 12px;
-}
-
-/* 评论表单 */
-.comment-form-wrapper {
-  padding: 24px;
-  margin-bottom: 40px;
-  background: var(--bg-body);
-  border-radius: 14px;
-}
-
-.reply-tip {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 16px;
-  padding: 10px 14px;
-  background: rgba(220, 38, 38, 0.08);
-  border-left: 3px solid var(--primary);
-  border-radius: 6px;
-  font-size: 13px;
-  color: var(--primary-dark);
-}
-
-.cancel-btn {
-  background: none;
-  border: none;
-  color: var(--primary);
-  font-size: 13px;
-  cursor: pointer;
-  padding: 0;
-}
-
-.cancel-btn:hover {
-  text-decoration: underline;
-}
-
-.form-input {
-  width: 100%;
-  height: 42px;
-  padding: 0 14px;
-  margin-bottom: 12px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  font-size: 14px;
-  color: var(--text-primary);
-  background: var(--bg-hover);
-  outline: none;
-  transition:
-    border-color 0.25s var(--ease-out),
-    box-shadow 0.25s var(--ease-out);
-}
-
-.form-input:focus {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.12);
-}
-
-.form-textarea {
-  width: 100%;
-  padding: 12px 14px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  font-size: 14px;
-  color: var(--text-primary);
-  background: var(--bg-hover);
-  outline: none;
-  resize: vertical;
-  font-family: inherit;
-  transition:
-    border-color 0.25s var(--ease-out),
-    box-shadow 0.25s var(--ease-out);
-}
-
-.form-textarea:focus {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.12);
-}
-
-.form-actions {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 12px;
-}
-
-.submit-btn {
-  padding: 10px 24px;
-  font-size: 14px;
-  font-weight: 600;
-  color: #fff;
-  background: var(--primary);
-  border: none;
-  border-radius: 20px;
-  cursor: pointer;
-  transition:
-    background 0.25s var(--ease-out),
-    transform 0.25s var(--ease-spring),
-    box-shadow 0.25s var(--ease-out);
-}
-
-.submit-btn:hover:not(:disabled) {
-  background: var(--primary-dark);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(220, 38, 38, 0.35);
-}
-
-.submit-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-/* 评论列表 */
-.comment-list {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
-
-.comment-item {
-  position: relative;
-}
-
-.comment-main {
-  display: flex;
-  gap: 14px;
-}
-
-.comment-avatar {
-  flex-shrink: 0;
-  width: 40px;
-  height: 40px;
-}
-
-.avatar-img {
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  object-fit: cover;
-}
-
-.avatar-placeholder {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
-  color: #fff;
-  font-size: 16px;
-  font-weight: 600;
-  border-radius: 50%;
-}
-
-.comment-body {
-  flex: 1;
-  min-width: 0;
-}
-
-.comment-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 6px;
-}
-
-.comment-nickname {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.comment-time {
-  font-size: 12px;
-  color: var(--text-tertiary);
-}
-
-.comment-content {
-  margin-bottom: 8px;
-  font-size: 14px;
-  line-height: 1.7;
-  color: var(--text-secondary);
-  word-break: break-word;
-}
-
-.reply-btn {
-  background: none;
-  border: none;
-  color: var(--text-tertiary);
-  font-size: 13px;
-  cursor: pointer;
-  padding: 0;
-  transition: color 0.2s var(--ease-out);
-}
-
-.reply-btn:hover {
-  color: var(--primary);
-}
-
-/* 子评论 */
-.comment-children {
-  margin-top: 16px;
-  margin-left: 26px;
-  padding-left: 20px;
-  border-left: 2px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.comment-item.child .comment-avatar {
-  width: 32px;
-  height: 32px;
-}
-
-/* 评论空状态 */
-.comment-empty {
-  text-align: center;
-  padding: 48px 0;
-}
-
-.empty-text {
-  margin: 0;
-  font-size: 14px;
-  color: var(--text-tertiary);
-}
-
 /* ========== 错误状态 ========== */
 .error-state {
   text-align: center;
   padding: 80px 20px;
 }
-
 .error-text {
   margin: 0 0 24px;
   font-size: 16px;
   color: var(--text-secondary);
 }
-
 .back-home-btn {
   padding: 10px 24px;
   font-size: 14px;
@@ -1211,72 +1091,56 @@ onUnmounted(() => {
   border-radius: 20px;
   cursor: pointer;
   transition:
-    background 0.25s var(--ease-out),
-    transform 0.25s var(--ease-spring);
+    background 0.25s,
+    transform 0.25s;
 }
-
 .back-home-btn:hover {
   background: var(--primary-dark);
   transform: translateY(-2px);
 }
 
-/* ========== 返回顶部按钮 ========== */
-.back-top {
-  position: fixed;
-  bottom: 32px;
-  right: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 48px;
-  height: 48px;
-  font-size: 20px;
-  color: #fff;
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
-  border: none;
-  border-radius: 50%;
-  cursor: pointer;
-  z-index: 90;
-  box-shadow: 0 8px 24px rgba(220, 38, 38, 0.4);
-  transition:
-    transform 0.3s var(--ease-spring),
-    box-shadow 0.3s var(--ease-out);
-}
-
-.back-top:hover {
-  transform: translateY(-4px) scale(1.05);
-  box-shadow: 0 12px 32px rgba(220, 38, 38, 0.5);
-}
-
-/* 返回顶部按钮过渡 */
-.fade-scale-enter-active,
-.fade-scale-leave-active {
-  transition:
-    opacity 0.3s var(--ease-out),
-    transform 0.3s var(--ease-spring);
-}
-
-.fade-scale-enter-from,
-.fade-scale-leave-to {
-  opacity: 0;
-  transform: scale(0.5);
-}
-
-/* ========== 滚动揭示动画 ========== */
+/* ========== 滚动揭示 ========== */
 .reveal {
   opacity: 0;
   transform: translateY(24px);
   transition:
-    opacity 0.7s var(--ease-out),
-    transform 0.7s var(--ease-out);
+    opacity 0.7s,
+    transform 0.7s;
 }
-
 .reveal.visible {
   opacity: 1;
   transform: translateY(0);
 }
 
+/* TOC 下拉过渡 */
+.toc-slide-enter-active,
+.toc-slide-leave-active {
+  transition:
+    max-height 0.3s ease,
+    opacity 0.3s ease,
+    padding 0.3s ease;
+  overflow: hidden;
+}
+.toc-slide-enter-from,
+.toc-slide-leave-to {
+  max-height: 0;
+  opacity: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+.toc-slide-enter-to,
+.toc-slide-leave-from {
+  max-height: 400px;
+  opacity: 1;
+}
+
 /* ========== 响应式 ========== */
+@media (max-width: 1200px) {
+  .toc-sidebar {
+    display: none;
+  }
+}
+
 @media (max-width: 768px) {
   .article-detail {
     padding: 24px 20px 64px;
@@ -1296,16 +1160,6 @@ onUnmounted(() => {
   .nav-card.next .nav-direction {
     flex-direction: row;
   }
-  .comment-children {
-    margin-left: 12px;
-    padding-left: 12px;
-  }
-  .back-top {
-    right: 20px;
-    bottom: 20px;
-    width: 44px;
-    height: 44px;
-  }
   .share-bar {
     flex-wrap: wrap;
     gap: 8px;
@@ -1313,6 +1167,9 @@ onUnmounted(() => {
   .share-btn {
     padding: 6px 12px;
     font-size: 12px;
+  }
+  .toc-mobile {
+    display: block;
   }
 }
 </style>

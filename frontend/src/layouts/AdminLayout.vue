@@ -160,7 +160,8 @@ import {
   Link,
   Expand,
   RefreshRight,
-  Headset
+  Headset,
+  Picture
 } from '@element-plus/icons-vue';
 
 const userStore = useUserStore();
@@ -268,15 +269,24 @@ function stopStatsTimer() {
 
 /**
  * 启动评论统计定时刷新
- * 每 15 秒自动获取一次
+ * 每 30 秒自动获取一次，仅在页面可见时轮询
  */
 function startStatsTimer() {
   stopStatsTimer();
   statsTimer = setInterval(() => {
-    if (!autoRefreshPaused) {
+    if (!autoRefreshPaused && document.visibilityState === 'visible') {
       fetchCommentStats();
     }
-  }, 15000);
+  }, 30000);
+}
+
+/**
+ * 页面可见性变化回调：恢复可见时立即刷新一次
+ */
+function handleVisibilityChange() {
+  if (document.visibilityState === 'visible' && !autoRefreshPaused) {
+    fetchCommentStats();
+  }
 }
 
 /**
@@ -295,10 +305,12 @@ function refreshStats() {
 onMounted(() => {
   fetchCommentStats();
   startStatsTimer();
+  document.addEventListener('visibilitychange', handleVisibilityChange);
 });
 
 onUnmounted(() => {
   stopStatsTimer();
+  document.removeEventListener('visibilitychange', handleVisibilityChange);
 });
 
 /** 内容管理菜单项（markRaw 避免图标组件被转为响应式） */
@@ -309,7 +321,8 @@ const contentMenu = [
   { path: '/admin/tags', label: '标签管理', icon: markRaw(PriceTag) },
   { path: '/admin/comments', label: '评论管理', icon: markRaw(ChatDotRound) },
   { path: '/admin/links', label: '友链管理', icon: markRaw(Link) },
-  { path: '/admin/music', label: '音乐管理', icon: markRaw(Headset) }
+  { path: '/admin/music', label: '音乐管理', icon: markRaw(Headset) },
+  { path: '/admin/media', label: '媒体库', icon: markRaw(Picture) }
 ];
 
 /** 系统菜单项 */

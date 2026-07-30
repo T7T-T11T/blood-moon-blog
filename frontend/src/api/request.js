@@ -46,6 +46,16 @@ request.interceptors.response.use(
     // 请求失败，根据状态码处理
     if (error.response) {
       const { status, data } = error.response;
+
+      // silent 模式：不弹任何 UI 提示，只记录日志，交由调用方自行处理
+      if (error.config?.silent) {
+        console.warn(
+          `[Silent] ${error.config.url} 请求失败 (${status}):`,
+          data?.message || error.message
+        );
+        return Promise.reject(error);
+      }
+
       if (status === 401) {
         // token 过期或未登录，清除登录信息并跳转登录页
         localStorage.removeItem('token');

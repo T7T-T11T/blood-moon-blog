@@ -12,9 +12,7 @@ import request from './request';
 export function uploadImage(file) {
   const formData = new FormData();
   formData.append('file', file);
-  return request.post('/upload/image', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' }
-  });
+  return request.post('/upload/image', formData);
 }
 
 /**
@@ -24,9 +22,7 @@ export function uploadImage(file) {
 export function uploadAudio(file) {
   const formData = new FormData();
   formData.append('file', file);
-  return request.post('/upload/audio', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' }
-  });
+  return request.post('/upload/audio', formData);
 }
 
 /**
@@ -36,9 +32,7 @@ export function uploadAudio(file) {
 export function uploadVideo(file) {
   const formData = new FormData();
   formData.append('file', file);
-  return request.post('/upload/video', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' }
-  });
+  return request.post('/upload/video', formData);
 }
 
 /**
@@ -48,9 +42,7 @@ export function uploadVideo(file) {
 export function uploadFile(file) {
   const formData = new FormData();
   formData.append('file', file);
-  return request.post('/upload/file', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' }
-  });
+  return request.post('/upload/file', formData);
 }
 
 /**
@@ -59,4 +51,20 @@ export function uploadFile(file) {
  */
 export function deleteUpload(url) {
   return request.delete('/upload', { data: { url } });
+}
+
+/**
+ * 获取上传文件列表
+ * @param {Object} params - { page, page_size, dir }
+ */
+export function getUploadList(params) {
+  return request.get('/upload/list', { params });
+}
+
+/**
+ * 按文件名删除上传文件
+ * @param {string} filename - 文件名
+ */
+export function deleteUploadFile(filename) {
+  return request.delete(`/upload/${filename}`);
 }

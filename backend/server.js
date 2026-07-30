@@ -69,21 +69,27 @@ const app = express()
  * helmet：设置安全响应头
  * 包括 X-Content-Type-Options、X-Frame-Options、HSTS、CSP 等
  * 生产环境必须开启，防止点击劫持、MIME 嗅探等攻击
+ *
+ * CSP 策略说明：
+ * - defaultSrc：默认只允许同源
+ * - connectSrc：允许同源及 HTTP/HTTPS（支持前后端分离部署）
+ * - imgSrc：允许同源图片及 data/blob URI（头像、封面等）
+ * - mediaSrc：允许同源及远程媒体资源（音频/视频 CDN）
+ * - scriptSrc/styleSrc：允许 unsafe-inline（兼容 Element Plus/Vue）
  */
 app.use(helmet({
-  // 允许加载同源图片（文章封面、头像等）
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      imgSrc: ["'self'", "data:", "blob:"],
-      mediaSrc: ["'self'", "data:", "blob:"],
+      connectSrc: ["'self'", 'http:', 'https:'],
+      imgSrc: ["'self'", 'data:', 'blob:', 'http:', 'https:'],
+      mediaSrc: ["'self'", 'data:', 'blob:', 'http:', 'https:'],
       scriptSrc: ["'self'", "'unsafe-inline'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      fontSrc: ["'self'", "data:"],
-      connectSrc: ["'self'"]
+      styleSrc: ["'self'", "'unsafe-inline'", 'http:', 'https:'],
+      fontSrc: ["'self'", 'data:'],
+      frameSrc: ["'self'"]
     }
   },
-  // 允许同源 iframe 嵌入（后台管理可能需要）
   frameguard: { action: 'sameorigin' }
 }))
 
@@ -111,6 +117,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }))    // URL 编码�
  * 登录接口限流：5 次/15 分钟/IP
  * 防止暴力破解管理员密码
  */
+// eslint-disable-next-line no-unused-vars
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 5,
@@ -137,10 +144,24 @@ const commentReadLimiter = rateLimit({
  * 上传接口限流：10 次/分钟/IP
  * 防止恶意大量上传消耗磁盘
  */
+// eslint-disable-next-line no-unused-vars
 const uploadLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 10,
   message: { code: 429, message: '上传请求过于频繁，请稍后再试' },
+  standardHeaders: true,
+  legacyHeaders: false
+})
+
+/**
+ * 搜索接口限流：10 次/分钟/IP
+ * 防止恶意搜索消耗数据库资源（LIKE 模糊查询开销较大）
+ */
+// eslint-disable-next-line no-unused-vars
+const searchLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 10,
+  message: { code: 429, message: '搜索过于频繁，请稍后再试' },
   standardHeaders: true,
   legacyHeaders: false
 })
@@ -229,6 +250,7 @@ app.get('/api/health', async (req, res) => {
  * 全局错误处理中间件
  * 捕获所有未处理的错误，返回统一格式的错误响应
  */
+// eslint-disable-next-line no-unused-vars
 app.use((err, req, res, next) => {
   console.error('服务器错误：', err)
   res.status(500).json({

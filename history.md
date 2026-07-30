@@ -1,5 +1,16 @@
 # 版本历史
 
+## v1.9.0 (2026-07-30)
+
+- fix(security): 放宽 Helmet CSP 策略，支持前后端分离部署（connectSrc/imgSrc/mediaSrc 允许 http/https）
+- fix(security): 搜索接口添加专用限流（10 次/分钟），防止恶意搜索消耗数据库资源
+- fix(security): SQL LIKE 查询转义用户输入中的 %、_、\ 通配符，防止搜索逻辑注入
+- perf(backend): 优化 attachTags 从 N+1 查询改为单次批量查询，文章列表查询性能大幅提升
+- refactor(backend): 重构 uploadController，使用工厂方法消除 4 个上传函数的重复代码
+- feat(backend): 新增 ESLint 配置（.eslintrc.cjs），后端代码纳入自动化 lint 检查
+- fix(frontend): 清理 ESLint 警告，删除未使用变量和导入，v-html 指令添加安全注释
+- 前后端版本号统一升级至 1.9.0
+
 ## v1.8.0 (2026-07-30)
 
 - fix(db): 修复数据库初始化脚本(001_init.sql)中文乱码问题，重写全部 SQL 语句

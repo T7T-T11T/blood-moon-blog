@@ -1,9 +1,3 @@
-/** * @file Links.vue * @description 友情链接页（杂志风，卡片网格改为分类列表） * * 作用： * - 按
-category 分组展示友链，列表式排版（非卡片） * - 每行：头像 + 名称 + 描述 + 访问箭头 * -
-头像缺失时使用名称首字母占位 * * 数据获取： * - getLinks() 返回数组 [{ id, name, url, description,
-avatar_url, category, sort_order }] * - 兼容返回 { list } 或数组两种结构 * * 动效（2-3 组）： * -
-入场：Hero 文案 fade-in-up 错峰 * - 滚动：每个分类分组进入视口时 fade-in-up（Intersection Observer）
-* - 悬浮：整行上移 + 名称变主色 + 头像放大 + 箭头右移 */
 <template>
   <div ref="rootRef" class="links-page">
     <!-- ============ Hero 区域 ============ -->
@@ -11,160 +5,72 @@ avatar_url, category, sort_order }] * - 兼容返回 { list } 或数组两种结
       <div class="hero-inner">
         <p class="hero-eyebrow animate-fade-in-down">FRIENDS</p>
         <h1 class="hero-title animate-fade-in-up">友情链接</h1>
-        <p class="hero-subtitle animate-fade-in-up delay-100">共收录 {{ totalLinks }} 个站点</p>
+        <p class="hero-tagline animate-fade-in-up delay-100">交换链接，共同成长</p>
       </div>
-      <!-- 装饰光斑（纯视觉） -->
-      <div class="hero-orb" aria-hidden="true"></div>
     </section>
 
-    <!-- ============ 主体：分类分组列表 ============ -->
-    <div class="content-wrapper">
-      <!-- 加载骨架 -->
-      <div v-if="loading && links.length === 0" class="skeleton-list">
-        <div v-for="n in 6" :key="n" class="skeleton-row">
-          <div class="skeleton-avatar"></div>
-          <div class="skeleton-lines">
-            <div class="skeleton-line w-40"></div>
-            <div class="skeleton-line w-80"></div>
-          </div>
-        </div>
+    <!-- ============ 友链列表 ============ -->
+    <AsyncData
+      :loading="loading"
+      :error="error"
+      :empty="links.length === 0 && !loading && !error"
+      error-message="加载友链失败，请稍后重试"
+      empty-message="暂无友链"
+      retry-text="重试"
+      @retry="loadLinks"
+    >
+      <div class="link-grid">
+        <article v-for="link in links" :key="link.id" class="link-card reveal">
+          <a :href="link.url" target="_blank" rel="noopener noreferrer" class="link-card-inner">
+            <img
+              v-if="link.avatar_url"
+              :src="link.avatar_url"
+              :alt="link.name"
+              class="link-avatar"
+              loading="lazy"
+            />
+            <div class="link-info">
+              <h3 class="link-name">{{ link.name }}</h3>
+              <p class="link-desc">{{ link.description }}</p>
+            </div>
+            <span class="link-arrow" aria-hidden="true">→</span>
+          </a>
+        </article>
       </div>
-
-      <!-- 分类分组 -->
-      <div v-else-if="groupedLinks.length > 0">
-        <section
-          v-for="(group, gi) in groupedLinks"
-          :key="group.category"
-          class="link-section reveal"
-          :style="{ '--row-index': gi }"
-        >
-          <!-- 分类标题 -->
-          <div class="section-header">
-            <h2 class="section-title">{{ group.category }}</h2>
-            <span class="section-sub">{{ group.links.length }} 个站点</span>
-          </div>
-
-          <!-- 站点列表（非卡片，使用分隔线列表） -->
-          <ul class="link-list">
-            <li
-              v-for="(link, li) in group.links"
-              :key="link.id"
-              class="link-row"
-              :style="{ '--item-index': li }"
-            >
-              <a :href="link.url" target="_blank" rel="noopener noreferrer" class="link-inner">
-                <!-- 头像：存在 avatar_url 展示图片，否则首字母占位 -->
-                <div class="link-avatar">
-                  <img
-                    v-if="link.avatar_url"
-                    :src="link.avatar_url"
-                    :alt="link.name"
-                    loading="lazy"
-                  />
-                  <span v-else class="avatar-fallback">{{ getInitial(link.name) }}</span>
-                </div>
-                <!-- 名称与描述 -->
-                <div class="link-info">
-                  <h3 class="link-name">{{ link.name }}</h3>
-                  <p class="link-desc">{{ link.description || '暂无描述' }}</p>
-                </div>
-                <!-- 访问箭头 -->
-                <span class="link-arrow" aria-hidden="true">→</span>
-              </a>
-            </li>
-          </ul>
-        </section>
-      </div>
-
-      <!-- 空状态 -->
-      <div v-else class="empty-state">
-        <p class="empty-title">暂无友情链接</p>
-        <p class="empty-desc">友链申请通过后将在此展示</p>
-      </div>
-    </div>
+    </AsyncData>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue';
+import { ref, onMounted, onUnmounted, nextTick } from 'vue';
 import { getLinks } from '../../api/links';
+import AsyncData from '../../components/common/AsyncData.vue';
 
-/** 组件根节点引用（用于作用域内的滚动观察） */
+/** 根元素引用，用于 IntersectionObserver 初始化 */
 const rootRef = ref(null);
-
-/** 友链列表（扁平数组） */
+/** 友情链接列表 */
 const links = ref([]);
+/** 加载状态 */
+const loading = ref(true);
+/** 错误状态 */
+const error = ref(false);
+/** 数据是否已加载完成（用于控制内容显示） */
+const loaded = ref(false);
 
-/** 加载状态（控制骨架屏展示） */
-const loading = ref(false);
-
-/** Intersection Observer 实例（滚动揭示动画） */
+/** IntersectionObserver 实例 */
 let observer = null;
-
-/** 预设分类展示顺序（未在此列表的分类按出现顺序追加） */
-const CATEGORY_ORDER = ['友情链接', '推荐站点', '工具资源'];
-
-/**
- * 友链总数
- * @returns {number} 友链总数量
- */
-const totalLinks = computed(() => links.value.length);
+/** 安全超时定时器，确保内容在数据加载后立即可见 */
+let revealTimeout = null;
 
 /**
- * 按分类分组的友链列表
- * - 按 category 字段分组，无 category 的归入"其他"
- * - 预设分类按固定顺序优先展示
- * - 每组内按 sort_order 升序排序
- * @returns {Array<{category: string, links: Array}>} 分组后的友链列表
- */
-const groupedLinks = computed(() => {
-  const map = new Map();
-  // 遍历所有友链，按 category 分组
-  for (const link of links.value) {
-    const category = link.category || '其他';
-    if (!map.has(category)) map.set(category, []);
-    map.get(category).push(link);
-  }
-  // 每组内按 sort_order 升序排序（缺失视为 0）
-  for (const [, groupLinks] of map) {
-    groupLinks.sort((a, b) => {
-      const oa = Number(a.sort_order) || 0;
-      const ob = Number(b.sort_order) || 0;
-      return oa - ob;
-    });
-  }
-  const result = [];
-  // 先添加预设分类（保证固定顺序）
-  for (const cat of CATEGORY_ORDER) {
-    if (map.has(cat)) {
-      result.push({ category: cat, links: map.get(cat) });
-      map.delete(cat);
-    }
-  }
-  // 再添加剩余分类（按 Map 原始插入顺序追加）
-  for (const [category, groupLinks] of map) {
-    result.push({ category, links: groupLinks });
-  }
-  return result;
-});
-
-/**
- * 获取名称首字符作为头像占位
- * @param {string} name - 友链名称
- * @returns {string} 首字符大写，空名称返回空字符串
- */
-function getInitial(name) {
-  if (!name) return '';
-  return name.charAt(0).toUpperCase();
-}
-
-/**
- * 加载友链列表
- * 兼容返回值为数组或对象包裹的数组两种结构
- * @returns {Promise<void>}
+ * 加载友情链接列表
+ * 从后端获取已审核通过的友链，初始化滚动动画
+ * 数据加载完成后设置 loaded 标记，并启动安全超时
  */
 async function loadLinks() {
   loading.value = true;
+  error.value = false;
+  loaded.value = false;
   try {
     const { data } = await getLinks();
     links.value = Array.isArray(data) ? data : (data?.list ?? []);
@@ -172,14 +78,21 @@ async function loadLinks() {
     initObserver();
   } catch (e) {
     console.error('加载友链失败:', e);
+    error.value = true;
   } finally {
     loading.value = false;
+    loaded.value = true;
+    // 安全超时：2秒后强制显示所有内容，防止 Observer 未触发导致内容不可见
+    if (revealTimeout) clearTimeout(revealTimeout);
+    revealTimeout = setTimeout(() => {
+      document.querySelectorAll('.links-page .reveal').forEach((el) => el.classList.add('visible'));
+    }, 2000);
   }
 }
 
 /**
- * 初始化 Intersection Observer
- * 监听组件内所有 .reveal 元素，进入视口时添加 visible 类触发动画
+ * 初始化滚动显示动画
+ * 使用 IntersectionObserver 监听带 .reveal 类的元素，可见时添加 .visible 类
  */
 function initObserver() {
   if (observer) observer.disconnect();
@@ -193,22 +106,29 @@ function initObserver() {
         }
       });
     },
-    { threshold: 0.1, rootMargin: '0px 0px -60px 0px' }
+    { threshold: 0.15, rootMargin: '0px 0px -40px 0px' }
   );
   rootRef.value.querySelectorAll('.reveal').forEach((el) => observer.observe(el));
 }
 
+/**
+ * 组件挂载时加载数据
+ */
 onMounted(() => {
   loadLinks();
 });
 
+/**
+ * 组件卸载时清理资源
+ */
 onUnmounted(() => {
   if (observer) observer.disconnect();
+  if (revealTimeout) clearTimeout(revealTimeout);
 });
 </script>
 
 <style scoped>
-/* ========== Hero 区域：黑红血月主题 ========== */
+/* ========== Hero 区域 ========== */
 .hero {
   position: relative;
   padding: 120px 32px 80px;
@@ -218,27 +138,24 @@ onUnmounted(() => {
     rgba(10, 14, 26, 0.45) 50%,
     rgba(18, 24, 40, 0.65) 100%
   );
-  backdrop-filter: blur(2px);
   overflow: hidden;
   color: #fff;
   isolation: isolate;
   border-bottom: 1px solid var(--border);
-  transition: opacity 0.8s ease-out;
 }
 
-/* 血月背景光晕 */
 .hero::before {
   content: '';
   position: absolute;
-  top: 10%;
+  top: 5%;
   left: 50%;
   transform: translateX(-50%);
-  width: 400px;
-  height: 400px;
+  width: 480px;
+  height: 480px;
   background: radial-gradient(
     circle,
-    rgba(220, 38, 38, 0.12) 0%,
-    rgba(153, 27, 27, 0.05) 40%,
+    rgba(220, 38, 38, 0.1) 0%,
+    rgba(153, 27, 27, 0.04) 40%,
     transparent 70%
   );
   border-radius: 50%;
@@ -254,10 +171,8 @@ onUnmounted(() => {
   text-align: center;
 }
 
-/* 英雄区结束标记：用于代码搜索锚点，此处无额外样式 */
-
 .hero-eyebrow {
-  margin: 0 0 16px;
+  margin: 0 0 20px;
   font-size: 13px;
   font-weight: 600;
   letter-spacing: 6px;
@@ -265,190 +180,117 @@ onUnmounted(() => {
 }
 
 .hero-title {
-  margin: 0 0 20px;
-  font-size: clamp(40px, 6vw, 64px);
+  margin: 0 0 24px;
+  font-size: clamp(48px, 8vw, 80px);
   font-weight: 800;
   letter-spacing: -2px;
   background: linear-gradient(180deg, #ffffff 0%, #fca5a5 60%, #dc2626 100%);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
-  filter: drop-shadow(0 0 20px rgba(220, 38, 38, 0.3));
 }
 
-.hero-subtitle {
-  margin: 0;
-  font-size: 16px;
-  color: rgba(241, 245, 249, 0.7);
+.hero-tagline {
+  margin: 0 auto;
+  max-width: 560px;
+  font-size: clamp(16px, 2vw, 18px);
+  font-weight: 400;
+  color: rgba(241, 245, 249, 0.6);
   letter-spacing: 1px;
 }
 
-/* Hero 装饰光斑（暗红调） */
-.hero-orb {
-  position: absolute;
-  top: -100px;
-  right: -60px;
-  width: 320px;
-  height: 320px;
-  background: radial-gradient(circle, rgba(220, 38, 38, 0.08) 0%, transparent 70%);
-  border-radius: 50%;
-  z-index: 1;
-  pointer-events: none;
-}
-
-/* 骨架屏适配暗色 */
-.skeleton-avatar,
-.skeleton-line {
-  background: linear-gradient(90deg, #1a2035 25%, #252d44 50%, #1a2035 75%);
-  background-size: 200% 100%;
-}
-
-/* ========== 内容区 ========== */
-.content-wrapper {
+/* ========== 友链网格 ========== */
+.link-grid {
   max-width: 960px;
   margin: 0 auto;
-  padding: 64px 32px 80px;
-  background: rgba(10, 14, 26, 0.3);
+  padding: 64px 32px 96px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 24px;
 }
 
-/* 分类区块：入场前隐藏 */
-.link-section {
-  margin-bottom: 64px;
+.link-card {
+  background: rgba(10, 14, 26, 0.4);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  backdrop-filter: blur(4px);
+  transition:
+    border-color 0.3s var(--ease-out),
+    transform 0.3s var(--ease-spring),
+    box-shadow 0.3s var(--ease-out);
   opacity: 0;
   transform: translateY(24px);
   transition:
     opacity 0.6s var(--ease-out),
-    transform 0.6s var(--ease-out);
-  transition-delay: calc(var(--row-index) * 80ms);
+    transform 0.6s var(--ease-out),
+    border-color 0.3s var(--ease-out),
+    box-shadow 0.3s var(--ease-out);
 }
 
-.link-section.visible {
+.link-card.visible {
   opacity: 1;
   transform: translateY(0);
 }
-
-.link-section:last-child {
-  margin-bottom: 0;
+.link-card:hover {
+  border-color: var(--primary);
+  box-shadow: 0 12px 48px rgba(220, 38, 38, 0.15);
+  transform: translateY(-4px);
+}
+.link-card.visible:hover {
+  transform: translateY(-4px);
 }
 
-/* 分类标题 */
-.section-header {
-  display: flex;
-  align-items: baseline;
-  gap: 14px;
-  margin-bottom: 20px;
-  padding-bottom: 14px;
-  border-bottom: 1px solid var(--border);
-}
-
-.section-title {
-  margin: 0;
-  font-size: 22px;
-  font-weight: 700;
-  color: var(--text-primary);
-  letter-spacing: -0.5px;
-}
-
-.section-sub {
-  font-size: 13px;
-  color: var(--text-tertiary);
-}
-
-/* ========== 站点列表（分隔线列表，非卡片） ========== */
-.link-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.link-row {
-  border-bottom: 1px solid var(--border);
-}
-
-.link-row:last-child {
-  border-bottom: none;
-}
-
-.link-inner {
+.link-card-inner {
   display: flex;
   align-items: center;
   gap: 18px;
-  padding: 18px 8px;
+  padding: 24px;
   text-decoration: none;
   color: inherit;
-  transition: transform 0.3s var(--ease-out);
 }
 
-/* 悬浮：整行上移 + 主色强调 */
-.link-inner:hover {
-  transform: translateY(-3px);
-}
-
-/* 头像 */
 .link-avatar {
   flex-shrink: 0;
-  width: 48px;
-  height: 48px;
+  width: 56px;
+  height: 56px;
   border-radius: 50%;
-  overflow: hidden;
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: transform 0.3s var(--ease-spring);
-}
-
-.link-avatar img {
-  width: 100%;
-  height: 100%;
   object-fit: cover;
+  border: 2px solid var(--border);
+  transition: border-color 0.3s var(--ease-out);
 }
 
-/* 悬浮时头像放大 */
-.link-inner:hover .link-avatar {
-  transform: scale(1.12);
+.link-card:hover .link-avatar {
+  border-color: var(--primary);
 }
 
-/* 首字母占位 */
-.avatar-fallback {
-  font-size: 20px;
-  font-weight: 800;
-  color: #fff;
-}
-
-/* 名称与描述 */
 .link-info {
   flex: 1;
   min-width: 0;
 }
 
 .link-name {
-  margin: 0 0 4px;
-  font-size: 16px;
+  margin: 0 0 6px;
+  font-size: 17px;
   font-weight: 700;
   color: var(--text-primary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
   transition: color 0.25s var(--ease-out);
 }
 
-/* 悬浮时名称变主色 */
-.link-inner:hover .link-name {
+.link-card:hover .link-name {
   color: var(--primary);
 }
 
 .link-desc {
   margin: 0;
   font-size: 13px;
-  color: var(--text-tertiary);
   line-height: 1.5;
-  white-space: nowrap;
+  color: var(--text-tertiary);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
 }
 
-/* 访问箭头 */
 .link-arrow {
   flex-shrink: 0;
   font-size: 18px;
@@ -459,93 +301,19 @@ onUnmounted(() => {
     color 0.25s var(--ease-out);
 }
 
-/* 悬浮时箭头变主色并右移 */
-.link-inner:hover .link-arrow {
+.link-card:hover .link-arrow {
   color: var(--primary);
-  transform: translateX(6px);
-}
-
-/* ========== 骨架屏 ========== */
-.skeleton-list {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.skeleton-row {
-  display: flex;
-  align-items: center;
-  gap: 18px;
-  padding: 18px 8px;
-}
-
-.skeleton-avatar {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  background: #1a2035;
-}
-
-.skeleton-lines {
-  flex: 1;
-}
-
-.skeleton-line {
-  height: 12px;
-  margin-bottom: 8px;
-  border-radius: 6px;
-  background: #1a2035;
-}
-
-.skeleton-line:last-child {
-  margin-bottom: 0;
-}
-
-.w-40 {
-  width: 40%;
-}
-.w-80 {
-  width: 80%;
-}
-
-/* ========== 空状态 ========== */
-.empty-state {
-  text-align: center;
-  padding: 80px 20px;
-}
-
-.empty-title {
-  margin: 0 0 8px;
-  font-size: 20px;
-  font-weight: 700;
-  color: var(--text-secondary);
-}
-
-.empty-desc {
-  margin: 0;
-  font-size: 14px;
-  color: var(--text-tertiary);
+  transform: translateX(4px);
 }
 
 /* ========== 响应式 ========== */
 @media (max-width: 768px) {
   .hero {
-    padding: 56px 20px 48px;
+    padding: 80px 20px 56px;
   }
-  .content-wrapper {
-    padding: 40px 16px 56px;
-  }
-  .section-title {
-    font-size: 18px;
-  }
-  .link-inner {
-    gap: 14px;
-    padding: 16px 4px;
-  }
-  .link-avatar {
-    width: 42px;
-    height: 42px;
+  .link-grid {
+    padding: 40px 20px 64px;
+    grid-template-columns: 1fr;
   }
 }
 </style>

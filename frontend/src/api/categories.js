@@ -3,13 +3,21 @@
  * 作用：封装文章分类的公开浏览和后台管理接口
  */
 import request from './request';
+import { listCache } from './cache';
 
 /**
- * 获取分类列表（公开）
+ * 获取分类列表（公开，缓存 60s）
  * @returns {Promise} 分类列表
  */
 export function getCategories() {
-  return request.get('/categories');
+  const key = 'getCategories';
+  const cached = listCache.get(key);
+  if (cached) return Promise.resolve(cached);
+
+  return request.get('/categories', { params: { with_count: 'true' } }).then((res) => {
+    listCache.set(key, res);
+    return res;
+  });
 }
 
 /**

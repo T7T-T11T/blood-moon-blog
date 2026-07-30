@@ -20,16 +20,24 @@
  * - deleteArticle(id)                   删除文章
  */
 import request from './request';
+import { listCache, defaultCache, cacheKey } from './cache';
 
 // ==================== 公开接口 ====================
 
 /**
- * 获取已发布文章列表（公开接口）
+ * 获取已发布文章列表（公开接口，缓存 60s）
  * @param {Object} params - 查询参数 { page, page_size, category_id, tag_id, keyword }
  * @returns {Promise} 文章分页列表
  */
 export function getPublicArticles(params) {
-  return request.get('/articles/public', { params });
+  const key = cacheKey(getPublicArticles, params);
+  const cached = listCache.get(key);
+  if (cached) return Promise.resolve(cached);
+
+  return request.get('/articles/public', { params }).then((res) => {
+    listCache.set(key, res);
+    return res;
+  });
 }
 
 /**
@@ -42,21 +50,35 @@ export function getArticleDetail(id) {
 }
 
 /**
- * 获取最新文章（公开接口）
+ * 获取最新文章（公开接口，缓存 60s）
  * @param {number} limit - 限制数量，默认5
  * @returns {Promise} 最新文章列表
  */
 export function getLatestArticles(limit = 5) {
-  return request.get('/articles/public/latest', { params: { limit } });
+  const key = cacheKey(getLatestArticles, limit);
+  const cached = listCache.get(key);
+  if (cached) return Promise.resolve(cached);
+
+  return request.get('/articles/public/latest', { params: { limit } }).then((res) => {
+    listCache.set(key, res);
+    return res;
+  });
 }
 
 /**
- * 获取热门文章（公开接口，按浏览量排序）
+ * 获取热门文章（公开接口，按浏览量排序，缓存 30s）
  * @param {number} limit - 限制数量，默认5
  * @returns {Promise} 热门文章列表
  */
 export function getHotArticles(limit = 5) {
-  return request.get('/articles/public/hot', { params: { limit } });
+  const key = cacheKey(getHotArticles, limit);
+  const cached = defaultCache.get(key);
+  if (cached) return Promise.resolve(cached);
+
+  return request.get('/articles/public/hot', { params: { limit } }).then((res) => {
+    defaultCache.set(key, res);
+    return res;
+  });
 }
 
 /**
@@ -80,11 +102,27 @@ export function getArticlesByTag(slug, params) {
 }
 
 /**
- * 获取文章归档列表（公开接口）
+ * 获取文章归档列表（公开接口，缓存 60s）
  * @returns {Promise} 按年月分组的文章归档
  */
 export function getArticleArchives() {
-  return request.get('/articles/public/archives');
+  const key = 'getArticleArchives';
+  const cached = listCache.get(key);
+  if (cached) return Promise.resolve(cached);
+
+  return request.get('/articles/public/archives').then((res) => {
+    listCache.set(key, res);
+    return res;
+  });
+}
+
+/**
+ * 全站搜索文章（公开接口）
+ * @param {Object} params - 查询参数 { keyword, page, page_size }
+ * @returns {Promise} 搜索结果
+ */
+export function searchArticles(params) {
+  return request.get('/articles/public/search', { params });
 }
 
 // ==================== 管理接口 ====================

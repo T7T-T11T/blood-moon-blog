@@ -7,11 +7,11 @@ import { createPinia } from 'pinia';
 import piniaPluginPersistedstate from 'pinia-plugin-persistedstate';
 import ElementPlus from 'element-plus';
 import 'element-plus/dist/index.css';
-import * as ElementPlusIconsVue from '@element-plus/icons-vue';
 
 import App from './App.vue';
 import router from './router';
 import './style.css';
+import lazyLoad from './directives/lazyLoad';
 
 const app = createApp(App);
 
@@ -26,10 +26,8 @@ app.use(router);
 // 注册 Element Plus UI 组件库
 app.use(ElementPlus);
 
-// 注册 Element Plus 图标（全局组件）
-for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
-  app.component(key, component);
-}
+// 注册图片懒加载自定义指令
+app.directive('lazy', lazyLoad);
 
 // 挂载到 #app 元素
 app.mount('#app');
