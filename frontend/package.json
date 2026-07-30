@@ -1,6 +1,6 @@
 {
   "name": "task-manager-frontend",
-  "version": "1.11.2",
+  "version": "1.12.0",
   "description": "任务管理系统前端 - Vue 3 + Vite + Element Plus",
   "type": "module",
   "scripts": {

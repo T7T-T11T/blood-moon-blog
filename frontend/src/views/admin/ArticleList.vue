@@ -52,7 +52,10 @@
         <el-table-column label="文章" min-width="280">
           <template #default="{ row }">
             <div class="article-cell" @click="goToEdit(row.id)">
-              <h4 class="article-title">{{ row.title }}</h4>
+              <h4 class="article-title">
+                <el-tag v-if="row.is_top" type="danger" size="small" effect="dark" class="top-tag">置顶</el-tag>
+                {{ row.title }}
+              </h4>
               <p v-if="row.summary" class="article-summary">{{ row.summary }}</p>
             </div>
           </template>
@@ -107,9 +110,29 @@
         </el-table-column>
 
         <!-- 操作列 -->
-        <el-table-column label="操作" width="140" fixed="right">
+        <el-table-column label="操作" width="260" fixed="right">
           <template #default="{ row }">
             <el-button type="primary" size="small" text @click="goToEdit(row.id)">编辑</el-button>
+            <el-button
+              :type="row.is_top ? 'warning' : 'info'"
+              size="small"
+              text
+              @click="handleToggleTop(row)"
+            >
+              {{ row.is_top ? '取消置顶' : '置顶' }}
+            </el-button>
+            <el-dropdown trigger="click" @command="(cmd) => handleExportSingle(row.id, cmd)">
+              <el-button type="success" size="small" text>
+                <el-icon><Download /></el-icon>
+                导出
+              </el-button>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item command="markdown">Markdown (.md)</el-dropdown-item>
+                  <el-dropdown-item command="html">HTML (.html)</el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
             <el-button type="danger" size="small" text @click="handleDelete(row)">删除</el-button>
           </template>
         </el-table-column>
@@ -150,7 +173,7 @@ import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { Search, Plus, Document, Download } from '@element-plus/icons-vue';
-import { getArticles, deleteArticle } from '@/api/articles';
+import { getArticles, deleteArticle, exportArticle, toggleTop } from '@/api/articles';
 
 const router = useRouter();
 
@@ -295,43 +318,103 @@ async function handleDelete(article) {
 }
 
 /**
- * 导出文章数据
- * 调用后端导出接口，下载 JSON 文件
+ * 切换文章置顶状态
+ * @param {Object} article - 文章数据
  */
-async function handleExportArticles() {
+async function handleToggleTop(article) {
+  try {
+    const res = await toggleTop(article.id);
+    if (res.code === 200) {
+      ElMessage.success(res.message);
+      loadArticles();
+    }
+  } catch (e) {
+    console.error('切换置顶失败:', e);
+    ElMessage.error('操作失败，请稍后重试');
+  }
+}
+
+/**
+ * 导出单篇文章为指定格式
+ * @param {number} id - 文章ID
+ * @param {string} format - 导出格式 (markdown / html)
+ */
+async function handleExportSingle(id, format = 'markdown') {
   try {
     loading.value = true;
-    const params = {};
-    if (filterStatus.value !== '全部') params.status = filterStatus.value;
-    if (searchKeyword.value.trim()) params.keyword = searchKeyword.value.trim();
+    const res = await exportArticle(id, format);
 
-    const res = await fetch('/api/export/articles', {
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
-      }
-    });
+    // 拦截器已返回 response.data，blob 响应直接就是 Blob 对象
+    const blob = res instanceof Blob ? res : new Blob([res]);
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    const ext = format === 'markdown' ? 'md' : 'html';
+    link.download = `article_${id}_${Date.now()}.${ext}`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
 
-    if (!res.ok) {
-      throw new Error('导出失败');
-    }
-
-    const data = await res.json();
-    if (data.code === 200) {
-      // 创建下载链接
-      const blob = new Blob([JSON.stringify(data.data, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `articles_${Date.now()}.json`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-      ElMessage.success(`成功导出 ${data.total} 篇文章`);
-    }
+    ElMessage.success('导出成功');
   } catch (e) {
     console.error('导出文章失败:', e);
     ElMessage.error('导出失败，请稍后重试');
+  } finally {
+    loading.value = false;
+  }
+}
+
+/**
+ * 批量导出当前页文章为 Markdown 格式
+ */
+async function handleExportArticles() {
+  if (articles.value.length === 0) {
+    ElMessage.warning('当前页没有可导出的文章');
+    return;
+  }
+
+  try {
+    await ElMessageBox.confirm(
+      `确定要导出当前页的 ${articles.value.length} 篇文章为 Markdown 格式吗？`,
+      '批量导出确认',
+      { confirmButtonText: '确定导出', cancelButtonText: '取消', type: 'info' }
+    );
+
+    loading.value = true;
+    let exported = 0;
+    let failed = 0;
+
+    for (const article of articles.value) {
+      try {
+        const res = await exportArticle(article.id, 'markdown');
+        const blob = res instanceof Blob ? res : new Blob([res]);
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${article.title}_${Date.now()}.md`.replace(/[^\w\u4e00-\u9fa5.-]/g, '_');
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        exported++;
+        // 延迟一下避免浏览器弹窗过快
+        await new Promise((_resolve) => setTimeout(_resolve, 300));
+      } catch (err) {
+        failed++;
+      }
+    }
+
+    if (failed === 0) {
+      ElMessage.success(`成功导出 ${exported} 篇文章`);
+    } else {
+      ElMessage.warning(`导出完成：成功 ${exported} 篇，失败 ${failed} 篇`);
+    }
+  } catch (e) {
+    if (e !== 'cancel') {
+      console.error('批量导出失败:', e);
+      ElMessage.error('导出失败，请稍后重试');
+    }
   } finally {
     loading.value = false;
   }
@@ -437,6 +520,14 @@ onMounted(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   transition: color 0.2s var(--ease-out);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.top-tag {
+  flex-shrink: 0;
+  font-size: 11px;
 }
 
 .article-summary {

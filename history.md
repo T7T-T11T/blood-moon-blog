@@ -1,5 +1,19 @@
 # 版本历史
 
+## v1.12.0 (2026-07-31)
+
+- feat(editor): 文章编辑器新增自动保存功能（草稿恢复 + 30秒自动保存）
+- feat(dashboard): Dashboard增强（活动流展示 + 统计图表 + 快捷入口优化）
+- feat(comments): 评论通知增强（后台评论提醒 + 待审核标记）
+- feat(export): 文章导出功能（支持 Markdown/HTML 格式导出）
+- feat(top): 文章置顶功能（后台置顶切换 + 首页置顶文章优先展示）
+- feat(lightbox): 图片灯箱功能（文章详情页点击图片放大预览，支持ESC关闭）
+- feat(codeblock): 代码块增强（一键复制 + 语言标注 + 复制反馈动画）
+- feat(interaction): 微交互动效增强（按钮涟漪效果 + 悬浮发光 + 按压反馈 + 闪光扫过）
+- feat(interaction): 首页文章列表添加点击涟漪效果
+- fix(lint): 修复 ESLint 警告（未使用变量 resolve、Link 导入）
+- 前后端版本号统一升级至 1.12.0
+
 ## v1.11.2 (2026-07-30)
 
 - feat(log): 登录接口添加 logLogin 日志记录

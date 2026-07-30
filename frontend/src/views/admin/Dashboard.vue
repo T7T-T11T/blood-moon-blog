@@ -81,9 +81,63 @@
         >
           <el-icon :size="28" color="var(--primary)"><component :is="action.icon" /></el-icon>
           <span>{{ action.label }}</span>
+          <span v-if="action.label === '评论管理' && pendingComments > 0" class="badge">{{ pendingComments }}</span>
         </router-link>
       </div>
     </section>
+
+    <!-- 最近活动 + 待办提醒 -->
+    <div class="content-row">
+      <!-- 待办提醒 -->
+      <section class="content-card animate-fade-in-up delay-300">
+        <div class="card-header">
+          <h3 class="card-title">
+            <el-icon><Bell /></el-icon>
+            待办提醒
+          </h3>
+        </div>
+        <div class="card-body">
+          <div class="todo-item">
+            <div class="todo-icon comment">
+              <el-icon><ChatDotSquare /></el-icon>
+            </div>
+            <div class="todo-info">
+              <span class="todo-title">待审核评论</span>
+              <span class="todo-desc">有 {{ pendingComments }} 条评论等待审核</span>
+            </div>
+            <router-link to="/admin/comments?status=待审核" class="todo-action">
+              去处理
+            </router-link>
+          </div>
+          <div v-if="pendingComments === 0" class="empty-tip">暂无待办事项</div>
+        </div>
+      </section>
+
+      <!-- 最近活动 -->
+      <section class="content-card animate-fade-in-up delay-400">
+        <div class="card-header">
+          <h3 class="card-title">
+            <el-icon><TrendCharts /></el-icon>
+            最近活动
+          </h3>
+          <router-link to="/admin/logs" class="view-all">查看日志</router-link>
+        </div>
+        <div class="card-body">
+          <div v-for="log in recentLogs" :key="log.id" class="log-item">
+            <div class="log-dot" :class="log.resource_type"></div>
+            <div class="log-info">
+              <span class="log-action">{{ log.action }}</span>
+              <span class="log-user">{{ log.username }}</span>
+              <span v-if="log.resource_type" class="log-resource">
+                {{ getResourceLabel(log.resource_type) }}
+              </span>
+            </div>
+            <span class="log-time">{{ formatTime(log.created_at) }}</span>
+          </div>
+          <div v-if="!recentLogs.length" class="empty-tip">暂无活动记录</div>
+        </div>
+      </section>
+    </div>
   </div>
 </template>
 
@@ -103,11 +157,15 @@ import {
   TrendCharts,
   Clock,
   EditPen,
-  Link
+  Bell,
+  ChatDotSquare,
+  Delete
 } from '@element-plus/icons-vue';
 import { getHotArticles } from '@/api/articles';
 import { getDashboardStatsAPI } from '@/api/dashboard';
 import { getVisitStats } from '@/api/visits';
+import { getLogs } from '@/api/logs';
+import { getComments } from '@/api/comments';
 import { DataLine } from '@element-plus/icons-vue';
 
 /** 统计数据 */
@@ -120,12 +178,20 @@ const hotArticles = ref([]);
 /** 最新文章列表 */
 const latestArticles = ref([]);
 
+/** 最近活动 */
+const recentLogs = ref([]);
+
+/** 待审核评论数 */
+const pendingComments = ref(0);
+
 /** 快捷操作项（markRaw 避免图标组件响应式包装） */
 const quickActions = [
   { label: '写文章', path: '/admin/articles/add', icon: markRaw(EditPen) },
   { label: '管理分类', path: '/admin/categories', icon: markRaw(Folder) },
   { label: '管理标签', path: '/admin/tags', icon: markRaw(PriceTag) },
-  { label: '友链管理', path: '/admin/links', icon: markRaw(Link) }
+  { label: '评论管理', path: '/admin/comments', icon: markRaw(ChatDotSquare) },
+  { label: '回收站', path: '/admin/trash', icon: markRaw(Delete) },
+  { label: '系统设置', path: '/admin/settings', icon: markRaw(Bell) }
 ];
 
 /** 统计卡片配置（根据 stats 计算得出） */
@@ -155,14 +221,52 @@ function formatDate(dateStr) {
 }
 
 /**
+ * 格式化时间为相对时间
+ * @param {string} dateStr - 后端返回的时间字符串
+ * @returns {string} 相对时间描述
+ */
+function formatTime(dateStr) {
+  if (!dateStr) return '';
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diff = now - date;
+
+  if (diff < 60000) return '刚刚';
+  if (diff < 3600000) return `${Math.floor(diff / 60000)} 分钟前`;
+  if (diff < 86400000) return `${Math.floor(diff / 3600000)} 小时前`;
+  if (diff < 604800000) return `${Math.floor(diff / 86400000)} 天前`;
+  return date.toLocaleDateString('zh-CN');
+}
+
+/**
+ * 获取资源类型中文标签
+ * @param {string} type - 资源类型
+ * @returns {string} 中文标签
+ */
+function getResourceLabel(type) {
+  const map = {
+    article: '文章',
+    category: '分类',
+    tag: '标签',
+    comment: '评论',
+    link: '友链',
+    music: '音乐',
+    user: '用户'
+  };
+  return map[type] || type;
+}
+
+/**
  * 并行加载仪表盘所有数据
  * 使用 Promise.allSettled 保证单个接口失败不影响其他数据展示
  */
 async function loadDashboard() {
-  const [dashboardRes, hotRes, visitRes] = await Promise.allSettled([
+  const [dashboardRes, hotRes, visitRes, logsRes, commentsRes] = await Promise.allSettled([
     getDashboardStatsAPI(),
     getHotArticles(5),
-    getVisitStats()
+    getVisitStats(),
+    getLogs({ page: 1, page_size: 8 }),
+    getComments({ status: '待审核', page: 1, page_size: 1 })
   ]);
 
   // 仪表盘统计：文章数、总阅读、分类数、标签数、最新文章
@@ -183,6 +287,16 @@ async function loadDashboard() {
   // 访问统计
   if (visitRes.status === 'fulfilled' && visitRes.value.code === 200) {
     visitStats.value = visitRes.value.data;
+  }
+
+  // 最近活动
+  if (logsRes.status === 'fulfilled' && logsRes.value.code === 200) {
+    recentLogs.value = logsRes.value.data?.list || [];
+  }
+
+  // 待审核评论数
+  if (commentsRes.status === 'fulfilled' && commentsRes.value.code === 200) {
+    pendingComments.value = commentsRes.value.data?.pagination?.total || 0;
   }
 }
 
@@ -419,6 +533,145 @@ onMounted(() => {
   background: var(--primary-bg);
   transform: translateY(-3px);
   box-shadow: var(--shadow-md);
+}
+
+/* 快捷操作徽章 */
+.action-card .badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  background: #ef4444;
+  color: #fff;
+  border-radius: 9px;
+  font-size: 11px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: pulse 2s infinite;
+}
+
+.action-card {
+  position: relative;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+/* ========== 待办提醒 ========== */
+.todo-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.todo-item:last-child {
+  border-bottom: none;
+}
+
+.todo-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.todo-icon.comment {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+}
+
+.todo-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.todo-title {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.todo-desc {
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
+.todo-action {
+  font-size: 13px;
+  color: var(--primary);
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
+.todo-action:hover {
+  color: var(--primary-dark);
+}
+
+/* ========== 最近活动 ========== */
+.log-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.log-item:last-child {
+  border-bottom: none;
+}
+
+.log-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.log-dot.article { background: var(--primary); }
+.log-dot.category { background: #f59e0b; }
+.log-dot.tag { background: #8b5cf6; }
+.log-dot.comment { background: #10b981; }
+.log-dot.user { background: #3b82f6; }
+.log-dot.link { background: #ec4899; }
+.log-dot.music { background: #06b6d4; }
+
+.log-info {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+}
+
+.log-action {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.log-user {
+  color: var(--text-tertiary);
+  margin: 0 4px;
+}
+
+.log-resource {
+  color: var(--text-tertiary);
+  font-size: 12px;
+}
+
+.log-time {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  flex-shrink: 0;
 }
 
 /* ========== 响应式 ========== */

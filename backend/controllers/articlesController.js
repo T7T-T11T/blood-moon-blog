@@ -230,6 +230,32 @@ exports.deleteArticle = async (req, res) => {
   }
 };
 
+/**
+ * 切换文章置顶状态
+ * PUT /api/articles/:id/toggle-top
+ */
+exports.toggleTop = async (req, res) => {
+  try {
+    const result = await articleService.toggleTop({
+      id: req.params.id,
+      userId: req.user.id
+    });
+
+    if (!result) {
+      return res.status(404).json({ code: 404, message: '文章不存在' });
+    }
+
+    res.json({
+      code: 200,
+      message: result.is_top ? '已置顶' : '已取消置顶',
+      data: { is_top: result.is_top }
+    });
+  } catch (e) {
+    console.error('切换置顶状态失败：', e);
+    res.status(500).json({ code: 500, message: '服务器错误' });
+  }
+};
+
 // ==================== 回收站接口 ====================
 
 /**
@@ -306,6 +332,40 @@ exports.clearAllTrash = async (req, res) => {
     res.json({ code: 200, message: `已清空回收站，共删除 ${count} 篇文章` });
   } catch (e) {
     console.error('清空回收站失败：', e);
+    res.status(500).json({ code: 500, message: '服务器错误' });
+  }
+};
+
+// ==================== 导出接口 ====================
+
+/**
+ * 导出文章
+ * GET /api/articles/:id/export?format=markdown|html
+ */
+exports.exportArticle = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const format = req.query.format || 'markdown';
+
+    if (!['markdown', 'html'].includes(format)) {
+      return res.status(400).json({ code: 400, message: '不支持的导出格式' });
+    }
+
+    const result = await articleService.exportArticle({
+      id,
+      userId: req.user.id,
+      format
+    });
+
+    if (!result) {
+      return res.status(404).json({ code: 404, message: '文章不存在' });
+    }
+
+    res.setHeader('Content-Type', result.contentType + '; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(result.fileName)}"`);
+    res.send(result.content);
+  } catch (e) {
+    console.error('导出文章失败：', e);
     res.status(500).json({ code: 500, message: '服务器错误' });
   }
 };

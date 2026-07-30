@@ -1005,13 +1005,37 @@ body {
 }
 
 .hover-glow {
-  transition: box-shadow var(--dur-normal) var(--ease-out);
+  transition:
+    box-shadow var(--dur-normal) var(--ease-out),
+    border-color var(--dur-normal) var(--ease-out);
 }
 
 .hover-glow:hover {
-  box-shadow: 0 0 20px rgba(220, 38, 38, 0.3);
+  box-shadow:
+    0 0 15px rgba(220, 38, 38, 0.2),
+    0 0 30px rgba(220, 38, 38, 0.1);
 }
 
+.hover-glow-primary:hover {
+  box-shadow:
+    0 0 20px rgba(220, 38, 38, 0.4),
+    0 0 40px rgba(220, 38, 38, 0.2),
+    inset 0 0 20px rgba(220, 38, 38, 0.05);
+}
+
+.hover-glow-success:hover {
+  box-shadow:
+    0 0 20px rgba(16, 185, 129, 0.4),
+    0 0 40px rgba(16, 185, 129, 0.2);
+}
+
+.hover-glow-blue:hover {
+  box-shadow:
+    0 0 20px rgba(59, 130, 246, 0.4),
+    0 0 40px rgba(59, 130, 246, 0.2);
+}
+
+/* 按钮涟漪效果 */
 .click-ripple {
   position: relative;
   overflow: hidden;
@@ -1033,6 +1057,159 @@ body {
 
 .click-ripple:active::after {
   animation: ripple 0.6s ease-out;
+}
+
+/* 动态涟漪按钮 - 使用 JS 驱动的涟漪 */
+.btn-ripple {
+  position: relative;
+  overflow: hidden;
+  transform: translate3d(0, 0, 0);
+}
+
+.btn-ripple .ripple-effect {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.4);
+  transform: scale(0);
+  animation: btnRipple 0.6s ease-out;
+  pointer-events: none;
+}
+
+@keyframes btnRipple {
+  to {
+    transform: scale(4);
+    opacity: 0;
+  }
+}
+
+/* 悬浮发光边框 */
+.glow-border {
+  position: relative;
+}
+
+.glow-border::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, transparent 30%, rgba(220, 38, 38, 0.4) 50%, transparent 70%);
+  mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity var(--dur-normal) var(--ease-out);
+  pointer-events: none;
+}
+
+.glow-border:hover::before {
+  opacity: 1;
+}
+
+/* 按压反馈 */
+.press-effect {
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+
+.press-effect:active {
+  transform: scale(0.96);
+}
+
+/* 3D 按钮效果 */
+.btn-3d {
+  position: relative;
+  transform-style: preserve-3d;
+  transition:
+    transform var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out);
+}
+
+.btn-3d::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: inherit;
+  transform: translateZ(-4px);
+  filter: brightness(0.7);
+}
+
+.btn-3d:hover {
+  transform: translateY(-2px);
+}
+
+.btn-3d:active {
+  transform: translateY(2px);
+}
+
+/* 闪光扫过效果 */
+.shine-effect {
+  position: relative;
+  overflow: hidden;
+}
+
+.shine-effect::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.1) 50%,
+    transparent 100%
+  );
+  transition: left 0.6s ease;
+}
+
+.shine-effect:hover::before {
+  left: 100%;
+}
+
+/* 图标旋转效果 */
+.icon-spin {
+  transition: transform var(--dur-normal) var(--ease-in-out);
+}
+
+.icon-spin:hover {
+  transform: rotate(180deg);
+}
+
+/* 弹性反馈 */
+.bounce-effect {
+  transition: transform var(--dur-normal) var(--ease-spring);
+}
+
+.bounce-effect:hover {
+  transform: scale(1.05);
+}
+
+.bounce-effect:active {
+  transform: scale(0.95);
+}
+
+/* 渐变边框悬浮 */
+.gradient-border-hover {
+  position: relative;
+  z-index: 0;
+}
+
+.gradient-border-hover::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(135deg, rgba(220, 38, 38, 0.2), transparent);
+  opacity: 0;
+  transition: opacity var(--dur-normal) var(--ease-out);
+  z-index: -1;
+}
+
+.gradient-border-hover:hover::after {
+  opacity: 1;
 }
 
 /* ========== 延迟动画 ========== */

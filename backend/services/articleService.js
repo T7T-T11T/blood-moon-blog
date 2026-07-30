@@ -85,13 +85,13 @@ async function getPublishedArticles({ page = 1, pageSize = 10, category_id, tag_
   const offset = (page - 1) * pageSize;
   const [rows] = await pool.execute(
     `SELECT DISTINCT a.id, a.title, a.summary, a.cover_image, a.status, a.view_count,
-            a.category_id, a.created_at, a.updated_at,
+            a.category_id, a.created_at, a.updated_at, a.is_top,
             c.name as category_name, c.slug as category_slug
      ${fromClause}
      ${joinClause}
      LEFT JOIN categories c ON a.category_id = c.id
      WHERE ${whereClause}
-     ORDER BY a.created_at DESC
+     ORDER BY a.is_top DESC, a.created_at DESC
      LIMIT ? OFFSET ?`,
     [...params, String(pageSize), String(offset)]
   );
@@ -443,6 +443,33 @@ async function deleteArticle({ id, userId }) {
 }
 
 /**
+ * 切换文章置顶状态
+ * @param {Object} params - 参数对象
+ * @param {number} params.id - 文章ID
+ * @param {number} params.userId - 用户ID
+ * @returns {Promise<Object>} 包含新置顶状态的对象
+ */
+async function toggleTop({ id, userId }) {
+  // 获取当前置顶状态
+  const [articles] = await pool.execute(
+    'SELECT is_top FROM articles WHERE id = ? AND user_id = ? AND deleted_at IS NULL',
+    [id, userId]
+  );
+
+  if (!articles.length) {
+    return null;
+  }
+
+  const newTop = articles[0].is_top ? 0 : 1;
+  await pool.execute(
+    'UPDATE articles SET is_top = ? WHERE id = ? AND user_id = ?',
+    [newTop, id, userId]
+  );
+
+  return { is_top: newTop };
+}
+
+/**
  * 全站搜索文章（按标题和内容模糊匹配）
  * 转义用户输入中的 LIKE 通配符，防止搜索逻辑被注入
  * 只查询未被软删除的文章
@@ -680,6 +707,102 @@ async function clearAllTrash({ userId }) {
   }
 }
 
+// ==================== 导出功能 ====================
+
+/**
+ * 导出文章为 Markdown 或 HTML 格式
+ * @param {Object} params - 参数对象
+ * @param {number} params.id - 文章ID
+ * @param {number} params.userId - 用户ID
+ * @param {string} params.format - 导出格式 (markdown / html)
+ * @returns {Promise<Object>} 包含文件名和内容的对象
+ */
+async function exportArticle({ id, userId, format = 'markdown' }) {
+  const [articles] = await pool.execute(
+    `SELECT a.id, a.title, a.content, a.summary, a.status, a.created_at, a.updated_at,
+            c.name as category_name
+     FROM articles a
+     LEFT JOIN categories c ON a.category_id = c.id
+     WHERE a.id = ? AND a.user_id = ? AND a.deleted_at IS NULL`,
+    [id, userId]
+  );
+
+  if (!articles.length) {
+    return null;
+  }
+
+  const article = articles[0];
+
+  // 获取标签
+  const [tags] = await pool.execute(
+    `SELECT t.name FROM tags t
+     JOIN article_tags at ON t.id = at.tag_id
+     WHERE at.article_id = ?`,
+    [id]
+  );
+  const tagNames = tags.map((t) => t.name);
+
+  if (format === 'markdown') {
+    const frontmatter = [
+      '---',
+      `title: "${article.title.replace(/"/g, '\\"')}"`,
+      `date: ${article.created_at.toISOString().split('T')[0]}`,
+      `category: ${article.category_name || '未分类'}`,
+      `tags: [${tagNames.map((t) => `"${t}"`).join(', ')}]`,
+      `status: ${article.status}`,
+      article.summary ? `summary: "${article.summary.replace(/"/g, '\\"')}"` : '',
+      '---',
+      ''
+    ].filter(Boolean).join('\n');
+
+    const content = `${frontmatter}\n# ${article.title}\n\n${article.content}`;
+    const fileName = `${article.title}_${Date.now()}.md`.replace(/[^\w\u4e00-\u9fa5.-]/g, '_');
+    return { fileName, content, contentType: 'text/markdown' };
+  }
+
+  if (format === 'html') {
+    const meta = `<!--
+  标题: ${article.title}
+  分类: ${article.category_name || '未分类'}
+  标签: ${tagNames.join(', ')}
+  状态: ${article.status}
+  创建时间: ${article.created_at}
+  更新时间: ${article.updated_at}
+-->`;
+
+    const content = `${meta}
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${article.title}</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; line-height: 1.6; color: #333; }
+    h1 { border-bottom: 2px solid #007bff; padding-bottom: 10px; }
+    h2, h3 { color: #2c3e50; }
+    pre { background: #f4f4f4; padding: 15px; border-radius: 5px; overflow-x: auto; }
+    code { background: #f0f0f0; padding: 2px 6px; border-radius: 3px; }
+    blockquote { border-left: 4px solid #007bff; margin: 0; padding: 10px 20px; background: #f8f9fa; }
+    img { max-width: 100%; height: auto; }
+  </style>
+</head>
+<body>
+  <h1>${article.title}</h1>
+  <div class="meta" style="color: #666; font-size: 14px; margin-bottom: 20px;">
+    ${article.category_name ? `<span>分类: ${article.category_name}</span>` : ''}
+    ${tagNames.length ? `<span style="margin-left: 10px;">标签: ${tagNames.join(', ')}</span>` : ''}
+  </div>
+  <article>${article.content}</article>
+</body>
+</html>`;
+    const fileName = `${article.title}_${Date.now()}.html`.replace(/[^\w\u4e00-\u9fa5.-]/g, '_');
+    return { fileName, content, contentType: 'text/html' };
+  }
+
+  return null;
+}
+
 module.exports = {
   getPublishedArticles,
   getLatestArticles,
@@ -695,8 +818,10 @@ module.exports = {
   createArticle,
   updateArticle,
   deleteArticle,
+  toggleTop,
   getTrashArticles,
   restoreArticle,
   permanentDeleteArticle,
-  clearAllTrash
+  clearAllTrash,
+  exportArticle
 };

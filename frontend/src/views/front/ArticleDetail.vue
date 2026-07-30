@@ -223,6 +223,16 @@
       <p class="error-text">文章不存在或已被删除</p>
       <button class="back-home-btn" @click="goHome">返回首页</button>
     </div>
+
+    <!-- 图片灯箱预览 -->
+    <Teleport to="body">
+      <transition name="fade">
+        <div v-if="showPreview" class="image-lightbox" @click="closePreview">
+          <img :src="previewImage" alt="预览" class="lightbox-img" @click.stop />
+          <button class="lightbox-close" @click="closePreview">✕</button>
+        </div>
+      </transition>
+    </Teleport>
   </div>
 </template>
 
@@ -261,6 +271,114 @@ const article = ref(null);
 const loading = ref(true);
 const coverImageError = ref(false);
 const articleBodyRef = ref(null);
+
+// ---- 图片灯箱 ----
+const previewImage = ref('');
+const showPreview = ref(false);
+
+/**
+ * 初始化图片点击事件
+ * 为文章内容中的所有图片添加点击放大功能
+ */
+function initImageLightbox() {
+  const imgs = articleBodyRef.value?.querySelectorAll('img');
+  if (!imgs || imgs.length === 0) return;
+
+  imgs.forEach((img) => {
+    img.style.cursor = 'zoom-in';
+    img.addEventListener('click', () => {
+      previewImage.value = img.src;
+      showPreview.value = true;
+    });
+  });
+}
+
+/**
+ * 初始化代码块增强功能
+ * 为代码块添加语言标注和一键复制按钮
+ */
+function initCodeBlocks() {
+  const codeBlocks = articleBodyRef.value?.querySelectorAll('pre');
+  if (!codeBlocks || codeBlocks.length === 0) return;
+
+  codeBlocks.forEach((pre) => {
+    const code = pre.querySelector('code');
+    if (!code) return;
+
+    // 获取语言类型（从 class 属性中提取，如 language-javascript）
+    const langClass = code.className.match(/language-(\w+)/);
+    const language = langClass ? langClass[1].toUpperCase() : 'TEXT';
+
+    // 创建代码块容器
+    const wrapper = document.createElement('div');
+    wrapper.className = 'code-block-wrapper';
+
+    // 创建头部（语言标注 + 复制按钮）
+    const header = document.createElement('div');
+    header.className = 'code-block-header';
+
+    const langLabel = document.createElement('span');
+    langLabel.className = 'code-block-lang';
+    langLabel.textContent = language;
+
+    const copyBtn = document.createElement('button');
+    copyBtn.className = 'code-copy-btn';
+    copyBtn.textContent = '复制';
+    copyBtn.addEventListener('click', () => {
+      const text = code.textContent;
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(text).then(() => {
+          copyBtn.textContent = '已复制';
+          copyBtn.classList.add('copied');
+          setTimeout(() => {
+            copyBtn.textContent = '复制';
+            copyBtn.classList.remove('copied');
+          }, 2000);
+        });
+      } else {
+        // 降级方案
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+        copyBtn.textContent = '已复制';
+        copyBtn.classList.add('copied');
+        setTimeout(() => {
+          copyBtn.textContent = '复制';
+          copyBtn.classList.remove('copied');
+        }, 2000);
+      }
+    });
+
+    header.appendChild(langLabel);
+    header.appendChild(copyBtn);
+
+    // 包装 pre 元素
+    pre.parentNode?.insertBefore(wrapper, pre);
+    wrapper.appendChild(header);
+    wrapper.appendChild(pre);
+  });
+}
+
+/**
+ * 关闭图片预览
+ */
+function closePreview() {
+  showPreview.value = false;
+  previewImage.value = '';
+}
+
+/**
+ * 键盘事件处理
+ * ESC 键关闭预览
+ */
+function handleKeydown(e) {
+  if (e.key === 'Escape' && showPreview.value) {
+    closePreview();
+  }
+}
 
 // ---- 点赞 ----
 const liked = ref(false);
@@ -401,6 +519,8 @@ async function loadArticle() {
     await nextTick();
     initRevealObserver();
     initLazyImages();
+    initImageLightbox();
+    initCodeBlocks();
     updateActiveToc();
     fetchInteractionStatus();
     // 加载相关文章
@@ -565,12 +685,14 @@ watch(
 onMounted(() => {
   loadArticle();
   window.addEventListener('scroll', handleScroll, { passive: true });
+  window.addEventListener('keydown', handleKeydown);
 });
 
 onUnmounted(() => {
   if (revealObserver) revealObserver.disconnect();
   if (lazyImgObserver) lazyImgObserver.disconnect();
   window.removeEventListener('scroll', handleScroll);
+  window.removeEventListener('keydown', handleKeydown);
 });
 </script>
 
@@ -867,13 +989,59 @@ onUnmounted(() => {
   font-family: var(--font-mono);
 }
 
+.article-body :deep(.code-block-wrapper) {
+  position: relative;
+  margin: 24px 0;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #1e293b;
+}
+
+.article-body :deep(.code-block-header) {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  background: rgba(0, 0, 0, 0.3);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.article-body :deep(.code-block-lang) {
+  font-size: 12px;
+  font-weight: 600;
+  color: #94a3b8;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.article-body :deep(.code-copy-btn) {
+  padding: 4px 12px;
+  font-size: 12px;
+  color: #94a3b8;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.article-body :deep(.code-copy-btn:hover) {
+  color: #e2e8f0;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.article-body :deep(.code-copy-btn.copied) {
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.15);
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
 .article-body :deep(pre) {
   padding: 20px;
   background: #1e293b;
   color: #e2e8f0;
-  border-radius: 12px;
   overflow-x: auto;
-  margin: 24px 0;
+  margin: 0;
   font-size: 14px;
   line-height: 1.6;
 }
@@ -1388,5 +1556,58 @@ onUnmounted(() => {
   .breadcrumb-current {
     max-width: 120px;
   }
+}
+
+/* ========== 图片灯箱 ========== */
+.image-lightbox {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  cursor: zoom-out;
+}
+
+.lightbox-img {
+  max-width: 90vw;
+  max-height: 90vh;
+  object-fit: contain;
+  border-radius: 8px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.lightbox-close {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  font-size: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+
+.lightbox-close:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* 灯箱过渡动画 */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 </style>

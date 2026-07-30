@@ -55,6 +55,8 @@ router.get('/public/:id', articlesController.getArticleDetail);
 
 router.get('/', authMiddleware, articlesController.getAdminArticles);
 router.get('/:id', authMiddleware, articlesController.getAdminArticleDetail);
+router.get('/:id/export', authMiddleware, logAction('导出文章', { resource_type: 'article' }), articlesController.exportArticle);
+router.put('/:id/toggle-top', authMiddleware, logAction('置顶文章', { resource_type: 'article' }), articlesController.toggleTop);
 router.post('/', authMiddleware, logAction('创建文章', { resource_type: 'article' }), articlesController.createArticle);
 router.put('/:id', authMiddleware, logAction('更新文章', { resource_type: 'article' }), articlesController.updateArticle);
 router.delete('/:id', authMiddleware, logAction('删除文章', { resource_type: 'article' }), articlesController.deleteArticle);

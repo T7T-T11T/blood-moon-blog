@@ -39,12 +39,15 @@
           <article
             v-for="(article, index) in articles"
             :key="article.id"
-            class="article-row"
+            class="article-row click-ripple"
             :style="{ '--row-index': index }"
-            @click="goToArticle(article.id)"
+            @click="handleArticleClick($event, article.id)"
           >
             <!-- 主色强调条 -->
             <span class="accent-bar" aria-hidden="true"></span>
+
+            <!-- 涟漪容器 -->
+            <span class="ripple-container" aria-hidden="true"></span>
 
             <!-- 文章主体 -->
             <div class="article-body">
@@ -221,6 +224,42 @@ function formatDate(dateStr) {
   const m = String(date.getMonth() + 1).padStart(2, '0');
   const d = String(date.getDate()).padStart(2, '0');
   return `${y}-${m}-${d}`;
+}
+
+/**
+ * 处理文章点击（带涟漪效果）
+ * @param {MouseEvent} event - 鼠标事件
+ * @param {number} id - 文章ID
+ */
+function handleArticleClick(event, id) {
+  // 创建涟漪效果
+  const target = event.currentTarget;
+  const ripple = document.createElement('span');
+  const rect = target.getBoundingClientRect();
+  const size = Math.max(rect.width, rect.height);
+  const x = event.clientX - rect.left - size / 2;
+  const y = event.clientY - rect.top - size / 2;
+
+  ripple.style.cssText = `
+    position: absolute;
+    width: ${size}px;
+    height: ${size}px;
+    left: ${x}px;
+    top: ${y}px;
+    background: rgba(220, 38, 38, 0.3);
+    border-radius: 50%;
+    transform: scale(0);
+    animation: homeRipple 0.6s ease-out forwards;
+    pointer-events: none;
+  `;
+
+  target.appendChild(ripple);
+  setTimeout(() => ripple.remove(), 600);
+
+  // 延迟跳转，让涟漪效果可见
+  setTimeout(() => {
+    router.push(`/article/${id}`);
+  }, 150);
 }
 
 /**
@@ -514,6 +553,22 @@ onUnmounted(() => {
 
 .article-row:hover {
   padding-left: 36px;
+}
+
+/* 涟漪容器 */
+.ripple-container {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+/* Home 页面涟漪动画 */
+@keyframes homeRipple {
+  to {
+    transform: scale(2);
+    opacity: 0;
+  }
 }
 
 .accent-bar {

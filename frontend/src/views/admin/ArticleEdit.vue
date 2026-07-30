@@ -105,6 +105,15 @@
             </el-button>
             <el-button size="large" :disabled="isNew" @click="handleCancel">取消</el-button>
           </div>
+          <!-- 自动保存状态 -->
+          <div v-if="lastSavedAt" class="auto-save-tip">
+            <el-icon><Clock /></el-icon>
+            <span>草稿已保存 {{ new Date(lastSavedAt).toLocaleTimeString('zh-CN') }}</span>
+          </div>
+          <div v-if="isDirty" class="auto-save-tip unsaved">
+            <el-icon><Warning /></el-icon>
+            <span>有未保存的修改</span>
+          </div>
         </div>
 
         <!-- 文章信息（仅编辑模式显示） -->
@@ -136,10 +145,10 @@
  *       支持保存、保存并发布、存为草稿三种操作。编辑模式下加载已有文章详情。
  * 依赖 API：getAdminArticleDetail / addArticle / updateArticle / getCategories / getTags
  */
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { ElMessage } from 'element-plus';
-import { Check, Promotion, Document } from '@element-plus/icons-vue';
+import { ElMessage, ElMessageBox } from 'element-plus';
+import { Check, Promotion, Document, Clock, Warning } from '@element-plus/icons-vue';
 import TipTapEditor from '@/components/TipTapEditor.vue';
 import { getAdminArticleDetail, addArticle, updateArticle } from '@/api/articles';
 import { getCategories } from '@/api/categories';
@@ -178,6 +187,129 @@ const form = ref({
   tag_ids: [],
   status: '草稿'
 });
+
+/** 自动保存相关状态 */
+const DRAFT_STORAGE_KEY = 'article_edit_draft';
+const autoSaveTimer = ref(null);
+const lastSavedAt = ref(null);
+const isDirty = ref(false);
+
+/**
+ * 草稿存储键（按文章ID区分）
+ * @returns {string} localStorage key
+ */
+const draftKey = computed(() => {
+  const id = route.params.id || 'new';
+  return `${DRAFT_STORAGE_KEY}_${id}`;
+});
+
+/**
+ * 保存草稿到 localStorage
+ */
+function saveDraft() {
+  const draft = {
+    title: form.value.title,
+    summary: form.value.summary,
+    content: form.value.content,
+    category_id: form.value.category_id,
+    tag_ids: form.value.tag_ids,
+    status: form.value.status,
+    savedAt: new Date().toISOString()
+  };
+  localStorage.setItem(draftKey.value, JSON.stringify(draft));
+  lastSavedAt.value = draft.savedAt;
+}
+
+/**
+ * 检测并恢复草稿
+ */
+function restoreDraft() {
+  const saved = localStorage.getItem(draftKey.value);
+  if (!saved) return;
+
+  try {
+    const draft = JSON.parse(saved);
+    // 检查是否有实质内容
+    if (!draft.title && !draft.content) return;
+
+    ElMessageBox.confirm(
+      `检测到未保存的草稿（${new Date(draft.savedAt).toLocaleString('zh-CN')}），是否恢复？`,
+      '草稿恢复',
+      {
+        confirmButtonText: '恢复草稿',
+        cancelButtonText: '使用空内容',
+        type: 'info'
+      }
+    ).then(() => {
+      form.value.title = draft.title;
+      form.value.summary = draft.summary;
+      form.value.content = draft.content;
+      form.value.category_id = draft.category_id;
+      form.value.tag_ids = draft.tag_ids;
+      form.value.status = draft.status;
+      ElMessage.success('草稿已恢复');
+    }).catch(() => {
+      // 用户选择不恢复，清除草稿
+      localStorage.removeItem(draftKey.value);
+    });
+  } catch (e) {
+    console.error('恢复草稿失败:', e);
+  }
+}
+
+/**
+ * 清除草稿
+ */
+function clearDraft() {
+  localStorage.removeItem(draftKey.value);
+  lastSavedAt.value = null;
+  isDirty.value = false;
+}
+
+/**
+ * 启动自动保存定时器
+ */
+function startAutoSave() {
+  if (autoSaveTimer.value) return;
+  autoSaveTimer.value = setInterval(() => {
+    if (isDirty.value) {
+      saveDraft();
+      isDirty.value = false;
+    }
+  }, 30000); // 每30秒保存一次
+}
+
+/**
+ * 停止自动保存定时器
+ */
+function stopAutoSave() {
+  if (autoSaveTimer.value) {
+    clearInterval(autoSaveTimer.value);
+    autoSaveTimer.value = null;
+  }
+}
+
+/**
+ * 监听表单变化，标记为已修改
+ */
+watch(
+  () => [form.value.title, form.value.summary, form.value.content, form.value.category_id, form.value.tag_ids],
+  () => {
+    isDirty.value = true;
+  },
+  { deep: true }
+);
+
+/**
+ * 页面关闭前保存草稿
+ */
+function handleBeforeUnload(e) {
+  if (isDirty.value) {
+    saveDraft();
+    e.preventDefault();
+    e.returnValue = '';
+  }
+}
 
 /** 表单校验规则 */
 const rules = {
@@ -283,11 +415,13 @@ async function saveArticle(status = '草稿') {
     }
 
     if (res.code === 200) {
-      // 清除草稿
-      editorRef.value?.clearDraft();
+      // 清除本地草稿
+      clearDraft();
       ElMessage.success(isNew.value ? '创建成功' : '更新成功');
       // 新建成功后跳转到编辑页（带新 id），否则返回列表
       if (isNew.value && res.data?.id) {
+        // 清除旧的新建草稿
+        localStorage.removeItem(`${DRAFT_STORAGE_KEY}_new`);
         router.replace(`/admin/articles/edit/${res.data.id}`);
       } else {
         router.push('/admin/articles');
@@ -327,6 +461,24 @@ onMounted(() => {
   loadCategories();
   loadTags();
   loadArticle();
+  // 启动自动保存
+  startAutoSave();
+  // 检测并恢复草稿
+  restoreDraft();
+  // 监听页面关闭
+  window.addEventListener('beforeunload', handleBeforeUnload);
+});
+
+/**
+ * 组件卸载时清理资源
+ */
+onUnmounted(() => {
+  stopAutoSave();
+  window.removeEventListener('beforeunload', handleBeforeUnload);
+  // 如果有未保存的修改，保存草稿
+  if (isDirty.value) {
+    saveDraft();
+  }
 });
 </script>
 
@@ -495,6 +647,29 @@ onMounted(() => {
 .action-buttons .el-button {
   width: 100%;
   justify-content: flex-start;
+}
+
+/* 自动保存状态提示 */
+.auto-save-tip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+  padding: 8px 10px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  color: var(--text-tertiary);
+  animation: fadeIn 0.3s ease;
+}
+
+.auto-save-tip .el-icon {
+  font-size: 14px;
+}
+
+.auto-save-tip.unsaved {
+  color: #e6a23c;
+  background: rgba(230, 162, 60, 0.1);
 }
 
 /* 媒体上传按钮 */

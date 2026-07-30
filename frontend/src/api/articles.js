@@ -182,3 +182,25 @@ export function updateArticle(id, data) {
 export function deleteArticle(id) {
   return request.delete(`/articles/${id}`);
 }
+
+/**
+ * 导出文章为 Markdown 或 HTML 格式
+ * @param {number} id - 文章ID
+ * @param {string} format - 导出格式 (markdown / html)
+ * @returns {Promise<Blob>} 文件流
+ */
+export function exportArticle(id, format = 'markdown') {
+  return request.get(`/articles/${id}/export`, {
+    params: { format },
+    responseType: 'blob'
+  });
+}
+
+/**
+ * 切换文章置顶状态
+ * @param {number} id - 文章ID
+ * @returns {Promise} 新的置顶状态
+ */
+export function toggleTop(id) {
+  return request.put(`/articles/${id}/toggle-top`);
+}
