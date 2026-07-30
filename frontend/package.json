@@ -1,7 +1,7 @@
 {
   "name": "task-manager-frontend",
-  "version": "1.12.1",
-  "description": "任务管理系统前端 - Vue 3 + Vite + Element Plus",
+  "version": "1.13.0",
+  "description": "寿冬与秋 - 个人博客系统前端（Vue 3 + Vite + Element Plus）",
   "type": "module",
   "scripts": {
     "dev": "vite",

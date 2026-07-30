@@ -1,5 +1,13 @@
 # 版本历史
 
+## v1.13.0 (2026-07-31)
+
+- feat(release): 首次发布至 GitHub 开源社区
+- feat(test): 完成全项目自测，201 项测试用例全部通过
+- feat(doc): 新增完整测试文档 TEST_PLAN.md
+- fix(doc): 更新 README.md 文档描述为博客系统
+- chore: 前后端版本号统一升级至 1.13.0
+
 ## v1.12.1 (2026-07-31)
 
 - fix(database): 修复 MySQL 预处理语句 LIMIT/OFFSET 占位符问题（8处SQL查询，涉及5个文件）
