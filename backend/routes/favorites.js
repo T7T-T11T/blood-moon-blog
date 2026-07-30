@@ -104,6 +104,8 @@ router.get('/', async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const pageSize = parseInt(req.query.page_size) || 20;
     const offset = (page - 1) * pageSize;
+    const safePageSize = Math.max(1, parseInt(pageSize, 10) || 20);
+    const safeOffset = Math.max(0, parseInt(offset, 10) || 0);
 
     const [rows] = await pool.execute(
       `SELECT a.id, a.title, a.summary, a.cover_image, a.view_count,
@@ -112,8 +114,8 @@ router.get('/', async (req, res) => {
        INNER JOIN articles a ON f.article_id = a.id
        WHERE f.user_id = ? AND a.status = '已发布'
        ORDER BY f.created_at DESC
-       LIMIT ? OFFSET ?`,
-      [userId, pageSize, offset]
+       LIMIT ${safePageSize} OFFSET ${safeOffset}`,
+      [userId]
     );
 
     const [[{ total }]] = await pool.execute(

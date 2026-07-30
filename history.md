@@ -2,7 +2,8 @@
 
 ## v1.12.1 (2026-07-31)
 
-- fix(database): 修复 MySQL 预处理语句不支持 LIMIT/OFFSET 占位符的问题（5处SQL查询）
+- fix(database): 修复 MySQL 预处理语句 LIMIT/OFFSET 占位符问题（8处SQL查询，涉及5个文件）
+- fix(database): 修改文件：articleService.js、commentService.js、logService.js、routes/favorites.js、routes/music.js
 - fix(ui): 修复 getActionTagType 返回空字符串导致 Element Plus prop 验证警告
 - fix(ui): Dashboard 文章状态为 null 时显示兜底文案「草稿」
 - 前后端版本号统一升级至 1.12.1

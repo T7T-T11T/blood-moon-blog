@@ -109,14 +109,16 @@ async function getLogs({
 
   // 查询列表
   const offset = (page - 1) * page_size;
+  const safePageSize = Math.max(1, parseInt(page_size, 10) || 10);
+  const safeOffset = Math.max(0, parseInt(offset, 10) || 0);
   const [rows] = await pool.execute(
     `SELECT id, user_id, username, action, resource_type, resource_id,
             details, ip_address, user_agent, created_at
      FROM operation_logs
      ${whereClause}
      ORDER BY created_at DESC
-     LIMIT ? OFFSET ?`,
-    [...params, String(page_size), String(offset)]
+     LIMIT ${safePageSize} OFFSET ${safeOffset}`,
+    params
   );
 
   return {
@@ -137,13 +139,14 @@ async function getLogs({
  * @returns {Promise<Array>} 日志列表
  */
 async function getUserLogs(userId, limit = 100) {
+  const safeLimit = Math.max(1, parseInt(limit, 10) || 100);
   const [rows] = await pool.execute(
     `SELECT id, action, resource_type, resource_id, details, ip_address, created_at
      FROM operation_logs
      WHERE user_id = ?
      ORDER BY created_at DESC
-     LIMIT ?`,
-    [userId, String(limit)]
+     LIMIT ${safeLimit}`,
+    [userId]
   );
   return rows;
 }
@@ -156,13 +159,14 @@ async function getUserLogs(userId, limit = 100) {
  * @returns {Promise<Array>} 日志列表
  */
 async function getResourceLogs(resourceType, resourceId, limit = 50) {
+  const safeLimit = Math.max(1, parseInt(limit, 10) || 50);
   const [rows] = await pool.execute(
     `SELECT id, user_id, username, action, details, ip_address, created_at
      FROM operation_logs
      WHERE resource_type = ? AND resource_id = ?
      ORDER BY created_at DESC
-     LIMIT ?`,
-    [resourceType, resourceId, String(limit)]
+     LIMIT ${safeLimit}`,
+    [resourceType, resourceId]
   );
   return rows;
 }

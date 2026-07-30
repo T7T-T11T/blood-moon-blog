@@ -47,6 +47,8 @@ async function getCommentsList({ status, article_id, page = 1, pageSize = 10 }) 
   const total = countResult[0].total;
 
   const offset = (page - 1) * pageSize;
+  const safePageSize = Math.max(1, parseInt(pageSize, 10) || 10);
+  const safeOffset = Math.max(0, parseInt(offset, 10) || 0);
   const [rows] = await pool.execute(
     `SELECT c.id, c.article_id, c.nickname, c.email, c.avatar_url, c.content,
             c.parent_id, c.status, c.ip_address, c.created_at,
@@ -55,8 +57,8 @@ async function getCommentsList({ status, article_id, page = 1, pageSize = 10 }) 
      LEFT JOIN articles a ON c.article_id = a.id
      WHERE ${whereClause}
      ORDER BY c.created_at DESC
-     LIMIT ? OFFSET ?`,
-    [...params, String(pageSize), String(offset)]
+     LIMIT ${safePageSize} OFFSET ${safeOffset}`,
+    params
   );
 
   return {

@@ -112,10 +112,11 @@ router.get('/all', authMiddleware, async (req, res) => {
 
     // 查询分页数据
     const offset = (page - 1) * pageSize;
+    const safePageSize = Math.max(1, parseInt(pageSize, 10) || 10);
+    const safeOffset = Math.max(0, parseInt(offset, 10) || 0);
     const [rows] = await pool.execute(
       `SELECT id, title, artist, file_path, cover_image, duration, sort_order, is_active, created_at, updated_at
-       FROM music ORDER BY sort_order ASC, id ASC LIMIT ? OFFSET ?`,
-      [String(pageSize), String(offset)]
+       FROM music ORDER BY sort_order ASC, id ASC LIMIT ${safePageSize} OFFSET ${safeOffset}`
     );
 
     res.json({

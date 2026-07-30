@@ -122,6 +122,7 @@ async function getPublishedArticles({ page = 1, pageSize = 10, category_id, tag_
  * 只查询未被软删除的文章
  */
 async function getLatestArticles(limit = 5) {
+  const safeLimit = Math.max(1, parseInt(limit, 10) || 5);
   const [rows] = await pool.execute(
     `SELECT a.id, a.title, a.summary, a.cover_image, a.view_count,
             a.category_id, a.created_at,
@@ -130,8 +131,7 @@ async function getLatestArticles(limit = 5) {
      LEFT JOIN categories c ON a.category_id = c.id
      WHERE a.status = '已发布' AND a.deleted_at IS NULL
      ORDER BY a.created_at DESC
-     LIMIT ?`,
-    [String(limit)]
+     LIMIT ${safeLimit}`
   );
   return attachTags(rows);
 }
@@ -141,6 +141,7 @@ async function getLatestArticles(limit = 5) {
  * 只查询未被软删除的文章
  */
 async function getHotArticles(limit = 5) {
+  const safeLimit = Math.max(1, parseInt(limit, 10) || 5);
   const [rows] = await pool.execute(
     `SELECT a.id, a.title, a.summary, a.view_count,
             c.name as category_name, c.slug as category_slug
@@ -148,8 +149,7 @@ async function getHotArticles(limit = 5) {
      LEFT JOIN categories c ON a.category_id = c.id
      WHERE a.status = '已发布' AND a.deleted_at IS NULL
      ORDER BY a.view_count DESC
-     LIMIT ?`,
-    [String(limit)]
+     LIMIT ${safeLimit}`
   );
   return rows;
 }
