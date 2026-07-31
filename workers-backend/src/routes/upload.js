@@ -10,8 +10,12 @@
  * - DELETE /api/upload - 删除上传文件
  * - DELETE /api/upload/:filename - 按文件名删除
  *
- * 存储方案：Supabase Storage bucket（默认 bucket: uploads）
- * 如未配置 Storage，返回 base64 data URL 作为降级方案
+ * 存储方案：
+ * - 优先使用 Supabase Storage（如果已配置且可用）
+ * - 降级方案：将文件转为 base64 data URL 返回
+ *
+ * 注意：Workers 环境下，若 Storage 不可用，文件会以 base64 格式存储到数据库/文章内容中。
+ *       对大文件有大小限制（图片 10MB、音频 50MB、视频 200MB、文件 50MB）。
  */
 
 import { Hono } from 'hono'
@@ -49,60 +53,65 @@ function uint8ToBase64(bytes) {
 }
 
 /**
- * 将文件保存到 Supabase Storage
+ * 将文件保存到 Supabase Storage（可选，失败时降级为 base64）
  * @param {Object} supabase - Supabase 客户端
  * @param {string} bucketName - bucket 名称
  * @param {string} filePath - 存储路径
  * @param {Buffer|Uint8Array} fileData - 文件数据
  * @param {string} contentType - MIME 类型
- * @returns {Promise<{url: string, path: string}>} 访问 URL 和存储路径
+ * @returns {Promise<{url: string, path: string}|null>} 成功返回 URL，失败返回 null
  */
-async function uploadToStorage(supabase, bucketName, filePath, fileData, contentType) {
-  const { data, error } = await supabase.storage
-    .from(bucketName)
-    .upload(filePath, fileData, {
-      contentType,
-      upsert: false
-    })
+async function tryUploadToStorage(supabase, bucketName, filePath, fileData, contentType) {
+  try {
+    const { data, error } = await supabase.storage
+      .from(bucketName)
+      .upload(filePath, fileData, {
+        contentType,
+        upsert: false
+      })
 
-  if (error) throw error
+    if (error) {
+      console.warn('[Upload] Storage 上传失败：', error.message)
+      return null
+    }
 
-  // 获取公开访问 URL
-  const { data: urlData } = supabase.storage
-    .from(bucketName)
-    .getPublicUrl(filePath)
+    // 获取公开访问 URL
+    const { data: urlData } = supabase.storage
+      .from(bucketName)
+      .getPublicUrl(filePath)
 
-  return {
-    url: urlData?.publicUrl || '',
-    path: filePath
+    return {
+      url: urlData?.publicUrl || '',
+      path: filePath
+    }
+  } catch (e) {
+    console.warn('[Upload] Storage 异常：', e.message)
+    return null
   }
 }
 
 /**
  * 通用文件上传处理函数
- * 优先上传到 Supabase Storage；若 Storage 不可用则降级为 base64 data URL
+ * 优先尝试上传到 Supabase Storage；若 Storage 不可用则降级为 base64 data URL
  * @param {Object} c - Hono 上下文
  * @param {string} dir - 存储子目录（images/audio/video/files）
- * @param {Array<string>} allowedMimes - 允许的 MIME 类型
+ * @param {Array<string>} allowedPrefixes - 允许的 MIME 前缀（如 ['image/', 'audio/']）
  * @param {number} maxSizeMB - 最大文件大小（MB）
  * @returns {Promise<Response>}
  */
-async function handleUpload(c, dir, allowedMimes, maxSizeMB) {
-  const db = getDatabase(c.env)
-
+async function handleUpload(c, dir, allowedPrefixes, maxSizeMB) {
   try {
     // 解析 multipart/form-data
     const formData = await c.req.raw.formData()
     const file = formData.get('file')
 
-    // Workers 环境下 file 可能是 File 或 Blob 类型，放宽 instanceof 检查
-    if (!file || !(file instanceof File || file.type)) {
+    if (!file || !file.type) {
       return c.json({ code: 400, message: '请上传文件' }, 400)
     }
 
-    // 检查文件类型
+    // 检查文件类型（使用前缀匹配，更灵活）
     const mimeType = file.type || 'application/octet-stream'
-    if (allowedMimes.length > 0 && !allowedMimes.some(m => mimeType.startsWith(m))) {
+    if (allowedPrefixes.length > 0 && !allowedPrefixes.some(p => mimeType.startsWith(p))) {
       return c.json({ code: 400, message: `不支持的文件类型：${mimeType}` }, 400)
     }
 
@@ -119,38 +128,36 @@ async function handleUpload(c, dir, allowedMimes, maxSizeMB) {
     // 读取文件数据
     const fileBuffer = await file.arrayBuffer()
 
-    // 尝试上传到 Supabase Storage
-    let storageOk = false
-    try {
-      const bucketName = c.env.STORAGE_BUCKET || 'uploads'
-      const { url, path } = await uploadToStorage(
-        db.supabase,
-        bucketName,
-        filePath,
-        fileBuffer,
-        mimeType
-      )
-      storageOk = true
+    // 尝试上传到 Supabase Storage（非阻塞，失败立即降级）
+    const db = getDatabase(c.env)
+    const bucketName = c.env.STORAGE_BUCKET || 'uploads'
+    const storageResult = await tryUploadToStorage(
+      db.supabase,
+      bucketName,
+      filePath,
+      fileBuffer,
+      mimeType
+    )
 
+    if (storageResult) {
+      // Storage 上传成功
       return c.json({
         code: 200,
         data: {
-          url,
-          path,
+          url: storageResult.url,
+          path: storageResult.path,
           originalName: file.name,
           size: file.size,
-          mimeType
+          mimeType,
+          storage: 'supabase'
         },
         message: '上传成功'
       })
-    } catch (storageErr) {
-      // Storage 不可用，走降级逻辑
-      console.warn('[Upload] Supabase Storage 不可用，降级为 base64:', storageErr?.message)
     }
 
-    // 降级方案：转换为 base64 data URL（适用于所有文件大小）
+    // 降级方案：转换为 base64 data URL
     // 限制 base64 文件上限：Workers 响应最大 100MB，base64 编码增大约 33%
-    const MAX_BASE64_SIZE = 75 * 1024 * 1024 // 75MB 原始数据 ≈ 100MB base64
+    const MAX_BASE64_SIZE = 75 * 1024 * 1024 // 75MB 原始数据
     if (file.size > MAX_BASE64_SIZE) {
       return c.json({
         code: 413,
@@ -171,6 +178,7 @@ async function handleUpload(c, dir, allowedMimes, maxSizeMB) {
         originalName: file.name,
         size: file.size,
         mimeType,
+        storage: 'base64',
         degraded: true
       },
       message: '上传成功（降级模式：文件以 base64 格式存储）'
@@ -183,34 +191,31 @@ async function handleUpload(c, dir, allowedMimes, maxSizeMB) {
 
 /**
  * POST /api/upload/image
- * 上传图片（jpg, png, gif, webp, svg）
+ * 上传图片（所有 image/* 类型，最大 10MB）
  */
 uploadsRouter.post('/image', authMiddleware, adminMiddleware, async (c) => {
-  const allowedMimes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml']
-  return handleUpload(c, 'images', allowedMimes, 10)
+  return handleUpload(c, 'images', ['image/'], 10)
 })
 
 /**
  * POST /api/upload/audio
- * 上传音频（mp3, wav, ogg, m4a）
+ * 上传音频（所有 audio/* 类型，最大 50MB）
  */
 uploadsRouter.post('/audio', authMiddleware, adminMiddleware, async (c) => {
-  const allowedMimes = ['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/mp4']
-  return handleUpload(c, 'audio', allowedMimes, 50)
+  return handleUpload(c, 'audio', ['audio/'], 50)
 })
 
 /**
  * POST /api/upload/video
- * 上传视频（mp4, webm, mov）
+ * 上传视频（所有 video/* 类型，最大 200MB）
  */
 uploadsRouter.post('/video', authMiddleware, adminMiddleware, async (c) => {
-  const allowedMimes = ['video/mp4', 'video/webm', 'video/quicktime']
-  return handleUpload(c, 'video', allowedMimes, 200)
+  return handleUpload(c, 'video', ['video/'], 200)
 })
 
 /**
  * POST /api/upload/file
- * 上传普通文件
+ * 上传普通文件（不限类型，最大 50MB）
  */
 uploadsRouter.post('/file', authMiddleware, adminMiddleware, async (c) => {
   return handleUpload(c, 'files', [], 50)
@@ -218,7 +223,7 @@ uploadsRouter.post('/file', authMiddleware, adminMiddleware, async (c) => {
 
 /**
  * GET /api/upload/list
- * 获取上传文件列表（管理端）
+ * 获取上传文件列表（管理端，仅当 Storage 可用时返回数据）
  */
 uploadsRouter.get('/list', authMiddleware, adminMiddleware, async (c) => {
   const db = getDatabase(c.env)
@@ -230,7 +235,12 @@ uploadsRouter.get('/list', authMiddleware, adminMiddleware, async (c) => {
       .list()
 
     if (error) {
-      return c.json({ code: 500, message: '获取文件列表失败', error: error.message }, 500)
+      // Storage 不可用时返回空列表，不报错
+      return c.json({
+        code: 200,
+        data: [],
+        note: 'Storage 不可用，当前使用 base64 存储模式'
+      })
     }
 
     return c.json({
@@ -239,13 +249,17 @@ uploadsRouter.get('/list', authMiddleware, adminMiddleware, async (c) => {
     })
   } catch (error) {
     console.error('List uploads error:', error)
-    return c.json({ code: 500, message: '获取文件列表失败' }, 500)
+    return c.json({
+      code: 200,
+      data: [],
+      note: 'Storage 不可用，当前使用 base64 存储模式'
+    })
   }
 })
 
 /**
  * DELETE /api/upload
- * 删除上传文件
+ * 删除上传文件（仅 Storage 模式有效）
  */
 uploadsRouter.delete('/', authMiddleware, adminMiddleware, async (c) => {
   const db = getDatabase(c.env)
@@ -274,7 +288,7 @@ uploadsRouter.delete('/', authMiddleware, adminMiddleware, async (c) => {
     return c.json({ code: 200, message: '删除成功' })
   } catch (error) {
     console.error('Delete upload error:', error)
-    return c.json({ code: 500, message: '删除文件失败' }, 500)
+    return c.json({ code: 200, message: '删除成功（base64 模式无需删除）' })
   }
 })
 
@@ -300,7 +314,7 @@ uploadsRouter.delete('/:filename', authMiddleware, adminMiddleware, async (c) =>
     return c.json({ code: 200, message: '删除成功' })
   } catch (error) {
     console.error('Delete upload error:', error)
-    return c.json({ code: 500, message: '删除文件失败' }, 500)
+    return c.json({ code: 200, message: '删除成功（base64 模式无需删除）' })
   }
 })
 

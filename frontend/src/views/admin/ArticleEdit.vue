@@ -190,6 +190,8 @@ const form = ref({
 
 /** 自动保存相关状态 */
 const DRAFT_STORAGE_KEY = 'article_edit_draft';
+const DRAFT_DB_NAME = 'blog_drafts';
+const DRAFT_STORE_NAME = 'articles';
 const autoSaveTimer = ref(null);
 const lastSavedAt = ref(null);
 const isDirty = ref(false);
@@ -204,9 +206,92 @@ const draftKey = computed(() => {
 });
 
 /**
- * 保存草稿到 localStorage
- * 若存储空间不足（QuotaExceededError），优先保存元信息（标题、摘要、标签）
- * 丢弃 content 避免草稿保存失败导致整页抛错
+ * 确保 IndexedDB 已初始化（首次调用时创建）
+ * @returns {Promise<IDBDatabase>} IndexedDB 数据库实例
+ */
+function getDraftDB() {
+  return new Promise((resolve, reject) => {
+    try {
+      const req = indexedDB.open(DRAFT_DB_NAME, 1);
+      req.onupgradeneeded = (e) => {
+        const db = e.target.result;
+        if (!db.objectStoreNames.contains(DRAFT_STORE_NAME)) {
+          db.createObjectStore(DRAFT_STORE_NAME, { keyPath: 'key' });
+        }
+      };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    } catch (e) {
+      reject(e);
+    }
+  });
+}
+
+/**
+ * 将草稿保存到 IndexedDB（大容量存储，解决 localStorage 5MB 限制）
+ * @param {string} key - 草稿键
+ * @param {Object} data - 草稿数据
+ */
+async function saveDraftToIndexedDB(key, data) {
+  try {
+    const db = await getDraftDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(DRAFT_STORE_NAME, 'readwrite');
+      const store = tx.objectStore(DRAFT_STORE_NAME);
+      store.put({ key, value: data, updatedAt: new Date().toISOString() });
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  } catch (e) {
+    console.warn('[Draft] IndexedDB 保存失败：', e);
+    throw e;
+  }
+}
+
+/**
+ * 从 IndexedDB 读取草稿
+ * @param {string} key - 草稿键
+ * @returns {Promise<Object|null>} 草稿数据
+ */
+async function loadDraftFromIndexedDB(key) {
+  try {
+    const db = await getDraftDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(DRAFT_STORE_NAME, 'readonly');
+      const store = tx.objectStore(DRAFT_STORE_NAME);
+      const req = store.get(key);
+      req.onsuccess = () => resolve(req.result ? req.result.value : null);
+      req.onerror = () => reject(req.error);
+    });
+  } catch (e) {
+    console.warn('[Draft] IndexedDB 读取失败：', e);
+    return null;
+  }
+}
+
+/**
+ * 从 IndexedDB 删除草稿
+ * @param {string} key - 草稿键
+ */
+async function deleteDraftFromIndexedDB(key) {
+  try {
+    const db = await getDraftDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(DRAFT_STORE_NAME, 'readwrite');
+      const store = tx.objectStore(DRAFT_STORE_NAME);
+      store.delete(key);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  } catch (e) {
+    console.warn('[Draft] IndexedDB 删除失败：', e);
+  }
+}
+
+/**
+ * 保存草稿
+ * 存储优先级：localStorage → IndexedDB（大容量降级）
+ * 若 localStorage 配额不足（QuotaExceededError），自动降级到 IndexedDB
  */
 function saveDraft() {
   const baseDraft = {
@@ -218,51 +303,81 @@ function saveDraft() {
     savedAt: new Date().toISOString()
   };
 
-  // 第一步：先尝试保存完整草稿（含 content）
+  const fullDraft = { ...baseDraft, content: form.value.content };
+  const draftKeyStr = draftKey.value;
+
+  // 第一步：尝试 localStorage（快速路径，适合小草稿）
   try {
-    const fullDraft = { ...baseDraft, content: form.value.content };
-    localStorage.setItem(draftKey.value, JSON.stringify(fullDraft));
+    localStorage.setItem(draftKeyStr, JSON.stringify(fullDraft));
     lastSavedAt.value = baseDraft.savedAt;
+    // 同时异步存到 IndexedDB 作为备份
+    saveDraftToIndexedDB(draftKeyStr, fullDraft).catch(() => {});
     return;
   } catch (e) {
-    if (e && e.name === 'QuotaExceededError') {
-      console.warn('[Draft] 存储配额不足，降级保存草稿（不含正文 content）');
+    // localStorage 配额不足，降级到 IndexedDB
+    if (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
+      console.warn('[Draft] localStorage 配额不足，降级到 IndexedDB');
     } else {
-      console.warn('[Draft] 草稿保存失败:', e);
+      console.warn('[Draft] localStorage 保存失败：', e);
     }
   }
 
-  // 第二步：降级保存（不含 content）
-  try {
-    localStorage.setItem(draftKey.value, JSON.stringify(baseDraft));
-    lastSavedAt.value = baseDraft.savedAt;
-  } catch (e2) {
-    console.warn('[Draft] 降级保存也失败，尝试 sessionStorage：', e2);
-    // 第三步：再降级到 sessionStorage
-    try {
-      sessionStorage.setItem(draftKey.value, JSON.stringify(baseDraft));
+  // 第二步：尝试 IndexedDB（大容量存储，上限通常 500MB+）
+  saveDraftToIndexedDB(draftKeyStr, fullDraft)
+    .then(() => {
       lastSavedAt.value = baseDraft.savedAt;
-    } catch (e3) {
-      console.error('[Draft] 所有存储方式都失败：', e3);
-    }
-  }
+      // IndexedDB 保存成功后，尝试只保存元信息到 localStorage（不占太多空间）
+      try {
+        localStorage.setItem(draftKeyStr, JSON.stringify(baseDraft));
+      } catch (_) {
+        // localStorage 还是存不下就算了
+      }
+    })
+    .catch((err) => {
+      console.error('[Draft] IndexedDB 也保存失败：', err);
+      // 第三步：最后尝试 sessionStorage
+      try {
+        sessionStorage.setItem(draftKeyStr, JSON.stringify(baseDraft));
+        lastSavedAt.value = baseDraft.savedAt;
+      } catch (e3) {
+        console.error('[Draft] 所有存储方式都失败：', e3);
+      }
+    });
 }
 
 /**
  * 按优先级读取草稿：localStorage → sessionStorage
  * @returns {string|null} 草稿 JSON 字符串，未找到返回 null
  */
-function getDraftRaw() {
+/**
+ * 按优先级读取草稿：localStorage → IndexedDB → sessionStorage
+ * @returns {Promise<string|null>} 草稿 JSON 字符串，未找到返回 null
+ */
+async function getDraftRaw() {
+  // 优先 localStorage（快速读取）
   const local = localStorage.getItem(draftKey.value);
   if (local) return local;
+
+  // 其次 IndexedDB（大容量存储）
+  try {
+    const idbData = await loadDraftFromIndexedDB(draftKey.value);
+    if (idbData) return JSON.stringify(idbData);
+  } catch (_) {
+    // 忽略 IndexedDB 错误
+  }
+
+  // 最后 sessionStorage
   return sessionStorage.getItem(draftKey.value);
 }
 
 /**
  * 检测并恢复草稿
  */
-function restoreDraft() {
-  const saved = getDraftRaw();
+/**
+ * 检测并恢复草稿（支持 IndexedDB 异步读取）
+ */
+async function restoreDraft() {
+  const saved = await getDraftRaw();
   if (!saved) return;
 
   try {
@@ -299,9 +414,17 @@ function restoreDraft() {
 /**
  * 清除草稿（同时清理 localStorage 和 sessionStorage）
  */
-function clearDraft() {
+/**
+ * 清除当前文章的草稿
+ */
+async function clearDraft() {
   localStorage.removeItem(draftKey.value);
   sessionStorage.removeItem(draftKey.value);
+  try {
+    await deleteDraftFromIndexedDB(draftKey.value);
+  } catch (_) {
+    // 忽略错误
+  }
   lastSavedAt.value = null;
   isDirty.value = false;
 }

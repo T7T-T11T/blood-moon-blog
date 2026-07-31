@@ -1,5 +1,24 @@
 # 版本历史
 
+## v1.14.2 (2026-08-01)
+
+- fix(upload): 修复上传接口在无 Storage 环境下全部失败的问题
+  - upload.js: 重构 handleUpload()，Storage 失败立即降级为 base64（不再阻塞）
+  - upload.js: tryUploadToStorage() 非阻塞，失败返回 null 而非抛异常
+  - upload.js: MIME 类型检查改为前缀匹配（['image/', 'audio/', 'video/']）
+  - upload.js: 删除接口在 Storage 不可用时返回成功（base64 模式无需删除）
+  - upload.js: GET /list 在 Storage 不可用时返回空列表而非 500
+
+- fix(draft): 使用 IndexedDB 解决 localStorage 5MB 配额限制
+  - ArticleEdit.vue: 新增 getDraftDB/saveDraftToIndexedDB/loadDraftFromIndexedDB/deleteDraftFromIndexedDB
+  - ArticleEdit.vue: saveDraft() 优先级 localStorage → IndexedDB → sessionStorage
+  - ArticleEdit.vue: QuotaExceededError 自动降级到 IndexedDB（上限 500MB+）
+  - ArticleEdit.vue: getDraftRaw/restoreDraft/clearDraft 均支持 IndexedDB
+
+- fix(schema): 数据库字段类型修复
+  - init_postgres.sql: articles.cover_image VARCHAR(500) → TEXT
+  - fix_schema.sql: 新增 ALTER TABLE articles ALTER COLUMN cover_image TYPE TEXT
+
 ## v1.14.1 (2026-07-31)
 
 - fix(music): 修复播放时长始终 00:00 + 状态开关自动回跳

@@ -75,7 +75,7 @@ CREATE TABLE articles (
     title        VARCHAR(200) NOT NULL,
     content      TEXT         NOT NULL,
     summary      VARCHAR(500),
-    cover_image  VARCHAR(500),
+    cover_image  TEXT,
     status       VARCHAR(20)  NOT NULL DEFAULT '已发布',
     is_top       SMALLINT     NOT NULL DEFAULT 0,
     view_count   INT          NOT NULL DEFAULT 0,

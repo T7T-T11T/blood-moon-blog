@@ -73,3 +73,7 @@ ALTER TABLE users ALTER COLUMN avatar_url TYPE TEXT;
 -- 9. 修复 site_settings.setting_value 字段类型
 -- 原因：存储长文章内容或配置值时可能超出 VARCHAR 限制
 ALTER TABLE site_settings ALTER COLUMN setting_value TYPE TEXT;
+
+-- 10. 修复 articles.cover_image 字段类型
+-- 原因：VARCHAR(500) 无法存储 base64 data URL（通常 10KB+）
+ALTER TABLE articles ALTER COLUMN cover_image TYPE TEXT;
