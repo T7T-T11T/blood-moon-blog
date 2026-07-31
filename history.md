@@ -1,5 +1,20 @@
 # 版本历史
 
+## v1.13.2 (2026-07-31)
+
+- fix(workers-backend): 修复所有上传接口返回 500 的问题
+  - 原因：Supabase Storage bucket（uploads）不存在或不可用
+    - 大文件（>512KB）直接返回 500，小文件走 base64 降级但编码性能差
+  - 修复1：移除 512KB 降级限制，所有文件均支持 base64 data URL 降级
+  - 修复2：新增高效 base64 编码函数 uint8ToBase64（分块处理，避免 O(n²) 性能问题）
+  - 修复3：放宽 File 类型检查（兼容 Workers 环境的 Blob/File 对象）
+  - 修复4：调整降级上限为 75MB（Workers 响应大小限制 100MB + base64 膨胀 33%）
+  - 修复5：Storage 失败时不再直接报错，自动降级为 base64
+- fix(workers-backend): 修复友链 avatar → avatar_url 字段映射
+  - links.js GET /api/links 和 /api/links/all：新增 avatar_url 映射
+  - friends.js GET /api/friends 和 /api/friends/all：同步新增 avatar_url 映射
+  - 解决前端 Links.vue / LinkList.vue 使用 avatar_url 字段但后端返回 avatar 的兼容性问题
+
 ## v1.13.1 (2026-07-31)
 
 - fix(workers-backend): 修复归档页面「明明有文章却不显示」的 Bug

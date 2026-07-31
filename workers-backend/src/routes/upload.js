@@ -33,6 +33,22 @@ function generateFileName(originalName) {
 }
 
 /**
+ * 将 Uint8Array 高效转为 base64 字符串
+ * 使用分块处理避免大文件 O(n²) 性能问题
+ * @param {Uint8Array} bytes - 字节数组
+ * @returns {string} base64 编码字符串
+ */
+function uint8ToBase64(bytes) {
+  const CHUNK_SIZE = 0x8000 // 32KB 分块，防止栈溢出
+  let binary = ''
+  for (let i = 0; i < bytes.length; i += CHUNK_SIZE) {
+    const chunk = bytes.subarray(i, i + CHUNK_SIZE)
+    binary += String.fromCharCode.apply(null, chunk)
+  }
+  return btoa(binary)
+}
+
+/**
  * 将文件保存到 Supabase Storage
  * @param {Object} supabase - Supabase 客户端
  * @param {string} bucketName - bucket 名称
@@ -64,6 +80,7 @@ async function uploadToStorage(supabase, bucketName, filePath, fileData, content
 
 /**
  * 通用文件上传处理函数
+ * 优先上传到 Supabase Storage；若 Storage 不可用则降级为 base64 data URL
  * @param {Object} c - Hono 上下文
  * @param {string} dir - 存储子目录（images/audio/video/files）
  * @param {Array<string>} allowedMimes - 允许的 MIME 类型
@@ -78,12 +95,13 @@ async function handleUpload(c, dir, allowedMimes, maxSizeMB) {
     const formData = await c.req.raw.formData()
     const file = formData.get('file')
 
-    if (!file || !(file instanceof File)) {
+    // Workers 环境下 file 可能是 File 或 Blob 类型，放宽 instanceof 检查
+    if (!file || !(file instanceof File || file.type)) {
       return c.json({ code: 400, message: '请上传文件' }, 400)
     }
 
     // 检查文件类型
-    const mimeType = file.type
+    const mimeType = file.type || 'application/octet-stream'
     if (allowedMimes.length > 0 && !allowedMimes.some(m => mimeType.startsWith(m))) {
       return c.json({ code: 400, message: `不支持的文件类型：${mimeType}` }, 400)
     }
@@ -95,13 +113,14 @@ async function handleUpload(c, dir, allowedMimes, maxSizeMB) {
     }
 
     // 生成存储路径
-    const fileName = generateFileName(file.name)
+    const fileName = generateFileName(file.name || 'unnamed')
     const filePath = `${dir}/${fileName}`
 
     // 读取文件数据
     const fileBuffer = await file.arrayBuffer()
 
     // 尝试上传到 Supabase Storage
+    let storageOk = false
     try {
       const bucketName = c.env.STORAGE_BUCKET || 'uploads'
       const { url, path } = await uploadToStorage(
@@ -111,6 +130,7 @@ async function handleUpload(c, dir, allowedMimes, maxSizeMB) {
         fileBuffer,
         mimeType
       )
+      storageOk = true
 
       return c.json({
         code: 200,
@@ -124,37 +144,37 @@ async function handleUpload(c, dir, allowedMimes, maxSizeMB) {
         message: '上传成功'
       })
     } catch (storageErr) {
-      // Storage 不可用时降级：返回 base64 data URL（仅适合小文件）
-      if (file.size > 512 * 1024) {
-        return c.json({
-          code: 500,
-          message: '存储服务不可用，大文件无法降级上传',
-          error: storageErr.message
-        }, 500)
-      }
-
-      // 降级方案：转换为 base64 data URL
-      const bytes = new Uint8Array(fileBuffer)
-      let binary = ''
-      for (let i = 0; i < bytes.byteLength; i++) {
-        binary += String.fromCharCode(bytes[i])
-      }
-      const base64 = btoa(binary)
-      const dataUrl = `data:${mimeType};base64,${base64}`
-
-      return c.json({
-        code: 200,
-        data: {
-          url: dataUrl,
-          path: filePath,
-          originalName: file.name,
-          size: file.size,
-          mimeType,
-          degraded: true
-        },
-        message: '上传成功（降级模式）'
-      })
+      // Storage 不可用，走降级逻辑
+      console.warn('[Upload] Supabase Storage 不可用，降级为 base64:', storageErr?.message)
     }
+
+    // 降级方案：转换为 base64 data URL（适用于所有文件大小）
+    // 限制 base64 文件上限：Workers 响应最大 100MB，base64 编码增大约 33%
+    const MAX_BASE64_SIZE = 75 * 1024 * 1024 // 75MB 原始数据 ≈ 100MB base64
+    if (file.size > MAX_BASE64_SIZE) {
+      return c.json({
+        code: 413,
+        message: `文件过大（${(file.size / 1024 / 1024).toFixed(1)}MB），Storage 不可用时无法上传超过 75MB 的文件`,
+        error: '请配置 Supabase Storage 或使用更小的文件'
+      }, 413)
+    }
+
+    const bytes = new Uint8Array(fileBuffer)
+    const base64 = uint8ToBase64(bytes)
+    const dataUrl = `data:${mimeType};base64,${base64}`
+
+    return c.json({
+      code: 200,
+      data: {
+        url: dataUrl,
+        path: filePath,
+        originalName: file.name,
+        size: file.size,
+        mimeType,
+        degraded: true
+      },
+      message: '上传成功（降级模式：文件以 base64 格式存储）'
+    })
   } catch (error) {
     console.error('Upload error:', error)
     return c.json({ code: 500, message: '上传失败', error: error.message }, 500)

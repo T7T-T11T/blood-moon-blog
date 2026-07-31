@@ -27,13 +27,16 @@ friendsRouter.get('/', async (c) => {
     const filters = { status: '已通过' }
     if (category) filters.category = category
 
-    const list = await db.select('friends', filters, {
+    const rawList = await db.select('friends', filters, {
       order: { column: 'sort_order', ascending: true }
     })
 
-    // 兼容前端：
-    // Links.vue 用 Array.isArray(data) ? data : data.list
-    // 所以同时返回 data 数组
+    /** 字段映射：avatar → avatar_url，兼容前端模板 */
+    const list = rawList.map(item => ({
+      ...item,
+      avatar_url: item.avatar || null
+    }))
+
     return c.json({
       code: 200,
       data: list,
@@ -63,11 +66,17 @@ friendsRouter.get('/all', authMiddleware, adminMiddleware, async (c) => {
     if (status) filters.status = status
 
     const total = await db.count('friends', filters)
-    const list = await db.select('friends', filters, {
+    const rawList = await db.select('friends', filters, {
       order: { column: 'sort_order', ascending: true },
       offset,
       limit: pageSize
     })
+
+    /** 字段映射：avatar → avatar_url */
+    const list = rawList.map(item => ({
+      ...item,
+      avatar_url: item.avatar || null
+    }))
 
     return c.json({
       code: 200,
