@@ -135,7 +135,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { Search, Setting, Sunny, Moon, Connection } from '@element-plus/icons-vue';
-import { getSettings } from '../api/settings';
+import { getSettings, settingsState } from '../api/settings';
 import heroBg from '../assets/hero-bg.webp';
 import MusicPlayer from '../components/MusicPlayer.vue';
 import BackToTop from '../components/common/BackToTop.vue';
@@ -150,20 +150,11 @@ const router = useRouter();
 const themeStore = useThemeStore();
 const userStore = useUserStore();
 
-/**
- * 站点配置（getSettings 失败时使用默认值）
- * @type {import('vue').Ref<Object>}
- */
-const settings = ref({
-  siteName: '寿冬与秋',
-  siteDescription: '分享技术，记录成长'
-});
+/** 站点名（使用模块级共享状态） */
+const siteName = computed(() => settingsState.siteName || '寿冬与秋');
 
-/** 站点名（兜底默认值） */
-const siteName = computed(() => settings.value.siteName || '寿冬与秋');
-
-/** 站点描述（兜底默认值） */
-const siteDescription = computed(() => settings.value.siteDescription || '');
+/** 站点描述（使用模块级共享状态） */
+const siteDescription = computed(() => settingsState.siteDescription || '');
 
 /** 当前年份 */
 const currentYear = new Date().getFullYear();
@@ -240,15 +231,12 @@ function handleScroll() {
 
 /**
  * 加载站点配置
- * 失败时保留默认值，不阻断页面渲染
+ * getSettings 内部已处理缓存和共享状态同步，无需手动赋值
  * @returns {Promise<void>}
  */
 async function loadSettings() {
   try {
-    const { data } = await getSettings();
-    if (data && typeof data === 'object') {
-      settings.value = { ...settings.value, ...data };
-    }
+    await getSettings();
   } catch (e) {
     console.error('加载站点配置失败:', e);
   }

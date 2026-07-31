@@ -56,7 +56,7 @@
  */
 import { ref, reactive, onMounted } from 'vue';
 import { ElMessage } from 'element-plus';
-import { getSettings, updateSettings } from '@/api/settings';
+import { getSettings, updateSettings, clearSettingsCache } from '@/api/settings';
 
 /** 当前激活的 Tab（site=站点信息，author=博主信息） */
 const activeTab = ref('site');
@@ -201,6 +201,7 @@ async function handleSave() {
     });
 
     await updateSettings(payload);
+    clearSettingsCache();
     ElMessage.success('保存成功');
   } catch (e) {
     console.error('保存设置失败:', e);

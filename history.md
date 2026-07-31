@@ -1,5 +1,15 @@
 # 版本历史
 
+## v1.13.4 (2026-07-31)
+
+- perf(frontend): 大幅优化首页加载速度，消除重复 API 调用
+  - settings.js: getSettings() 新增 defaultCache(30s TTL) 缓存，防止重复请求
+  - settings.js: 新增模块级 settingsState reactive 共享状态，所有组件共用同一份数据
+  - settings.js: 新增 clearSettingsCache() 供管理端更新后手动失效缓存
+  - Home.vue: 移除 loadSettings() 调用，改用共享 settingsState（原与 FrontLayout 重复调用 getSettings）
+  - FrontLayout.vue: 移除本地 settings ref，改用共享 settingsState
+  - Settings.vue: 保存设置后调用 clearSettingsCache() 确保数据一致性
+
 ## v1.13.3 (2026-07-31)
 
 - fix(frontend): 修复文章保存超时 + 草稿存储超限 + 首页网络错误提示

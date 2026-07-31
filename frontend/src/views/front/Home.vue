@@ -147,7 +147,7 @@ import { ref, computed, onMounted, nextTick, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { View } from '@element-plus/icons-vue';
 import { getPublicArticles, getHotArticles } from '../../api/articles';
-import { getSettings } from '../../api/settings';
+import { settingsState } from '../../api/settings';
 import ArticleSkeleton from '../../components/front/ArticleSkeleton.vue';
 
 const router = useRouter();
@@ -176,21 +176,16 @@ let observer = null;
 /** 区块标题引用（用于初始化观察） */
 const sectionHeaderRef = ref(null);
 
-/** 站点配置 */
-const settings = ref({
-  siteName: '个人博客',
-  siteDescription: '分享技术，记录成长'
-});
+/** 站点配置（使用模块级共享状态，由 FrontLayout 统一加载） */
 
 /** 站点显示名称（用于 Hero 标题，空时不显示文字，仅保留发光效果） */
 const siteDisplayName = computed(() => {
-  const name = settings.value.siteName || '';
-  // 如果未配置或为默认值，返回空字符串
+  const name = settingsState.siteName || '';
   return name && name !== '个人博客' ? name : '';
 });
 
 /** 站点描述（Hero 副标题） */
-const siteDescription = computed(() => settings.value.siteDescription || '分享技术，记录成长');
+const siteDescription = computed(() => settingsState.siteDescription || '分享技术，记录成长');
 
 /**
  * 从已加载文章中提取去重分类列表
@@ -304,20 +299,6 @@ async function loadHotArticles() {
 }
 
 /**
- * 加载站点配置
- */
-async function loadSettings() {
-  try {
-    const { data } = await getSettings();
-    if (data && typeof data === 'object') {
-      settings.value = { ...settings.value, ...data };
-    }
-  } catch (e) {
-    console.error('加载站点配置失败:', e);
-  }
-}
-
-/**
  * 初始化 Intersection Observer
  */
 function initObserver() {
@@ -350,7 +331,6 @@ onMounted(async () => {
   await nextTick();
   loadArticles(1);
   loadHotArticles();
-  loadSettings();
 });
 
 onUnmounted(() => {
