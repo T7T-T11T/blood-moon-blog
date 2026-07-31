@@ -36,9 +36,10 @@ settingsRouter.get('/', async (c) => {
     })
   } catch (error) {
     console.error('Get settings error:', error)
+    // 返回实际错误信息便于调试（生产环境也返回，因为是只读接口）
     return c.json({
       code: 500,
-      message: '服务器错误'
+      message: error.message || '服务器错误'
     }, 500)
   }
 })
@@ -76,11 +77,12 @@ settingsRouter.put('/', authMiddleware, adminMiddleware, async (c) => {
           updated_at: new Date().toISOString()
         })
       } else {
+        // 注意：site_settings 表无 created_at 字段，使用 updated_at 作为时间戳
         await db.insert('site_settings', {
           setting_key: key,
           setting_value: String(value),
           description: '',
-          created_at: new Date().toISOString()
+          updated_at: new Date().toISOString()
         })
       }
     }

@@ -2,24 +2,32 @@
  * 数据库连接模块 - Supabase PostgreSQL
  * 
  * 功能：
- * - 初始化 Supabase 客户端
+ * - 初始化 Supabase 客户端（Worker 级缓存，避免每次请求重建）
  * - 提供数据库操作封装
- * - 支持连接池和错误处理
  * 
  * 注意：Cloudflare Workers 环境下使用 Supabase JavaScript SDK
  *       不支持原生 pg 驱动，需通过 Supabase REST API 操作数据库
+ *       Supabase 客户端按 Worker 实例缓存（同一 isolate 内复用）
  */
 
 import { createClient } from '@supabase/supabase-js'
 
 /**
- * 创建 Supabase 客户端实例
+ * Worker 级 Supabase 客户端缓存
+ * 同一 Worker isolate 内的多个请求复用同一个客户端实例
+ * key 为 `${url}|${key}`，保证不同项目不会串
+ * @type {Map<string, import('@supabase/supabase-js').SupabaseClient>}
+ */
+const clientCache = new Map()
+
+/**
+ * 创建或获取缓存的 Supabase 客户端实例
  * @param {Object} env - Cloudflare Workers 环境变量
  * @param {string} env.SUPABASE_URL - Supabase 项目 URL
- * @param {string} env.SUPABASE_ANON_KEY - Supabase 匿名 Key（用于客户端访问）
+ * @param {string} env.SUPABASE_ANON_KEY - Supabase 匿名 Key
  * @returns {import('@supabase/supabase-js').SupabaseClient} Supabase 客户端
  */
-export function createSupabaseClient(env) {
+export function getSupabaseClient(env) {
   const supabaseUrl = env.SUPABASE_URL
   const supabaseAnonKey = env.SUPABASE_ANON_KEY
 
@@ -27,12 +35,19 @@ export function createSupabaseClient(env) {
     throw new Error('SUPABASE_URL 和 SUPABASE_ANON_KEY 必须配置')
   }
 
-  return createClient(supabaseUrl, supabaseAnonKey, {
+  const cacheKey = `${supabaseUrl}|${supabaseAnonKey}`
+  const cached = clientCache.get(cacheKey)
+  if (cached) return cached
+
+  const client = createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
       persistSession: false,
       autoRefreshToken: false
     }
   })
+
+  clientCache.set(cacheKey, client)
+  return client
 }
 
 /**
@@ -185,6 +200,6 @@ export class Database {
  * @returns {Database} 数据库实例
  */
 export function getDatabase(env) {
-  const supabase = createSupabaseClient(env)
+  const supabase = getSupabaseClient(env)
   return new Database(supabase)
 }

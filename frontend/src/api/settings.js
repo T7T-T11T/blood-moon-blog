@@ -36,29 +36,29 @@ function applySettingsToState(data) {
 
 /**
  * 获取所有网站设置项（公开接口，带 30s 缓存 + 自动同步到共享状态）
- * @returns {Promise} 键值对对象 { key: value }
+ * @returns {Promise<{code: number, data: Object}>} 标准响应格式 { code, data }
  */
 export function getSettings() {
   const key = 'getSettings';
   const cached = defaultCache.get(key);
   if (cached) {
     applySettingsToState(cached);
-    return Promise.resolve(cached);
+    // 返回与网络请求相同的响应结构 { code: 200, data: cached }
+    return Promise.resolve({ code: 200, data: cached });
   }
 
   return request
     .get('/settings')
     .then((res) => {
-      // 兼容两种响应格式：{ data: {...} } 或直接返回对象
-      const data = res?.data ?? res;
-      if (data && typeof data === 'object') {
-        defaultCache.set(key, data);
-        applySettingsToState(data);
+      // 兼容两种响应格式：后端返回 { code, data }，取内层 data
+      const innerData = res?.data ?? res;
+      if (innerData && typeof innerData === 'object') {
+        defaultCache.set(key, innerData);
+        applySettingsToState(innerData);
       }
       return res;
     })
     .catch((err) => {
-      // 请求失败不缓存，允许下次重试
       return Promise.reject(err);
     });
 }

@@ -1,5 +1,14 @@
 # 版本历史
 
+## v1.13.5 (2026-07-31)
+
+- perf(workers-backend): 修复首页加载慢 / 500 错误的三大根因
+  - articles.js: 修复 N+1 查询问题，批量预加载 categories，避免每篇文章单独查 category
+  - db.js: Supabase 客户端改为 Worker 级缓存（Map 复用），不再每次请求重建
+  - settings.js PUT: 修复 insert 时写入不存在的 created_at 字段（改为 updated_at）
+  - settings.js GET: 错误信息直接返回便于调试
+  - settings.js: 缓存命中时返回与网络请求一致的 { code, data } 结构，修复 admin Settings 页数据读取
+
 ## v1.13.4 (2026-07-31)
 
 - perf(frontend): 大幅优化首页加载速度，消除重复 API 调用

@@ -61,20 +61,23 @@ articlesRouter.get('/public', async (c) => {
       )
     }
 
-    // 获取分类名称
-    const result = []
-    for (const article of articles) {
-      if (article.category_id) {
-        const category = await db.findOne('categories', { id: article.category_id })
-        article.category_name = category ? category.name : ''
+    // 获取分类名称（批量预加载，避免 N+1 查询）
+    const categoryIds = [...new Set(articles.filter(a => a.category_id).map(a => a.category_id))]
+    const categoryMap = {}
+    if (categoryIds.length > 0) {
+      const categories = await db.select('categories', {})
+      for (const cat of categories) {
+        categoryMap[cat.id] = cat.name
       }
-      result.push(article)
+    }
+    for (const article of articles) {
+      article.category_name = article.category_id ? (categoryMap[article.category_id] || '') : ''
     }
 
     return c.json({
       code: 200,
       data: {
-        list: result,
+        list: articles,
         pagination: {
           page,
           page_size: pageSize,
