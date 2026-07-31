@@ -53,7 +53,7 @@ dashboardRouter.get('/stats', authMiddleware, adminMiddleware, async (c) => {
     const latestArticles = await db.supabase
       .from('articles')
       .select('id, title, view_count, created_at, status')
-      .eq('deleted_at', null)
+      .is('deleted_at', null)
       .order('created_at', { ascending: false })
       .limit(5)
 
@@ -61,7 +61,7 @@ dashboardRouter.get('/stats', authMiddleware, adminMiddleware, async (c) => {
     const hotArticles = await db.supabase
       .from('articles')
       .select('id, title, view_count, like_count, created_at')
-      .eq('deleted_at', null)
+      .is('deleted_at', null)
       .order('view_count', { ascending: false })
       .limit(10)
 
@@ -111,7 +111,7 @@ async function getTotalViews(db) {
   const { data, error } = await db.supabase
     .from('articles')
     .select('view_count', { count: 'exact', sum: 'view_count' })
-    .eq('deleted_at', null)
+    .is('deleted_at', null)
   
   if (error) return 0
   
@@ -119,7 +119,7 @@ async function getTotalViews(db) {
   const { data: sumData } = await db.supabase
     .from('articles')
     .select('view_count')
-    .eq('deleted_at', null)
+    .is('deleted_at', null)
   
   if (!sumData) return 0
   return sumData.reduce((sum, item) => sum + (item.view_count || 0), 0)
@@ -146,7 +146,7 @@ dashboardRouter.get('/recent-articles', authMiddleware, adminMiddleware, async (
     const articles = await db.supabase
       .from('articles')
       .select('*, categories(name)')
-      .eq('deleted_at', null)
+      .is('deleted_at', null)
       .order('created_at', { ascending: false })
       .range(offset, offset + pageSize - 1)
 

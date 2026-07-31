@@ -101,7 +101,7 @@ articlesRouter.get('/public/hot', async (c) => {
       .from('articles')
       .select('id, title, summary, cover_image, view_count, like_count, created_at')
       .eq('status', '已发布')
-      .eq('deleted_at', null)
+      .is('deleted_at', null)
       .order('view_count', { ascending: false })
       .limit(limit)
 
@@ -128,7 +128,7 @@ articlesRouter.get('/public/latest', async (c) => {
       .from('articles')
       .select('id, title, summary, cover_image, created_at')
       .eq('status', '已发布')
-      .eq('deleted_at', null)
+      .is('deleted_at', null)
       .order('created_at', { ascending: false })
       .limit(limit)
 
@@ -244,7 +244,7 @@ articlesRouter.get('/public/archives', async (c) => {
       .from('articles')
       .select('id, title, summary, created_at')
       .eq('status', '已发布')
-      .eq('deleted_at', null)
+      .is('deleted_at', null)
       .order('created_at', { ascending: false })
 
     if (error) {
@@ -322,7 +322,7 @@ articlesRouter.get('/public/tag/:slug', async (c) => {
       .from('articles')
       .select('*')
       .eq('status', '已发布')
-      .eq('deleted_at', null)
+      .is('deleted_at', null)
       .in('id', articleIds)
       .order('created_at', { ascending: false })
 
@@ -373,7 +373,7 @@ articlesRouter.get('/public/related/:id', async (c) => {
       .from('articles')
       .select('id, title, summary, cover_image, created_at')
       .eq('status', '已发布')
-      .eq('deleted_at', null)
+      .is('deleted_at', null)
       .neq('id', id)
       .order('created_at', { ascending: false })
       .limit(limit)

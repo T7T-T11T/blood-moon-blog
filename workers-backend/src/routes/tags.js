@@ -36,7 +36,7 @@ tagsRouter.get('/', async (c) => {
       const { data: pubArticles } = await db.supabase
         .from('articles')
         .select('id, status, deleted_at')
-        .eq('deleted_at', null)
+        .is('deleted_at', null)
         .eq('status', '已发布')
       const pubSet = new Set((pubArticles || []).map(a => a.id))
       for (const at of (atList || [])) {

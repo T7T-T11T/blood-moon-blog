@@ -3,11 +3,14 @@
 ## v1.13.1 (2026-07-31)
 
 - fix(workers-backend): 修复归档页面「明明有文章却不显示」的 Bug
-  - 原因：GET /articles/public/archives 接口返回格式与本地 backend 不一致
+  - 原因1：GET /articles/public/archives 接口返回格式与本地 backend 不一致
     - 本地返回：数组 [{ year, month, label, articles: [] }]
     - workers 后端返回：对象 { "YYYY-MM": [articles...] }
     - 前端 Archive.vue 只兼容数组或 {list:[]}，导致结果被判为 []
-  - 修复：重写 workers-backend 归档接口分组逻辑，返回格式与 articleService.getArchives() 对齐
+  - 修复1：重写 workers-backend 归档接口分组逻辑，返回格式与 articleService.getArchives() 对齐
+  - 原因2：Supabase 查询 null 值误用 .eq('deleted_at', null)，应使用 .is('deleted_at', null)
+    - 导致归档、热门、最新、相关文章、Dashboard 统计等接口查询失败或返回空
+  - 修复2：批量替换 articles.js / dashboard.js / tags.js 中所有 .eq('deleted_at', null) → .is('deleted_at', null)
   - 新增：归档接口查询补充 summary 字段，增加 Supabase error 捕获
 - 前后端 + workers 版本号统一升级至 1.13.1
 
