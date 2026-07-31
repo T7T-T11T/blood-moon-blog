@@ -1,5 +1,13 @@
 # 版本历史
 
+## v1.14.0 (2026-07-31)
+
+- fix(music-player): 修复音乐播放器无法播放 + AbortError 崩溃
+  - MusicPlayer.vue: audioUrl 从 currentMusic.value.file_path 改为 currentMusic.value.url（后端返回字段名为 url）
+  - MusicPlayer.vue: 增加 destroyed 标志位，防止组件卸载后异步 play() 继续执行
+  - MusicPlayer.vue: playCurrent() 区分 AbortError/NotAllowedError/其他错误分别处理
+  - MusicPlayer.vue: play() 被中断不再抛出未捕获的 promise rejection
+
 ## v1.13.9 (2026-07-31)
 
 - fix(music): 修复音乐上传 500 错误

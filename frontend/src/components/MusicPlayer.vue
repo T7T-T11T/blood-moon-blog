@@ -89,6 +89,10 @@
  *   - 进度条显示与跳转
  *   - 收起/展开状态
  *   - 音频跳动指示器动画
+ *
+ * 数据流：
+ *   - GET /api/music 返回 { id, title, artist, cover, url, lyric, ... }
+ *   - audioUrl 绑定歌曲的 url 字段（音乐文件地址）
  */
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue';
 import {
@@ -114,10 +118,14 @@ const currentMusic = computed(() => {
   return null;
 });
 
-/** 当前音乐文件URL */
+/**
+ * 当前音乐文件 URL
+ * 后端 GET /api/music 返回的字段名为 url（音乐文件地址）
+ * 兼容不同字段名：url（音乐地址）、file_path（旧字段）
+ */
 const audioUrl = computed(() => {
   if (currentMusic.value) {
-    return currentMusic.value.file_path;
+    return currentMusic.value.url || currentMusic.value.file_path || '';
   }
   return '';
 });
@@ -144,6 +152,9 @@ const progressPercent = computed(() => {
 
 /** 是否收起为迷你模式 */
 const collapsed = ref(false);
+
+/** 组件是否已卸载（防止异步 play() 在卸载后执行） */
+let destroyed = false;
 
 /**
  * 格式化时间为 mm:ss 格式
@@ -181,14 +192,26 @@ async function fetchMusicList() {
 
 /**
  * 播放当前音乐
- * 浏览器自动播放限制可能导致 play() 失败
+ * 浏览器自动播放限制可能导致 play() 失败（AbortError）
+ * 组件卸载时不再尝试播放
  */
 async function playCurrent() {
-  if (!audioRef.value) return;
+  if (!audioRef.value || destroyed) return;
   try {
     await audioRef.value.play();
   } catch (e) {
-    console.warn('自动播放被阻止，等待用户交互', e);
+    // AbortError: 媒体在 play() 完成前被移除（如路由跳转）
+    // NotAllowedError: 浏览器阻止了自动播放
+    if (e.name === 'AbortError') {
+      // 组件卸载或音频源被替换，正常忽略
+      return;
+    }
+    if (e.name === 'NotAllowedError') {
+      // 需要用户交互才能播放
+      isPlaying.value = false;
+      return;
+    }
+    console.warn('播放失败：', e);
   }
 }
 
