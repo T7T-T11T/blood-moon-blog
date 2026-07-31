@@ -104,8 +104,27 @@ musicRouter.get('/all', authMiddleware, adminMiddleware, async (c) => {
 })
 
 /**
+ * 将 Uint8Array 高效转为 base64 字符串
+ * 使用分块处理避免大文件 O(n²) 性能问题
+ * @param {Uint8Array} bytes - 字节数组
+ * @returns {string} base64 编码字符串
+ */
+function uint8ToBase64(bytes) {
+  const CHUNK_SIZE = 0x8000 // 32KB 分块，防止栈溢出
+  let binary = ''
+  for (let i = 0; i < bytes.length; i += CHUNK_SIZE) {
+    const chunk = bytes.subarray(i, i + CHUNK_SIZE)
+    binary += String.fromCharCode.apply(null, chunk)
+  }
+  return btoa(binary)
+}
+
+/**
  * POST /api/music
  * 添加音乐
+ * 支持两种请求方式：
+ *   1. application/json: 直接传 url / cover_url
+ *   2. multipart/form-data: 传文件字段，自动转为 base64 data URL
  */
 musicRouter.post('/', authMiddleware, adminMiddleware, async (c) => {
   const db = getDatabase(c.env)
@@ -117,7 +136,7 @@ musicRouter.post('/', authMiddleware, adminMiddleware, async (c) => {
 
     // 兼容 JSON 请求和 multipart/form-data 上传
     if (contentType.includes('multipart/form-data')) {
-      const formData = await c.req.formData()
+      const formData = await c.req.raw.formData()
       title = formData.get('title')
       artist = formData.get('artist')
       url = formData.get('url')
@@ -125,16 +144,14 @@ musicRouter.post('/', authMiddleware, adminMiddleware, async (c) => {
       lyric = formData.get('lyric')
       sort_order = parseInt(formData.get('sort_order')) || 0
 
-      // 如果有文件字段，先通过上传路由处理
+      // 如果有文件字段，内联转 base64（复用 upload 降级方案）
       const file = formData.get('file')
-      if (file && file instanceof File) {
-        // 上传到 Supabase Storage 或转 base64
-        const fileName = `${Date.now()}_${file.name}`
+      if (file && (file instanceof File || (file.type && file.arrayBuffer))) {
+        const fileName = `${Date.now()}_${file.name || 'audio.bin'}`
         const bytes = await file.arrayBuffer()
-        const base64 = btoa(
-          new Uint8Array(bytes).reduce((s, b) => s + String.fromCharCode(b), '')
-        )
-        url = url || `data:${file.type};base64,${base64}`
+        const fileType = file.type || 'application/octet-stream'
+        const base64 = uint8ToBase64(new Uint8Array(bytes))
+        url = url || `data:${fileType};base64,${base64}`
       }
     } else {
       const body = await c.req.json()

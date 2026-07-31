@@ -1,5 +1,18 @@
 # 版本历史
 
+## v1.13.3 (2026-07-31)
+
+- fix(frontend): 修复文章保存超时 + 草稿存储超限 + 首页网络错误提示
+  - request.js: axios timeout 从 10s 延长到 60s，解决含 base64 大图的文章/文件上传超时
+  - ArticleEdit.vue: saveDraft() 增加三级降级（完整→无 content→sessionStorage）
+    - 捕获 QuotaExceededError，避免 localStorage 超限时整页报错
+    - 新增 getDraftRaw()：按优先级读取 localStorage → sessionStorage
+    - clearDraft() 同时清理两个 Storage 的草稿
+- fix(workers-backend): 修复音乐上传及所有管理接口写操作卡顿/超时问题
+  - music.js POST: 替换 reduce 风格 base64 编码为分块高效 uint8ToBase64
+  - music.js: 改用 c.req.raw.formData()，放宽 file instanceof File 兼容 Blob
+- 版本统一升级至 v1.13.3（已构建 dist，前端可直接重新发布到 Pages）
+
 ## v1.13.2 (2026-07-31)
 
 - fix(workers-backend): 修复所有上传接口返回 500 的问题

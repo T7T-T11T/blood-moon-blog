@@ -19,7 +19,7 @@ const baseURL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 const request = axios.create({
   baseURL: baseURL, // 基础路径，开发环境配合 vite proxy 代理到后端
-  timeout: 10000 // 请求超时时间 10 秒
+  timeout: 60000 // 请求超时时间 60 秒（上传大文件/含 base64 图片的文章内容需要足够时间）
 });
 
 // ========== 请求拦截器 ==========

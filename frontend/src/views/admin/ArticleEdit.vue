@@ -205,26 +205,64 @@ const draftKey = computed(() => {
 
 /**
  * 保存草稿到 localStorage
+ * 若存储空间不足（QuotaExceededError），优先保存元信息（标题、摘要、标签）
+ * 丢弃 content 避免草稿保存失败导致整页抛错
  */
 function saveDraft() {
-  const draft = {
+  const baseDraft = {
     title: form.value.title,
     summary: form.value.summary,
-    content: form.value.content,
     category_id: form.value.category_id,
     tag_ids: form.value.tag_ids,
     status: form.value.status,
     savedAt: new Date().toISOString()
   };
-  localStorage.setItem(draftKey.value, JSON.stringify(draft));
-  lastSavedAt.value = draft.savedAt;
+
+  // 第一步：先尝试保存完整草稿（含 content）
+  try {
+    const fullDraft = { ...baseDraft, content: form.value.content };
+    localStorage.setItem(draftKey.value, JSON.stringify(fullDraft));
+    lastSavedAt.value = baseDraft.savedAt;
+    return;
+  } catch (e) {
+    if (e && e.name === 'QuotaExceededError') {
+      console.warn('[Draft] 存储配额不足，降级保存草稿（不含正文 content）');
+    } else {
+      console.warn('[Draft] 草稿保存失败:', e);
+    }
+  }
+
+  // 第二步：降级保存（不含 content）
+  try {
+    localStorage.setItem(draftKey.value, JSON.stringify(baseDraft));
+    lastSavedAt.value = baseDraft.savedAt;
+  } catch (e2) {
+    console.warn('[Draft] 降级保存也失败，尝试 sessionStorage：', e2);
+    // 第三步：再降级到 sessionStorage
+    try {
+      sessionStorage.setItem(draftKey.value, JSON.stringify(baseDraft));
+      lastSavedAt.value = baseDraft.savedAt;
+    } catch (e3) {
+      console.error('[Draft] 所有存储方式都失败：', e3);
+    }
+  }
+}
+
+/**
+ * 按优先级读取草稿：localStorage → sessionStorage
+ * @returns {string|null} 草稿 JSON 字符串，未找到返回 null
+ */
+function getDraftRaw() {
+  const local = localStorage.getItem(draftKey.value);
+  if (local) return local;
+  return sessionStorage.getItem(draftKey.value);
 }
 
 /**
  * 检测并恢复草稿
  */
 function restoreDraft() {
-  const saved = localStorage.getItem(draftKey.value);
+  const saved = getDraftRaw();
   if (!saved) return;
 
   try {
@@ -243,7 +281,7 @@ function restoreDraft() {
     ).then(() => {
       form.value.title = draft.title;
       form.value.summary = draft.summary;
-      form.value.content = draft.content;
+      form.value.content = draft.content || '';
       form.value.category_id = draft.category_id;
       form.value.tag_ids = draft.tag_ids;
       form.value.status = draft.status;
@@ -251,6 +289,7 @@ function restoreDraft() {
     }).catch(() => {
       // 用户选择不恢复，清除草稿
       localStorage.removeItem(draftKey.value);
+      sessionStorage.removeItem(draftKey.value);
     });
   } catch (e) {
     console.error('恢复草稿失败:', e);
@@ -258,10 +297,11 @@ function restoreDraft() {
 }
 
 /**
- * 清除草稿
+ * 清除草稿（同时清理 localStorage 和 sessionStorage）
  */
 function clearDraft() {
   localStorage.removeItem(draftKey.value);
+  sessionStorage.removeItem(draftKey.value);
   lastSavedAt.value = null;
   isDirty.value = false;
 }
