@@ -40,6 +40,10 @@ UPDATE comments SET status = '已拒绝' WHERE status = 'rejected';
 -- 5. music 表补充字段
 ALTER TABLE music ADD COLUMN IF NOT EXISTS sort_order INT NOT NULL DEFAULT 0;
 
+-- 5b. 修复 music 表 url/cover_url 字段类型（存储 base64 data URL 需要 TEXT）
+ALTER TABLE music ALTER COLUMN url TYPE TEXT;
+ALTER TABLE music ALTER COLUMN cover_url TYPE TEXT;
+
 -- 6. 为 admin 用户重置密码到 PBKDF2（由 reset-password.cjs 生成）
 -- 注意：以下哈希每次运行脚本都不同，请用脚本最新输出替换
 UPDATE users 

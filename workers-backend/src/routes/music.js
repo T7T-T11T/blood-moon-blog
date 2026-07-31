@@ -70,35 +70,25 @@ musicRouter.get('/all', authMiddleware, adminMiddleware, async (c) => {
     const total = await db.count('music', {})
     const offset = (page - 1) * pageSize
 
-    const { data, error } = await db.supabase
-      .from('music')
-      .select('*')
-      .order('sort_order', { ascending: true })
-      .range(offset, offset + pageSize - 1)
-
-    if (error) {
-      return c.json({
-        code: 500,
-        message: '查询失败'
-      }, 500)
-    }
+    const list = await db.select('music', {}, {
+      order: { column: 'sort_order', ascending: true },
+      offset,
+      limit: pageSize
+    })
 
     return c.json({
       code: 200,
       data: {
-        list: data || [],
-        pagination: {
-          page,
-          pageSize,
-          total
-        }
+        list,
+        pagination: { page, pageSize, total }
       }
     })
   } catch (error) {
     console.error('Get all music error:', error)
     return c.json({
       code: 500,
-      message: '服务器错误'
+      message: '服务器错误',
+      error: error.message
     }, 500)
   }
 })
@@ -147,7 +137,6 @@ musicRouter.post('/', authMiddleware, adminMiddleware, async (c) => {
       // 如果有文件字段，内联转 base64（复用 upload 降级方案）
       const file = formData.get('file')
       if (file && (file instanceof File || (file.type && file.arrayBuffer))) {
-        const fileName = `${Date.now()}_${file.name || 'audio.bin'}`
         const bytes = await file.arrayBuffer()
         const fileType = file.type || 'application/octet-stream'
         const base64 = uint8ToBase64(new Uint8Array(bytes))
@@ -170,14 +159,14 @@ musicRouter.post('/', authMiddleware, adminMiddleware, async (c) => {
       }, 400)
     }
 
+    // 注意：music 表的 created_at 有默认值 NOW()，不需要手动指定
     const music = await db.insert('music', {
       title,
       artist: artist || '',
       url,
       cover_url: cover_url || '',
       lyric: lyric || '',
-      sort_order,
-      created_at: new Date().toISOString()
+      sort_order
     })
 
     await db.safeInsertLog({
@@ -198,7 +187,8 @@ musicRouter.post('/', authMiddleware, adminMiddleware, async (c) => {
     console.error('Create music error:', error)
     return c.json({
       code: 500,
-      message: '服务器错误'
+      message: '服务器错误',
+      error: error.message
     }, 500)
   }
 })
@@ -275,7 +265,10 @@ musicRouter.delete('/:id', authMiddleware, adminMiddleware, async (c) => {
       }, 404)
     }
 
-    await db.supabase.from('music').delete().eq('id', id)
+    // 使用 update 方式删除（将 deleted_at 设置，实际为物理删除）
+    // music 表没有软删除字段，直接物理删除
+    const { error } = await db.supabase.from('music').delete().eq('id', id)
+    if (error) throw error
 
     await db.safeInsertLog({
       user_id: user.userId,
@@ -294,7 +287,8 @@ musicRouter.delete('/:id', authMiddleware, adminMiddleware, async (c) => {
     console.error('Delete music error:', error)
     return c.json({
       code: 500,
-      message: '服务器错误'
+      message: '服务器错误',
+      error: error.message
     }, 500)
   }
 })

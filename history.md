@@ -1,5 +1,15 @@
 # 版本历史
 
+## v1.13.9 (2026-07-31)
+
+- fix(music): 修复音乐上传 500 错误
+  - music.js POST: 移除手动 created_at（表有默认值 NOW()），移除 fileName 无用变量
+  - music.js POST/GET/DELETE: 所有错误返回 error.message 便于调试
+  - music.js GET /all: 改用 db.select() 封装替代裸 db.supabase 调用
+  - music.js DELETE /:id: 增加 error 检查
+  - init_postgres.sql: music 表 url/cover_url 改为 TEXT（存储 base64）
+  - fix_schema.sql: 新增 ALTER TABLE music ALTER COLUMN url/cover_url TYPE TEXT
+
 ## v1.13.8 (2026-07-31)
 
 - fix(articles): 修复管理端文章列表 500 错误

@@ -221,8 +221,8 @@ CREATE TABLE music (
     id         SERIAL PRIMARY KEY,
     title      VARCHAR(200) NOT NULL,
     artist     VARCHAR(100),
-    url        VARCHAR(500) NOT NULL,
-    cover_url  VARCHAR(500),
+    url        TEXT NOT NULL,
+    cover_url  TEXT,
     lyric      TEXT,
     sort_order INT          NOT NULL DEFAULT 0,
     created_at TIMESTAMPTZ  DEFAULT NOW()
