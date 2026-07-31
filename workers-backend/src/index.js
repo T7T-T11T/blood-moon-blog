@@ -35,7 +35,6 @@ import likesRouter from './routes/likes.js'
 import linksRouter from './routes/links.js'
 import uploadsRouter from './routes/upload.js'
 import trashRouter from './routes/trash.js'
-import diagRouter from './routes/diag.js'
 
 // 创建 Hono 应用
 const app = new Hono()
@@ -115,7 +114,6 @@ app.route('/api/likes', likesRouter)
 app.route('/api/links', linksRouter)
 app.route('/api/upload', uploadsRouter)
 app.route('/api/trash', trashRouter)
-app.route('/api/diag', diagRouter)
 
 /**
  * 404 处理
