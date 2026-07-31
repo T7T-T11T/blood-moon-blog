@@ -68,9 +68,13 @@
     <audio
       ref="audioRef"
       :src="audioUrl"
+      preload="metadata"
       @timeupdate="onTimeUpdate"
       @ended="onEnded"
       @loadedmetadata="onLoadedMetadata"
+      @durationchange="onLoadedMetadata"
+      @canplay="onLoadedMetadata"
+      @error="onAudioError"
       @play="isPlaying = true"
       @pause="isPlaying = false"
     ></audio>
@@ -282,10 +286,39 @@ function onEnded() {
 
 /**
  * 音频元数据加载完成回调
+ * 同时处理 loadedmetadata / durationchange / canplay 三种事件
+ * base64 data URL 的音频可能在 loadedmetadata 时仍未就绪
  */
 function onLoadedMetadata() {
-  if (audioRef.value) {
-    duration.value = audioRef.value.duration;
+  if (audioRef.value && !destroyed) {
+    // 尝试读取 duration
+    if (audioRef.value.duration && !isNaN(audioRef.value.duration) && audioRef.value.duration > 0) {
+      duration.value = audioRef.value.duration;
+    }
+    // 对于 base64 data URL，可能需要通过 currentTime 间接获取
+    // 或设置 currentTime 触发 seek 来获取时长
+    if (!duration.value && audioRef.value.duration === Infinity) {
+      // 流式音频（如 base64 可能导致 duration 为 Infinity）
+      // 通过设置一个时间点来触发 seek 完成后的 duration 获取
+      try {
+        audioRef.value.currentTime = 0.1;
+      } catch (_) {
+        // 某些浏览器不允许设置流式音频的 currentTime
+      }
+    }
+  }
+}
+
+/**
+ * 音频加载错误回调
+ * src 无效或解码失败时的错误处理
+ */
+function onAudioError() {
+  if (destroyed) return;
+  console.warn('音频加载失败，尝试播放下一首');
+  // 自动跳到下一首，避免卡在错误状态
+  if (musicList.value.length > 1) {
+    nextTrack();
   }
 }
 
@@ -305,8 +338,10 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  destroyed = true;
   if (audioRef.value) {
     audioRef.value.pause();
+    audioRef.value.src = '';
   }
 });
 </script>

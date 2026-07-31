@@ -213,7 +213,7 @@ musicRouter.put('/:id', authMiddleware, adminMiddleware, async (c) => {
       }, 404)
     }
 
-    const allowedFields = ['title', 'artist', 'sort_order', 'url', 'cover_url', 'lyric']
+    const allowedFields = ['title', 'artist', 'sort_order', 'url', 'cover_url', 'lyric', 'status']
     const updateData = {}
     for (const field of allowedFields) {
       if (body[field] !== undefined) {

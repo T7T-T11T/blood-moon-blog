@@ -1,5 +1,15 @@
 # 版本历史
 
+## v1.14.1 (2026-07-31)
+
+- fix(music): 修复播放时长始终 00:00 + 状态开关自动回跳
+  - MusicPlayer.vue: 增加 preload="metadata" + @durationchange + @canplay 事件
+  - MusicPlayer.vue: onLoadedMetadata 兼容 duration=Infinity 情况（base64 data URL）
+  - MusicPlayer.vue: 新增 onAudioError 自动跳过坏音频
+  - MusicPlayer.vue: onUnmounted 增加 destroyed=true + audio.src=''
+  - MusicList.vue: 状态开关从 is_active(0/1) 改为 status(已通过/已下架)
+  - music.js: PUT allowedFields 增加 status 字段
+
 ## v1.14.0 (2026-07-31)
 
 - fix(music-player): 修复音乐播放器无法播放 + AbortError 崩溃

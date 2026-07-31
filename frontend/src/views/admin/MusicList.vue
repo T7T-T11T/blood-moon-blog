@@ -33,13 +33,13 @@
           </template>
         </el-table-column>
 
-        <!-- 状态列 -->
-        <el-table-column label="状态" width="100">
+        <!-- 状态列：音乐表没有 is_active 字段，改用 status 字段（已通过/已下架） -->
+        <el-table-column prop="status" label="状态" width="100">
           <template #default="{ row }">
             <el-switch
-              v-model="row.is_active"
-              :active-value="1"
-              :inactive-value="0"
+              v-model="row.status"
+              :active-value="'已通过'"
+              :inactive-value="'已下架'"
               @change="toggleActive(row)"
             />
           </template>
@@ -359,17 +359,18 @@ async function submitEdit() {
  * @param {Object} row - 音乐行数据
  */
 async function toggleActive(row) {
+  const original = row.status === '已通过' ? '已下架' : '已通过';
   try {
-    const res = await updateMusic(row.id, { is_active: row.is_active });
+    const res = await updateMusic(row.id, { status: row.status });
     if (res.code === 200) {
-      ElMessage.success(row.is_active ? '已启用' : '已停用');
+      ElMessage.success(row.status === '已通过' ? '已启用' : '已下架');
     } else {
-      row.is_active = row.is_active === 1 ? 0 : 1; // 回滚
+      row.status = original;
       ElMessage.error(res.message || '操作失败');
     }
   } catch (e) {
     console.error('状态切换失败：', e);
-    row.is_active = row.is_active === 1 ? 0 : 1; // 回滚
+    row.status = original;
     ElMessage.error('操作失败');
   }
 }
