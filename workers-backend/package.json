@@ -1,0 +1,21 @@
+{
+  "name": "blood-moon-blog-workers",
+  "version": "1.13.1",
+  "description": "基于 Cloudflare Workers + Hono 的个人博客后端 API",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "hono": "^4.7.0",
+    "@supabase/supabase-js": "^2.45.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260730.1",
+    "typescript": "^5.6.0",
+    "wrangler": "^4.116.0"
+  }
+}

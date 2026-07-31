@@ -75,7 +75,7 @@ router.get('/stats', authMiddleware, async (req, res) => {
     const [dailyPv] = await pool.execute(
       `SELECT DATE(visit_time) AS date, COUNT(*) AS pv
        FROM site_visits
-       WHERE visit_time >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)
+       WHERE visit_time >= CURRENT_DATE - INTERVAL '6 days'
        GROUP BY DATE(visit_time)
        ORDER BY date ASC`
     );

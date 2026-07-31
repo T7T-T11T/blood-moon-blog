@@ -279,6 +279,9 @@ async function handleDelete(comment) {
   }
 }
 
+/** API 基础路径（开发环境 /api，生产环境为 Workers 完整 URL） */
+const apiBase = import.meta.env.VITE_API_BASE_URL || '/api';
+
 /**
  * 导出评论数据
  * 调用后端导出接口，下载 JSON 文件
@@ -290,7 +293,7 @@ async function handleExportComments() {
     if (filterStatus.value) params.status = filterStatus.value;
 
     const queryParams = new URLSearchParams(params);
-    const res = await fetch(`/api/export/comments?${queryParams.toString()}`, {
+    const res = await fetch(`${apiBase}/export/comments?${queryParams.toString()}`, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
       }

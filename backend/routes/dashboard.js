@@ -58,11 +58,11 @@ router.get('/stats', async (req, res) => {
       [userId]
     )
 
-    // 5. 近7天文章发布趋势
+    // 5. 近7天文章发布趋势（PostgreSQL 日期语法）
     const [publishTrend] = await pool.execute(
       `SELECT DATE(created_at) AS date, COUNT(*) AS count
        FROM articles
-       WHERE user_id = ? AND created_at >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)
+       WHERE user_id = ? AND created_at >= CURRENT_DATE - INTERVAL '6 days'
        GROUP BY DATE(created_at)
        ORDER BY date ASC`,
       [userId]
@@ -78,7 +78,7 @@ router.get('/stats', async (req, res) => {
       [userId]
     )
 
-    // 将 BigInt 字符串转为数字类型（mysql2 聚合函数默认返回字符串）
+    // 将聚合计算结果转为数字类型
     const stats = articleStats[0]
     const trendWithNumber = publishTrend.map((t) => ({ ...t, count: Number(t.count) }))
 

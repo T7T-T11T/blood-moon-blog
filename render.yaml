@@ -1,0 +1,48 @@
+/**
+ * Render 部署配置 - 后端 Express 服务
+ * 
+ * 本配置用于将 backend/ 目录部署到 Render.com
+ * Render 提供免费的 Node.js 托管服务（每月 750 小时）
+ * 
+ * 部署步骤：
+ *   1. 将 backend/ 目录单独推送到 GitHub 仓库
+ *   2. 在 Render Dashboard 中创建新服务，连接该仓库
+ *   3. Render 会自动识别此 render.yaml 配置
+ * 
+ * 环境变量需在 Render Dashboard 中配置：
+ *   DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME
+ *   JWT_SECRET, CORS_ORIGIN
+ */
+
+services:
+  # 后端 API 服务
+  - name: blood-moon-blog-api
+    type: web
+    runtime: node
+    region: singapore  # 新加坡节点，国内访问延迟较低
+    
+    # 构建配置
+    buildCommand: cd backend && npm install
+    startCommand: cd backend && node server.js
+    
+    # 根目录：backend 子目录
+    rootDir: backend
+    
+    # 端口配置（Render 会注入 PORT 环境变量）
+    env:
+      - key: NODE_ENV
+        value: production
+      - key: CORS_ORIGIN
+        # 允许 Cloudflare Pages 域名跨域访问
+        # 部署后替换为实际的 Cloudflare Pages 域名
+        value: "*"
+    
+    # 健康检查路径
+    healthCheckPath: /api/health
+    
+    # 自动部署（推送到 GitHub 后自动部署）
+    autoDeploy: true
+    
+    # 计划休眠（免费套餐功能）
+    # 闲置 15 分钟后休眠，首次请求需冷启动 30 秒
+    plan: free

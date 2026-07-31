@@ -165,7 +165,7 @@ import { getHotArticles } from '@/api/articles';
 import { getDashboardStatsAPI } from '@/api/dashboard';
 import { getVisitStats } from '@/api/visits';
 import { getLogs } from '@/api/logs';
-import { getComments } from '@/api/comments';
+import { getCommentList } from '@/api/comments';
 import { DataLine } from '@element-plus/icons-vue';
 
 /** 统计数据 */
@@ -266,7 +266,7 @@ async function loadDashboard() {
     getHotArticles(5),
     getVisitStats(),
     getLogs({ page: 1, page_size: 8 }),
-    getComments({ status: '待审核', page: 1, page_size: 1 })
+    getCommentList({ status: '待审核', page: 1, page_size: 1 })
   ]);
 
   // 仪表盘统计：文章数、总阅读、分类数、标签数、最新文章

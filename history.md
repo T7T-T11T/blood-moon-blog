@@ -1,5 +1,16 @@
 # 版本历史
 
+## v1.13.1 (2026-07-31)
+
+- fix(workers-backend): 修复归档页面「明明有文章却不显示」的 Bug
+  - 原因：GET /articles/public/archives 接口返回格式与本地 backend 不一致
+    - 本地返回：数组 [{ year, month, label, articles: [] }]
+    - workers 后端返回：对象 { "YYYY-MM": [articles...] }
+    - 前端 Archive.vue 只兼容数组或 {list:[]}，导致结果被判为 []
+  - 修复：重写 workers-backend 归档接口分组逻辑，返回格式与 articleService.getArchives() 对齐
+  - 新增：归档接口查询补充 summary 字段，增加 Supabase error 捕获
+- 前后端 + workers 版本号统一升级至 1.13.1
+
 ## v1.13.0 (2026-07-31)
 
 - feat(release): 首次发布至 GitHub 开源社区

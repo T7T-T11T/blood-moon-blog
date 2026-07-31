@@ -61,6 +61,10 @@ Desktop.ini
 coverage/
 .nyc_output/
 
+# Wrangler (Cloudflare Workers deployment cache & temp builds)
+.wrangler/
+workers-backend/.wrangler/
+
 # Package lock (optional, uncomment if you want to ignore)
 # package-lock.json
 # yarn.lock

@@ -35,6 +35,9 @@ request.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
+/** 401 重定向锁，防止并发 401 导致多次跳转 */
+let isRedirecting = false;
+
 // ========== 响应拦截器 ==========
 // 统一处理响应数据和错误
 request.interceptors.response.use(
@@ -43,6 +46,11 @@ request.interceptors.response.use(
     return response.data;
   },
   (error) => {
+    // 请求被中止（如页面导航、组件卸载）——静默处理，不弹提示
+    if (error.code === 'ERR_NETWORK' && !error.response) {
+      return Promise.reject(error);
+    }
+
     // 请求失败，根据状态码处理
     if (error.response) {
       const { status, data } = error.response;
@@ -57,21 +65,28 @@ request.interceptors.response.use(
       }
 
       if (status === 401) {
-        // token 过期或未登录，清除登录信息并跳转登录页
-        localStorage.removeItem('token');
-        localStorage.removeItem('username');
-        ElMessage.error('登录已过期，请重新登录');
-        router.push('/login');
+        // token 过期或未登录，清除登录信息并跳转登录页（加锁防止并发重复跳转）
+        if (!isRedirecting) {
+          isRedirecting = true;
+          localStorage.removeItem('token');
+          localStorage.removeItem('username');
+          ElMessage.error('登录已过期，请重新登录');
+          router.push('/login').finally(() => {
+            isRedirecting = false;
+          });
+        }
       } else if (status === 429) {
         // 限流错误：不弹 ElMessage 打扰，交由调用方处理
-        // 后台自动刷新遇到 429 时需要自行停止定时器
         console.warn('[429] 请求被限流:', data?.message || '请求过于频繁');
       } else {
         // 其他错误，显示错误信息
         ElMessage.error(data.message || '请求失败');
       }
     } else {
-      ElMessage.error('网络异常，请检查网络连接');
+      // 无 response 的错误（如超时、被中止），仅在非中止情况下提示
+      if (error.code !== 'ECONNABORTED') {
+        ElMessage.error('网络异常，请检查网络连接');
+      }
     }
     return Promise.reject(error);
   }

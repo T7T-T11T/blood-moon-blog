@@ -164,7 +164,7 @@ async function loadFriends() {
   try {
     const res = await getAllFriends();
     if (res.code === 200) {
-      friends.value = Array.isArray(res.data) ? res.data : [];
+      friends.value = Array.isArray(res.data) ? res.data : (res.data?.list ?? []);
     }
   } catch (e) {
     console.error('加载友链列表失败:', e);

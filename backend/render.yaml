@@ -1,0 +1,26 @@
+/**
+ * Render 后端部署配置
+ * 
+ * 此文件应放在 backend/ 目录下（backend/render.yaml）
+ * Render 会自动识别并应用此配置
+ */
+
+services:
+  - name: blood-moon-blog-api
+    type: web
+    runtime: node
+    region: singapore
+    plan: free
+    
+    buildCommand: npm install
+    startCommand: node server.js
+    
+    env:
+      - key: NODE_ENV
+        value: production
+      - key: CORS_ORIGIN
+        # Cloudflare Pages 域名将在部署后替换
+        value: "*"
+    
+    healthCheckPath: /api/health
+    autoDeploy: true

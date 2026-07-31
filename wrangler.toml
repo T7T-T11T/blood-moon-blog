@@ -1,0 +1,23 @@
+# ============================================
+# Cloudflare Pages 部署配置
+#
+# 本配置用于将前端构建产物部署到 Cloudflare Pages
+# 后端 API 通过 Functions 代理到 Cloudflare Workers 后端
+#
+# 部署命令：
+#   wrangler pages deploy frontend/dist --project-name=blood-moon-blog
+# ============================================
+
+# Cloudflare Pages 项目名
+name = "blood-moon-blog"
+compatibility_date = "2025-01-01"
+
+# Pages 构建输出目录（必填）
+pages_build_output_dir = "frontend/dist"
+
+# 环境变量配置
+[vars]
+API_BASE_URL = "/api"
+SITE_NAME = "寿冬与秋"
+# 后端 API 地址：Cloudflare Workers
+BACKEND_URL = "https://blood-moon-blog-api.2198789717.workers.dev"

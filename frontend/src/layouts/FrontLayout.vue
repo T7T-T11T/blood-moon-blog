@@ -120,7 +120,7 @@
         <span v-if="siteDescription" class="footer-divider">·</span>
         <span v-if="siteDescription" class="footer-desc">{{ siteDescription }}</span>
         <span class="footer-divider">·</span>
-        <a href="/api/rss" target="_blank" class="footer-rss" title="RSS 订阅">
+        <a :href="`${apiBase}/rss`" target="_blank" class="footer-rss" title="RSS 订阅">
           <el-icon><Connection /></el-icon> RSS
         </a>
       </div>
@@ -141,6 +141,9 @@ import MusicPlayer from '../components/MusicPlayer.vue';
 import BackToTop from '../components/common/BackToTop.vue';
 import { useThemeStore } from '../stores/theme';
 import { useUserStore } from '../stores/user';
+
+/** API 基础路径（开发环境 /api，生产环境为 Workers 完整 URL） */
+const apiBase = import.meta.env.VITE_API_BASE_URL || '/api';
 
 const route = useRoute();
 const router = useRouter();

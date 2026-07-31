@@ -1,0 +1,23 @@
+# ============================================
+# Cloudflare Workers 部署配置
+# 项目：血月博客后端 API
+# ============================================
+
+name = "blood-moon-blog-api"
+main = "src/index.js"
+compatibility_date = "2025-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+# 环境变量（部署时通过 wrangler secret 设置）
+# wrangler secret put SUPABASE_URL
+# wrangler secret put SUPABASE_ANON_KEY
+# wrangler secret put JWT_SECRET
+
+# CORS 配置
+[vars]
+ENVIRONMENT = "production"
+CORS_ORIGIN = "https://blood-moon-blog.pages.dev"
+
+# 开发环境配置
+[dev]
+# 本地开发时允许 localhost
