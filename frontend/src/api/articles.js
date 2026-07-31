@@ -138,12 +138,27 @@ export function getRelatedArticles(articleId, limit = 5) {
 // ==================== 管理接口 ====================
 
 /**
- * 获取文章列表（管理端，含草稿）
- * @param {Object} params - 查询参数 { status, category_id, keyword }
+ * 获取文章列表（管理端，含草稿，带 30s 缓存）
+ * @param {Object} params - 查询参数 { status, category_id, keyword, page, page_size }
  * @returns {Promise} 文章列表
  */
 export function getArticles(params) {
-  return request.get('/articles', { params });
+  const key = cacheKey(getArticles, params || {});
+  const cached = defaultCache.get(key);
+  if (cached) return Promise.resolve(cached);
+
+  return request.get('/articles', { params }).then((res) => {
+    defaultCache.set(key, res);
+    return res;
+  });
+}
+
+/**
+ * 清除管理端文章列表缓存
+ * 在增删改文章后调用，确保数据一致性
+ */
+export function clearArticlesCache() {
+  defaultCache.deleteByPrefix('getArticles:');
 }
 
 /**
@@ -161,7 +176,10 @@ export function getAdminArticleDetail(id) {
  * @returns {Promise} 创建结果
  */
 export function addArticle(data) {
-  return request.post('/articles', data);
+  return request.post('/articles', data).then((res) => {
+    clearArticlesCache();
+    return res;
+  });
 }
 
 /**
@@ -171,7 +189,10 @@ export function addArticle(data) {
  * @returns {Promise} 更新结果
  */
 export function updateArticle(id, data) {
-  return request.put(`/articles/${id}`, data);
+  return request.put(`/articles/${id}`, data).then((res) => {
+    clearArticlesCache();
+    return res;
+  });
 }
 
 /**
@@ -180,7 +201,10 @@ export function updateArticle(id, data) {
  * @returns {Promise} 删除结果
  */
 export function deleteArticle(id) {
-  return request.delete(`/articles/${id}`);
+  return request.delete(`/articles/${id}`).then((res) => {
+    clearArticlesCache();
+    return res;
+  });
 }
 
 /**
@@ -202,5 +226,8 @@ export function exportArticle(id, format = 'markdown') {
  * @returns {Promise} 新的置顶状态
  */
 export function toggleTop(id) {
-  return request.put(`/articles/${id}/toggle-top`);
+  return request.put(`/articles/${id}/toggle-top`).then((res) => {
+    clearArticlesCache();
+    return res;
+  });
 }

@@ -60,10 +60,22 @@ class MemoryCache {
   }
 
   /**
-   * 清空所有缓存
-   */
+ * 清空所有缓存
+ */
   clear() {
     this.cache.clear();
+  }
+
+  /**
+   * 按前缀批量删除缓存
+   * @param {string} prefix - 缓存键前缀
+   */
+  deleteByPrefix(prefix) {
+    for (const key of this.cache.keys()) {
+      if (key.startsWith(prefix)) {
+        this.cache.delete(key);
+      }
+    }
   }
 }
 

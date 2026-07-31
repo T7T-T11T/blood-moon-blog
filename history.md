@@ -1,5 +1,15 @@
 # 版本历史
 
+## v1.13.7 (2026-07-31)
+
+- perf(articles): 大幅优化管理端文章列表加载速度
+  - articles.js(后端): 管理端 GET /articles 增加 category_name + tags 批量预加载（3次查询完成，不再 N+1）
+  - articles.js(后端): 管理端列表改为只查询必要字段（排除 content 大字段，加速传输）
+  - articles.js(后端): 关键词过滤同时搜索 title 和 summary
+  - articles.js(前端): getArticles() 新增 30s defaultCache 缓存，避免重复网络请求
+  - articles.js(前端): addArticle/updateArticle/deleteArticle/toggleTop 自动清理缓存
+  - cache.js: MemoryCache 新增 deleteByPrefix() 方法，支持按前缀批量清除
+
 ## v1.13.6 (2026-07-31)
 
 - fix(avatar): 修复头像上传保存失败 + 前端体验优化

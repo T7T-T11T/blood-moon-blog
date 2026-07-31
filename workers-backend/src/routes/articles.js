@@ -447,7 +447,7 @@ articlesRouter.get('/public/:id', async (c) => {
 
 /**
  * GET /articles
- * 管理端文章列表
+ * 管理端文章列表（含分类名称、标签列表批量预加载）
  */
 articlesRouter.get('/', authMiddleware, adminMiddleware, async (c) => {
   const db = getDatabase(c.env)
@@ -464,14 +464,65 @@ articlesRouter.get('/', authMiddleware, adminMiddleware, async (c) => {
     const total = await db.count('articles', filters)
     const offset = (page - 1) * pageSize
 
+    // 只查询管理端列表需要的字段（排除 content 大字段，加速传输）
     let articles = await db.select('articles', filters, {
+      select: 'id, title, summary, cover_image, category_id, status, is_top, view_count, created_at, updated_at',
       order: { column: 'created_at', ascending: false },
       offset,
       limit: pageSize
     })
 
+    // 关键词过滤（客户端过滤，保持接口兼容）
     if (keyword) {
-      articles = articles.filter(a => a.title.includes(keyword))
+      articles = articles.filter(a => 
+        (a.title && a.title.includes(keyword)) ||
+        (a.summary && a.summary.includes(keyword))
+      )
+    }
+
+    // ===== 批量预加载分类名称 =====
+    const categoryIds = [...new Set(articles.filter(a => a.category_id).map(a => a.category_id))]
+    const categoryMap = {}
+    if (categoryIds.length > 0) {
+      const categories = await db.select('categories', {})
+      for (const cat of categories) {
+        categoryMap[cat.id] = cat.name
+      }
+    }
+    for (const article of articles) {
+      article.category_name = article.category_id ? (categoryMap[article.category_id] || '') : ''
+    }
+
+    // ===== 批量预加载标签 =====
+    if (articles.length > 0) {
+      const articleIds = articles.map(a => a.id)
+      const articleTags = await db.supabase
+        .from('article_tags')
+        .select('article_id, tag_id')
+        .in('article_id', articleIds)
+
+      const tagIds = [...new Set((articleTags || []).map(t => t.tag_id))]
+      const tagMap = {}
+      if (tagIds.length > 0) {
+        const { data: tags } = await db.supabase
+          .from('tags')
+          .select('id, name')
+          .in('id', tagIds)
+        for (const tag of (tags || [])) {
+          tagMap[tag.id] = tag
+        }
+      }
+
+      for (const article of articles) {
+        const tagIdsForArticle = (articleTags || [])
+          .filter(at => at.article_id === article.id)
+          .map(at => at.tag_id)
+        article.tags = tagIdsForArticle.map(tid => tagMap[tid]).filter(Boolean)
+      }
+    } else {
+      for (const article of articles) {
+        article.tags = []
+      }
     }
 
     return c.json({
@@ -483,7 +534,7 @@ articlesRouter.get('/', authMiddleware, adminMiddleware, async (c) => {
     })
   } catch (error) {
     console.error('Get articles (admin) error:', error)
-    return c.json({ code: 500, message: '服务器错误' }, 500)
+    return c.json({ code: 500, message: '服务器错误', error: error.message }, 500)
   }
 })
 
