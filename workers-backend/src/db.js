@@ -82,7 +82,10 @@ export class Database {
    * 根据条件查询记录
    * @param {string} table - 表名
    * @param {Object} [filters={}] - 查询条件
-   * @param {Object} [options={}] - 查询选项（limit, order, select）
+   *   - 简单值: { status: 'published' } → WHERE status = 'published'
+   *   - NULL值: { deleted_at: null } → WHERE deleted_at IS NULL
+   *   - IN查询: { id: { in: [1, 2, 3] } } → WHERE id IN (1, 2, 3)
+   * @param {Object} [options={}] - 查询选项（limit, offset, order, select）
    * @returns {Promise<Array>} 查询结果数组
    */
   async select(table, filters = {}, options = {}) {
@@ -93,6 +96,9 @@ export class Database {
       if (value === undefined) continue
       if (value === null) {
         query = query.is(key, null)
+      } else if (typeof value === 'object' && value.in) {
+        // IN 查询：{ id: { in: [1, 2, 3] } }
+        query = query.in(key, value.in)
       } else {
         query = query.eq(key, value)
       }

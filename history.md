@@ -1,5 +1,13 @@
 # 版本历史
 
+## v1.13.8 (2026-07-31)
+
+- fix(articles): 修复管理端文章列表 500 错误
+  - db.js: select() 方法新增 IN 查询支持（{ id: { in: [1,2,3] } }）
+  - articles.js: 标签预加载改用 db.select() 封装替代裸 db.supabase 调用
+  - articles.js: 分类/标签预加载增加 try-catch 容错，失败不影响文章列表
+  - articles.js: 修复关键词过滤同时搜索 title 和 summary
+
 ## v1.13.7 (2026-07-31)
 
 - perf(articles): 大幅优化管理端文章列表加载速度

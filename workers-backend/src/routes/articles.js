@@ -481,45 +481,59 @@ articlesRouter.get('/', authMiddleware, adminMiddleware, async (c) => {
     }
 
     // ===== 批量预加载分类名称 =====
-    const categoryIds = [...new Set(articles.filter(a => a.category_id).map(a => a.category_id))]
-    const categoryMap = {}
-    if (categoryIds.length > 0) {
-      const categories = await db.select('categories', {})
-      for (const cat of categories) {
-        categoryMap[cat.id] = cat.name
-      }
-    }
-    for (const article of articles) {
-      article.category_name = article.category_id ? (categoryMap[article.category_id] || '') : ''
-    }
-
-    // ===== 批量预加载标签 =====
-    if (articles.length > 0) {
-      const articleIds = articles.map(a => a.id)
-      const articleTags = await db.supabase
-        .from('article_tags')
-        .select('article_id, tag_id')
-        .in('article_id', articleIds)
-
-      const tagIds = [...new Set((articleTags || []).map(t => t.tag_id))]
-      const tagMap = {}
-      if (tagIds.length > 0) {
-        const { data: tags } = await db.supabase
-          .from('tags')
-          .select('id, name')
-          .in('id', tagIds)
-        for (const tag of (tags || [])) {
-          tagMap[tag.id] = tag
+    try {
+      const categoryIds = [...new Set(articles.filter(a => a.category_id).map(a => a.category_id))]
+      if (categoryIds.length > 0) {
+        const categories = await db.select('categories', {})
+        const categoryMap = {}
+        for (const cat of categories) {
+          categoryMap[cat.id] = cat.name
+        }
+        for (const article of articles) {
+          article.category_name = article.category_id ? (categoryMap[article.category_id] || '') : ''
+        }
+      } else {
+        for (const article of articles) {
+          article.category_name = ''
         }
       }
-
+    } catch (e) {
+      console.error('Category enrichment error:', e.message)
       for (const article of articles) {
-        const tagIdsForArticle = (articleTags || [])
-          .filter(at => at.article_id === article.id)
-          .map(at => at.tag_id)
-        article.tags = tagIdsForArticle.map(tid => tagMap[tid]).filter(Boolean)
+        article.category_name = ''
       }
-    } else {
+    }
+
+    // ===== 批量预加载标签（容错处理，失败不影响文章列表） =====
+    try {
+      if (articles.length > 0) {
+        const articleIds = articles.map(a => a.id)
+        const articleTags = await db.select('article_tags', {
+          article_id: { in: articleIds }
+        })
+
+        const tagIds = [...new Set((articleTags || []).map(t => t.tag_id))]
+        const tagMap = {}
+        if (tagIds.length > 0) {
+          const tags = await db.select('tags', { id: { in: tagIds } })
+          for (const tag of (tags || [])) {
+            tagMap[tag.id] = tag
+          }
+        }
+
+        for (const article of articles) {
+          const tagIdsForArticle = (articleTags || [])
+            .filter(at => at.article_id === article.id)
+            .map(at => at.tag_id)
+          article.tags = tagIdsForArticle.map(tid => tagMap[tid]).filter(Boolean)
+        }
+      } else {
+        for (const article of articles) {
+          article.tags = []
+        }
+      }
+    } catch (e) {
+      console.error('Tag enrichment error:', e.message)
       for (const article of articles) {
         article.tags = []
       }
