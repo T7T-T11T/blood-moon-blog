@@ -1,5 +1,18 @@
 # 版本历史
 
+## v1.13.6 (2026-07-31)
+
+- fix(avatar): 修复头像上传保存失败 + 前端体验优化
+  - Profile.vue: handleAvatarChange 修复 catch 变量名冲突（e → err）
+  - Profile.vue: 新增文件输入重置，支持重复选择同一文件
+  - Profile.vue: 新增图片类型和大小校验（< 2MB）
+  - Profile.vue: 新增上传中 loading 状态，头像上传时有视觉反馈
+  - Profile.vue: 新增 Loading 图标导入
+  - auth.js: PUT /profile 返回实际错误信息便于调试
+  - fix_schema.sql: 新增 ALTER TABLE users ALTER COLUMN avatar_url TYPE TEXT（需手动执行）
+  - init_postgres.sql: avatar_url 字段改为 TEXT 类型
+  - 新增 diag.js 诊断路由（/api/diag/storage 检查 Storage 状态）
+
 ## v1.13.5 (2026-07-31)
 
 - perf(workers-backend): 修复首页加载慢 / 500 错误的三大根因

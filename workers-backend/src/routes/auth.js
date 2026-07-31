@@ -186,7 +186,7 @@ authRouter.put('/profile', authMiddleware, async (c) => {
     return c.json({ code: 200, message: '更新成功' })
   } catch (error) {
     console.error('Update profile error:', error)
-    return c.json({ code: 500, message: '服务器错误' }, 500)
+    return c.json({ code: 500, message: '更新资料失败', error: error.message }, 500)
   }
 })
 

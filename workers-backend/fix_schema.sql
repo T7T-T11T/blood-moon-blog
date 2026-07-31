@@ -60,3 +60,12 @@ ALTER TABLE article_likes DISABLE ROW LEVEL SECURITY;
 ALTER TABLE article_favorites DISABLE ROW LEVEL SECURITY;
 ALTER TABLE article_tags DISABLE ROW LEVEL SECURITY;
 ALTER TABLE users DISABLE ROW LEVEL SECURITY;
+
+-- 8. 修复 users.avatar_url 字段类型
+-- 原因：VARCHAR(500) 无法存储 base64 data URL（通常 10KB+）
+-- 修复：改为 TEXT 类型，支持任意长度 URL
+ALTER TABLE users ALTER COLUMN avatar_url TYPE TEXT;
+
+-- 9. 修复 site_settings.setting_value 字段类型
+-- 原因：存储长文章内容或配置值时可能超出 VARCHAR 限制
+ALTER TABLE site_settings ALTER COLUMN setting_value TYPE TEXT;

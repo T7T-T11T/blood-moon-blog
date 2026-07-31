@@ -3,10 +3,13 @@
     <!-- 顶部信息卡片 -->
     <div class="profile-header">
       <div class="avatar-section">
-        <div class="avatar-wrapper" @click="triggerAvatarUpload">
-          <el-icon v-if="!form.avatar_url" :size="32" color="#fff"><User /></el-icon>
-          <img v-else :src="form.avatar_url" alt="头像" class="avatar-img" />
-          <div class="avatar-overlay">
+        <div class="avatar-wrapper" @click="uploading ? null : triggerAvatarUpload()">
+          <el-icon v-if="!form.avatar_url && !uploading" :size="32" color="#fff"><User /></el-icon>
+          <img v-else-if="form.avatar_url" :src="form.avatar_url" alt="头像" class="avatar-img" />
+          <div v-if="uploading" class="avatar-loading">
+            <el-icon :size="24" color="#fff" class="is-loading"><Loading /></el-icon>
+          </div>
+          <div class="avatar-overlay" v-if="!uploading">
             <el-icon :size="20" color="#fff"><Camera /></el-icon>
           </div>
         </div>
@@ -166,7 +169,7 @@
  */
 import { ref, reactive, onMounted } from 'vue';
 import { ElMessage } from 'element-plus';
-import { User, Camera, Link, ChatDotRound, ChatLineSquare } from '@element-plus/icons-vue';
+import { User, Camera, Loading, Link, ChatDotRound, ChatLineSquare } from '@element-plus/icons-vue';
 import { getProfile, updateProfile, changePassword } from '@/api/profile';
 import { getDashboardStatsAPI } from '@/api/dashboard';
 import { uploadImage } from '@/api/upload';
@@ -351,6 +354,9 @@ function triggerAvatarUpload() {
   avatarInputRef.value?.click();
 }
 
+/** 上传中状态 */
+const uploading = ref(false);
+
 /**
  * 处理头像上传
  * @param {Event} e - 文件选择事件
@@ -359,18 +365,40 @@ async function handleAvatarChange(e) {
   const file = e.target.files?.[0];
   if (!file) return;
 
+  // 重置文件输入，确保同一文件可重复选择
+  e.target.value = '';
+
+  // 简单的类型校验
+  if (!file.type.startsWith('image/')) {
+    ElMessage.error('请选择图片文件');
+    return;
+  }
+
+  // 简单的大小校验（头像建议 < 2MB）
+  if (file.size > 2 * 1024 * 1024) {
+    ElMessage.error('头像不能超过 2MB');
+    return;
+  }
+
+  uploading.value = true;
   try {
     const res = await uploadImage(file);
-    const url = res.data?.url || res.url || res.data;
+    const url = res?.data?.url || res?.url || res;
     if (url) {
       form.avatar_url = url;
       // 同步更新全局 store，使右上角头像立即生效
       userStore.setAvatar(url);
+      // 持久化到数据库
       await updateProfile({ avatar_url: url });
       ElMessage.success('头像更新成功');
+    } else {
+      ElMessage.error('上传响应无 URL，保存失败');
     }
-  } catch (e) {
-    console.error('头像上传失败:', e);
+  } catch (err) {
+    console.error('头像上传失败:', err);
+    // 错误信息由 request.js 拦截器统一处理
+  } finally {
+    uploading.value = false;
   }
 }
 
@@ -438,6 +466,23 @@ onMounted(() => {
 
 .avatar-wrapper:hover .avatar-overlay {
   opacity: 1;
+}
+
+.avatar-loading {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.avatar-loading .is-loading {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 .username {
