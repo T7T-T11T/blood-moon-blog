@@ -136,7 +136,7 @@ commentsRouter.post('/:articleId', async (c) => {
   const db = getDatabase(c.env)
 
   try {
-    const articleId = c.req.param('articleId')
+    const articleId = parseInt(c.req.param('articleId'))
     const body = await c.req.json()
     const { content, nickname, email, avatar_url, parent_id } = body
 
@@ -175,12 +175,12 @@ commentsRouter.post('/:articleId', async (c) => {
     }
 
     const comment = await db.insert('comments', {
-      article_id: parseInt(articleId),
+      article_id: articleId,
       nickname: nick,
       email: email || '',
       avatar_url: avatar,
       content,
-      parent_id: parent_id || null,
+      parent_id: parent_id ? parseInt(parent_id) : null,
       status: '已通过',
       ip_address: getClientIp(c),
       created_at: new Date().toISOString()
@@ -195,7 +195,8 @@ commentsRouter.post('/:articleId', async (c) => {
     console.error('Create comment error:', error)
     return c.json({
       code: 500,
-      message: '服务器错误'
+      message: '服务器错误: ' + error.message,
+      detail: error.details || error.stack || String(error)
     }, 500)
   }
 })

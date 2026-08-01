@@ -237,7 +237,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue';
+import { ref, shallowRef, computed, onMounted, onUnmounted, watch, nextTick } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
@@ -267,7 +267,8 @@ const route = useRoute();
 const router = useRouter();
 const userStore = useUserStore();
 
-const article = ref(null);
+/** 文章数据（使用 shallowRef 避免对大对象做深度响应式代理，防止栈溢出） */
+const article = shallowRef(null);
 const loading = ref(true);
 const coverImageError = ref(false);
 const articleBodyRef = ref(null);
@@ -460,9 +461,6 @@ const tocItems = computed(() => {
 // ---- Reveal 动画 Observer ----
 let revealObserver = null;
 
-// ---- 图片懒加载 Observer ----
-let lazyImgObserver = null;
-
 /**
  * 计算阅读时间（按中文约 500 字/分钟，英文约 200 词/分钟）
  * @returns {number} 预估阅读时间（分钟）
@@ -476,9 +474,43 @@ const readingTime = computed(() => {
   return Math.max(1, minutes);
 });
 
+/**
+ * 渲染 Markdown 为 HTML
+ * 1. 预处理：将 data: URL（base64 图片/视频）替换为合法 HTTPS 占位符
+ *    - 防止 marked 正则栈溢出（base64 超长行导致）
+ *    - 防止 DOMPurify 移除 data: URL
+ * 2. 解析 Markdown
+ * 3. DOMPurify 消毒（配置允许 data: URL、video 标签、占位符 URL）
+ * 4. 还原占位符为真正的 data: URL
+ */
+const PLACEHOLDER_BASE = 'https://cdn-purge.local/placeholder';
 const renderedContent = computed(() => {
   if (!article.value || !article.value.content) return '';
-  let html = DOMPurify.sanitize(marked(article.value.content));
+
+  // 提取所有 data: URL，替换为合法 HTTPS 占位符
+  const dataUrls = [];
+  let content = article.value.content.replace(/data:[^\s"'<>)]+/g, (match) => {
+    const idx = dataUrls.length;
+    dataUrls.push(match);
+    return `${PLACEHOLDER_BASE}/${idx}`;
+  });
+
+  // marked 解析 Markdown（此时无 data: URL，不会栈溢出）
+  const rawHtml = marked(content);
+
+  // DOMPurify 消毒：配置允许 data: URL、video 标签、占位符 URL
+  let html = DOMPurify.sanitize(rawHtml, {
+    ADD_TAGS: ['video', 'source'],
+    ADD_ATTR: ['controls', 'autoplay', 'loop', 'muted', 'playsinline', 'poster', 'preload'],
+    ALLOWED_URI_REGEXP:
+      /^(?:(?:f|ht)tps?|mailto|tel|callto|sms|cid|xmpp|data):|[^a-z]|[a-z+.-]+(?:[^a-z+.-:]|$)/i
+  });
+
+  // 还原占位符为真正的 data: URL
+  html = html.replace(
+    new RegExp(`${PLACEHOLDER_BASE.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')}/(\\d+)`, 'g'),
+    (match, idx) => dataUrls[parseInt(idx)] || ''
+  );
 
   // 给 h2/h3 加上 id 锚点
   let h2Count = 0;
@@ -495,9 +527,6 @@ const renderedContent = computed(() => {
     }
     return `<${tag} id="${id}">${text}</${tag}>`;
   });
-
-  // 将 img 标签改为懒加载占位（data-src + class）
-  html = html.replace(/<img\s/g, '<img loading="lazy" class="lazy-img" ');
 
   return html;
 });
@@ -518,7 +547,6 @@ async function loadArticle() {
     article.value = data;
     await nextTick();
     initRevealObserver();
-    initLazyImages();
     initImageLightbox();
     initCodeBlocks();
     updateActiveToc();
@@ -547,51 +575,6 @@ function initRevealObserver() {
     { threshold: 0.05, rootMargin: '0px 0px -40px 0px' }
   );
   document.querySelectorAll('.article-detail .reveal').forEach((el) => revealObserver.observe(el));
-}
-
-/** 对文章正文中的 img 标签设置 IntersectionObserver 懒加载 */
-function initLazyImages() {
-  if (lazyImgObserver) lazyImgObserver.disconnect();
-
-  const imgs = articleBodyRef.value?.querySelectorAll('img.lazy-img');
-  if (!imgs || imgs.length === 0) return;
-
-  lazyImgObserver = new IntersectionObserver(
-    (entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          const img = entry.target;
-          // 已加载过的跳过
-          if (img.dataset.lazyLoaded === 'true') {
-            lazyImgObserver.unobserve(img);
-            return;
-          }
-          img.dataset.lazyLoaded = 'true';
-
-          // 如果 src 是有效 URL，淡入显示
-          if (img.src && !img.src.startsWith('data:')) {
-            img.style.opacity = '0';
-            img.style.transition = 'opacity 0.4s ease';
-            const preloader = new Image();
-            preloader.onload = () => {
-              img.style.opacity = '1';
-              img.classList.add('lazy-loaded');
-            };
-            preloader.onerror = () => {
-              img.classList.add('lazy-error');
-            };
-            preloader.src = img.src;
-          }
-          lazyImgObserver.unobserve(img);
-        }
-      });
-    },
-    { rootMargin: '200px 0px', threshold: 0.01 }
-  );
-
-  imgs.forEach((img) => {
-    lazyImgObserver.observe(img);
-  });
 }
 
 // ---- TOC 滚动监听 ----
@@ -690,7 +673,6 @@ onMounted(() => {
 
 onUnmounted(() => {
   if (revealObserver) revealObserver.disconnect();
-  if (lazyImgObserver) lazyImgObserver.disconnect();
   window.removeEventListener('scroll', handleScroll);
   window.removeEventListener('keydown', handleKeydown);
 });
@@ -1077,16 +1059,11 @@ onUnmounted(() => {
   margin: 16px 0;
 }
 
-.article-body :deep(img.lazy-img) {
-  opacity: 0;
-  transition: opacity 0.4s ease;
-}
-.article-body :deep(img.lazy-loaded) {
-  opacity: 1;
-}
-.article-body :deep(img.lazy-error) {
-  opacity: 0.3;
-  filter: grayscale(1);
+.article-body :deep(video) {
+  max-width: 100%;
+  border-radius: 8px;
+  margin: 16px 0;
+  display: block;
 }
 
 .article-body :deep(table) {
@@ -1435,7 +1412,10 @@ onUnmounted(() => {
   overflow: hidden;
   text-decoration: none;
   color: inherit;
-  transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+  transition:
+    transform 0.3s ease,
+    box-shadow 0.3s ease,
+    border-color 0.3s ease;
 }
 
 .related-card:hover {

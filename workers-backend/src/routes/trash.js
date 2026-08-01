@@ -27,19 +27,35 @@ trashRouter.get('/', authMiddleware, adminMiddleware, async (c) => {
     const pageSize = parseInt(c.req.query('page_size') || '20')
     const offset = (page - 1) * pageSize
 
-    const { data, error, count } = await db.supabase
+    /** 先用 count 查总数（轻量查询），再用分页查列表 */
+    const { count, error: countError } = await db.supabase
       .from('articles')
-      .select('*', { count: 'exact' })
+      .select('*', { count: 'exact', head: true })
+      .not('deleted_at', 'is', null)
+
+    if (countError) throw countError
+
+    const { data, error } = await db.supabase
+      .from('articles')
+      .select('id, title, summary, category_id, deleted_at, created_at')
       .not('deleted_at', 'is', null)
       .order('deleted_at', { ascending: false })
       .range(offset, offset + pageSize - 1)
 
     if (error) throw error
 
+    /** 查询全部分类，映射 category_name 到文章列表（避免 N+1 查询） */
+    const categories = await db.select('categories', {})
+    const catMap = new Map(categories.map(c => [c.id, c.name]))
+    const list = (data || []).map(article => ({
+      ...article,
+      category_name: article.category_id ? (catMap.get(article.category_id) || '') : ''
+    }))
+
     return c.json({
       code: 200,
       data: {
-        list: data || [],
+        list,
         pagination: { page, page_size: pageSize, total: count || 0 }
       }
     })
@@ -62,7 +78,7 @@ trashRouter.post('/:id/restore', authMiddleware, adminMiddleware, async (c) => {
 
     const { data: article, error } = await db.supabase
       .from('articles')
-      .select('*')
+      .select('id, title, deleted_at')
       .eq('id', id)
       .not('deleted_at', 'is', null)
       .single()
@@ -93,53 +109,8 @@ trashRouter.post('/:id/restore', authMiddleware, adminMiddleware, async (c) => {
 })
 
 /**
- * DELETE /api/trash/:id
- * 永久删除回收站中的文章
- */
-trashRouter.delete('/:id', authMiddleware, adminMiddleware, async (c) => {
-  const db = getDatabase(c.env)
-  const user = c.get('user')
-
-  try {
-    const id = parseInt(c.req.param('id'))
-
-    const { data: article } = await db.supabase
-      .from('articles')
-      .select('*')
-      .eq('id', id)
-      .not('deleted_at', 'is', null)
-      .single()
-
-    if (!article) {
-      return c.json({ code: 404, message: '文章不存在或不在回收站中' }, 404)
-    }
-
-    // 永久删除（硬删除）
-    await db.supabase.from('article_tags').delete().eq('article_id', id)
-    await db.supabase.from('comments').delete().eq('article_id', id)
-    await db.supabase.from('article_likes').delete().eq('article_id', id)
-    await db.supabase.from('article_favorites').delete().eq('article_id', id)
-    await db.supabase.from('articles').delete().eq('id', id)
-
-    await db.safeInsertLog({
-      user_id: user.userId,
-      action: 'delete',
-      resource_type: 'article',
-      resource_id: id,
-      details: `永久删除文章：${article.title}`,
-      username: user.username
-    })
-
-    return c.json({ code: 200, message: '已永久删除' })
-  } catch (error) {
-    console.error('Delete trash error:', error)
-    return c.json({ code: 500, message: '服务器错误' }, 500)
-  }
-})
-
-/**
  * DELETE /api/trash/clear
- * 清空回收站
+ * 清空回收站（必须在 /:id 路由之前注册，否则 "clear" 会被当作 :id 匹配）
  */
 trashRouter.delete('/clear', authMiddleware, adminMiddleware, async (c) => {
   const db = getDatabase(c.env)
@@ -179,6 +150,54 @@ trashRouter.delete('/clear', authMiddleware, adminMiddleware, async (c) => {
     return c.json({ code: 200, message: `已清空回收站（${ids.length} 篇文章）` })
   } catch (error) {
     console.error('Clear trash error:', error)
+    return c.json({ code: 500, message: '服务器错误' }, 500)
+  }
+})
+
+/**
+ * DELETE /api/trash/:id
+ * 永久删除回收站中的文章
+ */
+trashRouter.delete('/:id', authMiddleware, adminMiddleware, async (c) => {
+  const db = getDatabase(c.env)
+  const user = c.get('user')
+
+  try {
+    const id = parseInt(c.req.param('id'))
+    if (isNaN(id)) {
+      return c.json({ code: 400, message: '无效的文章ID' }, 400)
+    }
+
+    const { data: article } = await db.supabase
+      .from('articles')
+      .select('id, title, deleted_at')
+      .eq('id', id)
+      .not('deleted_at', 'is', null)
+      .single()
+
+    if (!article) {
+      return c.json({ code: 404, message: '文章不存在或不在回收站中' }, 404)
+    }
+
+    // 永久删除（硬删除）
+    await db.supabase.from('article_tags').delete().eq('article_id', id)
+    await db.supabase.from('comments').delete().eq('article_id', id)
+    await db.supabase.from('article_likes').delete().eq('article_id', id)
+    await db.supabase.from('article_favorites').delete().eq('article_id', id)
+    await db.supabase.from('articles').delete().eq('id', id)
+
+    await db.safeInsertLog({
+      user_id: user.userId,
+      action: 'delete',
+      resource_type: 'article',
+      resource_id: id,
+      details: `永久删除文章：${article.title}`,
+      username: user.username
+    })
+
+    return c.json({ code: 200, message: '已永久删除' })
+  } catch (error) {
+    console.error('Delete trash error:', error)
     return c.json({ code: 500, message: '服务器错误' }, 500)
   }
 })

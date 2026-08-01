@@ -16,6 +16,9 @@ frontend/dist/
 backend/.env
 backend/.env.local
 frontend/.env.local
+workers-backend/.env
+workers-backend/.env.local
+workers-backend/.dev.vars
 
 # Uploads (user-generated content)
 backend/uploads/
@@ -35,6 +38,9 @@ pnpm-debug.log*
 # Temporary scripts (debug/admin operations)
 backend/scripts/*.js
 !backend/scripts/.gitkeep
+workers-backend/scripts/
+workers-backend/fix_schema.sql
+scripts/
 
 # Test artifacts
 test-screenshots/

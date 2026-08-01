@@ -61,17 +61,19 @@ articlesRouter.get('/public', async (c) => {
       )
     }
 
-    // 获取分类名称（批量预加载，避免 N+1 查询）
+    // 获取分类信息（批量预加载，避免 N+1 查询）
     const categoryIds = [...new Set(articles.filter(a => a.category_id).map(a => a.category_id))]
     const categoryMap = {}
     if (categoryIds.length > 0) {
       const categories = await db.select('categories', {})
       for (const cat of categories) {
-        categoryMap[cat.id] = cat.name
+        categoryMap[cat.id] = { name: cat.name, slug: cat.slug }
       }
     }
     for (const article of articles) {
-      article.category_name = article.category_id ? (categoryMap[article.category_id] || '') : ''
+      const catInfo = article.category_id ? categoryMap[article.category_id] : null
+      article.category_name = catInfo ? catInfo.name : ''
+      article.category_slug = catInfo ? catInfo.slug : ''
     }
 
     return c.json({
@@ -480,27 +482,31 @@ articlesRouter.get('/', authMiddleware, adminMiddleware, async (c) => {
       )
     }
 
-    // ===== 批量预加载分类名称 =====
+    // ===== 批量预加载分类信息 =====
     try {
       const categoryIds = [...new Set(articles.filter(a => a.category_id).map(a => a.category_id))]
       if (categoryIds.length > 0) {
         const categories = await db.select('categories', {})
         const categoryMap = {}
         for (const cat of categories) {
-          categoryMap[cat.id] = cat.name
+          categoryMap[cat.id] = { name: cat.name, slug: cat.slug }
         }
         for (const article of articles) {
-          article.category_name = article.category_id ? (categoryMap[article.category_id] || '') : ''
+          const catInfo = article.category_id ? categoryMap[article.category_id] : null
+          article.category_name = catInfo ? catInfo.name : ''
+          article.category_slug = catInfo ? catInfo.slug : ''
         }
       } else {
         for (const article of articles) {
           article.category_name = ''
+          article.category_slug = ''
         }
       }
     } catch (e) {
       console.error('Category enrichment error:', e.message)
       for (const article of articles) {
         article.category_name = ''
+        article.category_slug = ''
       }
     }
 

@@ -1,5 +1,33 @@
 # 版本历史
 
+## v1.14.3 (2026-08-01)
+
+- fix(comments): 修复登录用户评论 500 错误
+  - 根因：comments.avatar_url 为 VARCHAR(500)，登录用户头像（base64 data URL）超长导致插入失败
+  - comments.js：POST 评论时从 users 表读取头像写入 comments（登录态走 token 验证分支）
+  - 007_comments_avatar_text.sql：ALTER TABLE comments ALTER COLUMN avatar_url TYPE TEXT（彻底解决）
+
+- fix(article-detail): 修复文章详情页渲染崩溃与音视频不显示
+  - ArticleDetail.vue：article 由 ref 改为 shallowRef，避免深度响应式触发 marked 栈溢出
+  - ArticleDetail.vue：DOMPurify 配置允许 video/source 标签与 data: URL，修复音视频被过滤
+  - ArticleDetail.vue：移除与 DOMPurify 冲突的懒加载逻辑
+
+- fix(home): 修复首页分类数据为空
+  - Home.vue：categories 由 computed 改为 ref，直接调用 /api/categories 获取
+
+- fix(trash): 修复清空回收站 404
+  - trash.js：静态路由 DELETE /clear 注册在动态 DELETE /:id 之前，避免 clear 被当作 id
+  - trash.js：/:id 路由增加 isNaN(id) 校验
+
+- fix(articles): 公开与管理端文章接口返回 category_slug 字段
+
+- feat(cache): 前端版本检测与缓存控制
+  - version.js：新增版本检查工具，定时对比 meta app-version 检测更新
+  - App.vue：检测到新版本时弹出刷新提示
+  - vite.config.js：构建时注入时间戳版本号到 index.html
+  - index.html：增加 app-version meta 标签
+  - _headers：Cloudflare Pages 缓存策略（index.html no-cache，带 hash 资源长缓存）
+
 ## v1.14.2 (2026-08-01)
 
 - fix(upload): 修复上传接口在无 Storage 环境下全部失败的问题

@@ -53,6 +53,50 @@ function uint8ToBase64(bytes) {
 }
 
 /**
+ * 确保 Supabase Storage bucket 存在且为公开
+ * 如果 bucket 不存在，尝试自动创建（需要相应的权限策略）
+ * @param {Object} supabase - Supabase 客户端
+ * @param {string} bucketName - bucket 名称
+ * @returns {Promise<{ok: boolean, message: string}>} 检查结果
+ */
+async function ensureBucketExists(supabase, bucketName) {
+  try {
+    // 检查 bucket 是否已存在
+    const { data: buckets, error: listError } = await supabase.storage.listBuckets()
+
+    if (listError) {
+      return { ok: false, message: `无法获取 bucket 列表：${listError.message}` }
+    }
+
+    const existing = buckets?.find((b) => b.name === bucketName)
+    if (existing) {
+      if (!existing.public) {
+        return { ok: false, message: `Bucket "${bucketName}" 存在但未设为公开，请在 Supabase 控制台设置为 Public` }
+      }
+      return { ok: true, message: `Bucket "${bucketName}" 已存在且为公开` }
+    }
+
+    // Bucket 不存在，尝试创建
+    const { error: createError } = await supabase.storage.createBucket(bucketName, {
+      public: true,
+      fileSizeLimit: null,
+      allowedMimeTypes: null
+    })
+
+    if (createError) {
+      return {
+        ok: false,
+        message: `Bucket "${bucketName}" 不存在且自动创建失败：${createError.message}。请前往 Supabase Dashboard → Storage 手动创建公开 bucket`
+      }
+    }
+
+    return { ok: true, message: `Bucket "${bucketName}" 创建成功（公开）` }
+  } catch (e) {
+    return { ok: false, message: `ensureBucket 异常：${e.message}` }
+  }
+}
+
+/**
  * 将文件保存到 Supabase Storage（可选，失败时降级为 base64）
  * @param {Object} supabase - Supabase 客户端
  * @param {string} bucketName - bucket 名称
@@ -188,6 +232,86 @@ async function handleUpload(c, dir, allowedPrefixes, maxSizeMB) {
     return c.json({ code: 500, message: '上传失败', error: error.message }, 500)
   }
 }
+
+/**
+ * GET /api/upload/storage-status
+ * 诊断 Supabase Storage 状态（是否可用、bucket 是否存在/公开）
+ */
+uploadsRouter.get('/storage-status', authMiddleware, adminMiddleware, async (c) => {
+  const db = getDatabase(c.env)
+  const bucketName = c.env.STORAGE_BUCKET || 'uploads'
+
+  // 1. 检查 bucket 列表权限
+  const { data: buckets, error: listError } = await db.supabase.storage.listBuckets()
+
+  if (listError) {
+    return c.json({
+      code: 200,
+      data: {
+        storageAvailable: false,
+        bucketName,
+        error: listError.message,
+        suggestion: '请在 Supabase Dashboard → Storage → Policies 中为 anon 角色添加 bucket 读取权限'
+      }
+    })
+  }
+
+  const bucket = buckets?.find((b) => b.name === bucketName)
+
+  // 2. 尝试上传一个测试文件
+  const testPath = `diagnostics/test_${Date.now()}.txt`
+  const testData = new TextEncoder().encode('storage-test')
+  const { error: uploadError } = await db.supabase.storage
+    .from(bucketName)
+    .upload(testPath, testData, { contentType: 'text/plain' })
+
+  // 3. 尝试获取公开 URL
+  const { data: urlData } = db.supabase.storage
+    .from(bucketName)
+    .getPublicUrl(testPath)
+
+  // 4. 清理测试文件
+  if (!uploadError) {
+    await db.supabase.storage.from(bucketName).remove([testPath])
+  }
+
+  return c.json({
+    code: 200,
+    data: {
+      storageAvailable: !uploadError,
+      bucketName,
+      bucketExists: !!bucket,
+      bucketPublic: bucket?.public || false,
+      uploadError: uploadError?.message || null,
+      testUrl: urlData?.publicUrl || null,
+      allBuckets: buckets?.map((b) => ({ name: b.name, public: b.public })) || []
+    }
+  })
+})
+
+/**
+ * POST /api/upload/init-bucket
+ * 自动创建 Storage bucket（如果不存在）并设置为公开
+ * 需要相应的 Supabase 权限策略支持
+ */
+uploadsRouter.post('/init-bucket', authMiddleware, adminMiddleware, async (c) => {
+  const db = getDatabase(c.env)
+  const bucketName = c.env.STORAGE_BUCKET || 'uploads'
+
+  const result = await ensureBucketExists(db.supabase, bucketName)
+
+  if (!result.ok) {
+    return c.json({
+      code: 200,
+      data: { success: false, message: result.message }
+    })
+  }
+
+  return c.json({
+    code: 200,
+    data: { success: true, message: result.message }
+  })
+})
 
 /**
  * POST /api/upload/image

@@ -147,6 +147,7 @@ import { ref, computed, onMounted, nextTick, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { View } from '@element-plus/icons-vue';
 import { getPublicArticles, getHotArticles } from '../../api/articles';
+import { getCategories } from '../../api/categories';
 import { settingsState } from '../../api/settings';
 import ArticleSkeleton from '../../components/front/ArticleSkeleton.vue';
 
@@ -187,24 +188,8 @@ const siteDisplayName = computed(() => {
 /** 站点描述（Hero 副标题） */
 const siteDescription = computed(() => settingsState.siteDescription || '分享技术，记录成长');
 
-/**
- * 从已加载文章中提取去重分类列表
- * @returns {Array<{name: string, slug: string}>}
- */
-const categories = computed(() => {
-  const map = new Map();
-  for (const article of articles.value) {
-    if (article.category_slug && article.category_name) {
-      if (!map.has(article.category_slug)) {
-        map.set(article.category_slug, {
-          name: article.category_name,
-          slug: article.category_slug
-        });
-      }
-    }
-  }
-  return Array.from(map.values());
-});
+/** 分类列表（从 API 直接获取，避免依赖文章数据派生） */
+const categories = ref([]);
 
 /**
  * 格式化日期为 YYYY-MM-DD
@@ -299,6 +284,18 @@ async function loadHotArticles() {
 }
 
 /**
+ * 加载分类列表（直接从 API 获取，确保数据完整性）
+ */
+async function loadCategories() {
+  try {
+    const { data } = await getCategories();
+    categories.value = Array.isArray(data) ? data : [];
+  } catch (e) {
+    console.error('加载分类失败:', e);
+  }
+}
+
+/**
  * 初始化 Intersection Observer
  */
 function initObserver() {
@@ -331,6 +328,7 @@ onMounted(async () => {
   await nextTick();
   loadArticles(1);
   loadHotArticles();
+  loadCategories();
 });
 
 onUnmounted(() => {
