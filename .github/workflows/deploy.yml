@@ -3,12 +3,9 @@
 # 触发时机：推送到 master 分支时自动构建并部署
 #
 # 前置条件：
-#   1. GitHub 仓库配置 Cloudflare API Token（Settings → Secrets）
-#      Key: CLOUDFLARE_API_TOKEN
-#      Value: Cloudflare API Token（从 dash.cloudflare.com 获取）
-#   2. Cloudflare Account ID（Settings → Variables）
-#      Key: CLOUDFLARE_ACCOUNT_ID
-#      Value: 你的 Cloudflare 账号 ID
+#   GitHub 仓库配置 Cloudflare API Token（Settings → Secrets and variables → Actions）
+#   Key: CLOUDFLARE_API_TOKEN
+#   Value: Cloudflare API Token（从 dash.cloudflare.com/profile/api-tokens 创建，需 Workers Scripts:Edit + Pages:Edit 权限）
 
 name: Deploy to Cloudflare Pages
 
@@ -20,7 +17,6 @@ on:
 # 环境变量（从 GitHub Secrets 读取）
 env:
   CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-  CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
 jobs:
   build-and-deploy:
