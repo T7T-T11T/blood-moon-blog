@@ -1,8 +1,8 @@
 # 个人博客系统 - 完整测试文档
 
-> 版本：v1.12.1  
-> 生成日期：2026-07-30  
-> 测试范围：前端（Vue 3 + Element Plus）、后端（Node.js + Express）、数据库（MySQL）全栈自测
+> 版本：v1.17.0
+> 生成日期：2026-08-05
+> 测试范围：前端（Vue 3 + Element Plus）、后端（Cloudflare Workers + Hono）、数据库（PostgreSQL / Supabase）全栈自测
 
 ---
 
@@ -11,10 +11,9 @@
 | 项目 | 规格 |
 |------|------|
 | 操作系统 | Windows |
-| 后端端口 | 3000 |
+| 后端端口 | 8787（Workers dev）/ 3000（本地 Express） |
 | 前端端口 | 5173 |
-| 数据库 | MySQL 8.0+ |
-| 数据库名 | task_manager |
+| 数据库 | PostgreSQL 15+（Supabase） |
 | 默认账号 | admin / admin123 |
 
 ---
@@ -494,7 +493,7 @@
 | 编号 | 检查项 | 命令 | 通过标准 |
 |------|--------|------|----------|
 | QL-01 | 前端 ESLint | `cd frontend && npm run lint` | 0 错误 0 警告 |
-| QL-02 | 后端 ESLint | `cd backend && npm run lint` | 0 错误 0 警告 |
+| QL-02 | 后端 ESLint | `cd workers-backend && npm run lint` | 0 错误 0 警告 |
 | QL-03 | Prettier 格式化 | `cd frontend && npm run format` | 无差异 |
 | QL-04 | 前端构建 | `cd frontend && npm run build` | 构建成功无报错 |
 
@@ -603,5 +602,5 @@
 
 ---
 
-*文档生成时间：2026-07-30*  
+*文档更新时间：2026-08-05*
 *本文档覆盖个人博客系统全部前后端功能测试用例*

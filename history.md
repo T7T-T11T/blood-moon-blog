@@ -1,5 +1,15 @@
 # 版本历史
 
+## v1.18.0 (2026-08-05)
+
+- docs: 全面整理项目文档，消除重复内容并修复过时信息
+  - DEPLOY.md：移除全部 Render.com 部署步骤（项目已迁移到 Cloudflare Workers），重写为 GitHub Actions CI 自动部署 + wrangler 手动部署两种方式
+  - database/migrations/README.md：补全 001-007 全部迁移脚本列表，执行方式从 MySQL 命令行改为 Supabase SQL Editor
+  - workers-backend/README.md：移除硬编码的数据库凭证（安全隐患），精简与 README.md 重复的 API 列表（改为指向 README.md）
+  - README.md：版本表补全至 v1.17.0 并指向 history.md，项目结构补充 .github/workflows 和 DEPLOY.md
+  - TEST_PLAN.md：技术栈引用从 MySQL 8.0+ / Express 修正为 PostgreSQL / Hono，后端 ESLint 命令指向 workers-backend
+- chore: 前后端 + workers 版本号统一升至 1.18.0
+
 ## v1.17.0 (2026-08-05)
 
 - fix: 修复后台评论列表文章显示"已删除"的问题
