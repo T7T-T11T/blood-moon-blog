@@ -2,6 +2,8 @@
 
 ## v1.18.0 (2026-08-05)
 
+- ci: 触发 CI 验证新的 Cloudflare API Token 权限
+
 - docs: 全面整理项目文档，消除重复内容并修复过时信息
   - DEPLOY.md：移除全部 Render.com 部署步骤（项目已迁移到 Cloudflare Workers），重写为 GitHub Actions CI 自动部署 + wrangler 手动部署两种方式
   - database/migrations/README.md：补全 001-007 全部迁移脚本列表，执行方式从 MySQL 命令行改为 Supabase SQL Editor
