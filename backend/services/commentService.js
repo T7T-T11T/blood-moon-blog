@@ -102,11 +102,19 @@ async function getArticleComments(articleId) {
 /**
  * 发表评论
  */
-async function createComment({ articleId, nickname, content, parent_id, ipAddress }) {
+async function createComment({ articleId, nickname, content, parent_id, ipAddress, avatar_url, email }) {
   const [result] = await pool.execute(
-    `INSERT INTO comments (article_id, nickname, email, content, parent_id, status, ip_address)
-     VALUES (?, ?, NULL, ?, ?, '待审核', ?)`,
-    [articleId, nickname.trim(), content.trim(), parent_id || null, ipAddress]
+    `INSERT INTO comments (article_id, nickname, email, avatar_url, content, parent_id, status, ip_address)
+     VALUES (?, ?, ?, ?, ?, ?, '待审核', ?)`,
+    [
+      articleId,
+      nickname.trim(),
+      email || null,
+      (avatar_url && avatar_url.trim()) || null,
+      content.trim(),
+      parent_id || null,
+      ipAddress
+    ]
   );
   return result.insertId;
 }

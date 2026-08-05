@@ -157,7 +157,8 @@ commentsRouter.post('/:articleId', async (c) => {
 
     const authHeader = c.req.header('Authorization')
     let userId = null
-    let nick = nickname || '访客'
+    /** 最终使用的昵称：优先使用前端传入值；若为空，则区分是否登录（登录用户兜底用数据库里的 username，未登录兜底用 '访客'） */
+    let nick = ''
     let avatar = avatar_url || ''
 
     if (authHeader && authHeader.startsWith('Bearer ')) {
@@ -167,11 +168,17 @@ commentsRouter.post('/:articleId', async (c) => {
           userId = payload.userId
           const user = await db.findOne('users', { id: userId })
           if (user) {
-            nick = user.username
-            avatar = user.avatar_url || ''
+            // 已登录用户：允许使用自己填的昵称；没填才用 users.username 兜底
+            nick = (nickname && nickname.trim()) ? nickname.trim() : user.username
+            avatar = user.avatar_url || avatar || ''
           }
         }
       } catch {}
+    }
+
+    // 未登录或 token 校验失败：前端填了昵称就用，没填就 '访客'
+    if (!nick) {
+      nick = (nickname && nickname.trim()) ? nickname.trim() : '访客'
     }
 
     const comment = await db.insert('comments', {

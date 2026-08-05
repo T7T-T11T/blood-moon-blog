@@ -21,7 +21,7 @@
           v-model="commentForm.nickname"
           type="text"
           class="form-input"
-          placeholder="昵称 *"
+          :placeholder="userStore.isLoggedIn ? `昵称（当前：${userStore.username}）` : '昵称（可选，留空显示访客）'"
           maxlength="30"
         />
         <textarea
@@ -101,14 +101,18 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
 import { ElMessage } from 'element-plus';
 import { formatDate } from '@/utils/format';
 import { getComments, postComment } from '../../api/comments';
+import { useUserStore } from '@/stores/user';
 
 const props = defineProps({
   articleId: { type: [String, Number], required: true }
 });
+
+/** 用户状态（Pinia Store），用于获取已登录用户的昵称/头像 */
+const userStore = useUserStore();
 
 /** 评论树形列表 */
 const comments = ref([]);
@@ -123,6 +127,13 @@ const replyTo = ref(null);
 const commentForm = ref({
   nickname: '',
   content: ''
+});
+
+/** 组件挂载后：如已登录则自动填充当前用户的昵称（用户可修改） */
+onMounted(() => {
+  if (userStore.isLoggedIn && userStore.username) {
+    commentForm.value.nickname = userStore.username;
+  }
 });
 
 /**
@@ -142,10 +153,11 @@ const commentCount = computed(() => {
 
 /**
  * 是否可提交评论
+ * 规则：内容必填；昵称非必填（后端兜底：已登录用用户名，未登录用 '访客'）
  * @returns {boolean}
  */
 const canSubmit = computed(() => {
-  return commentForm.value.nickname.trim() !== '' && commentForm.value.content.trim() !== '';
+  return commentForm.value.content.trim() !== '';
 });
 
 /** 加载评论列表 */
@@ -176,7 +188,7 @@ function cancelReply() {
 /** 提交评论 */
 async function submitComment() {
   if (!canSubmit.value) {
-    ElMessage.warning('请填写昵称和评论内容');
+    ElMessage.warning('请填写评论内容');
     return;
   }
   submitting.value = true;

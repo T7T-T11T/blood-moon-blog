@@ -1,5 +1,14 @@
 # 版本历史
 
+## v1.16.0 (2026-08-05)
+
+- fix: 修复评论昵称全部显示为 admin 的问题
+  - **根因**：workers-backend 的 `routes/comments.js` 评论创建接口在检测到登录状态时，**无条件**用 `users.username`（即 admin）覆盖前端传入的 nickname，导致登录用户无法使用自定义昵称，访客因前端始终传非空 nickname 反而正常。
+  - 修复 workers-backend：已登录用户改为"前端传了就用前端的，未传才兜底 users.username"；未登录用户"前端传了就用，没传兜底为访客"，与前端表单的可选昵称逻辑对齐。
+  - 同步修复 backend/（本地开发后端）：新增 `silentResolveUser()` 静默 token 解析（不强制登录，仅为登录用户兜底昵称/头像），`commentsController.createComment` 与 `commentService.createComment` 的 INSERT 语句补充写入 avatar_url 字段，确保两套后端行为一致。
+  - 前端优化：`CommentSection.vue` 已登录时自动填入当前用户 username（placeholder 提示当前昵称），昵称改为可选（后端兜底，用户可清空改回访客或改成其他昵称）；`canSubmit` 只校验内容非空。
+- chore: 前后端 + workers 版本号统一升至 1.16.0
+
 ## v1.15.0 (2026-08-05)
 
 - refactor: 不破坏功能前提下精简代码，删除死代码并提取重复工具函数
