@@ -104,14 +104,18 @@
               <el-icon><ChatDotSquare /></el-icon>
             </div>
             <div class="todo-info">
-              <span class="todo-title">待审核评论</span>
-              <span class="todo-desc">有 {{ pendingComments }} 条评论等待审核</span>
+              <span class="todo-title">评论管理</span>
+              <span class="todo-desc">
+                共 {{ totalComments }} 条评论
+                <template v-if="pendingComments > 0">· 待审核 {{ pendingComments }} 条</template>
+                <template v-else>· 暂无待审核</template>
+              </span>
             </div>
-            <router-link to="/admin/comments?status=待审核" class="todo-action">
+            <router-link to="/admin/comments" class="todo-action">
               去处理
             </router-link>
           </div>
-          <div v-if="pendingComments === 0" class="empty-tip">暂无待办事项</div>
+          <div v-if="totalComments === 0" class="empty-tip">暂无评论</div>
         </div>
       </section>
 
@@ -185,6 +189,9 @@ const recentLogs = ref([]);
 
 /** 待审核评论数 */
 const pendingComments = ref(0);
+
+/** 总评论数 */
+const totalComments = ref(0);
 
 /** 快捷操作项（markRaw 避免图标组件响应式包装） */
 const quickActions = [
@@ -263,12 +270,13 @@ function getResourceLabel(type) {
  * 使用 Promise.allSettled 保证单个接口失败不影响其他数据展示
  */
 async function loadDashboard() {
-  const [dashboardRes, hotRes, visitRes, logsRes, commentsRes] = await Promise.allSettled([
+  const [dashboardRes, hotRes, visitRes, logsRes, commentsRes, totalCommentsRes] = await Promise.allSettled([
     getDashboardStatsAPI(),
     getHotArticles(5),
     getVisitStats(),
     getLogs({ page: 1, page_size: 8 }),
-    getCommentList({ status: '待审核', page: 1, page_size: 1 })
+    getCommentList({ status: '待审核', page: 1, page_size: 1 }),
+    getCommentList({ page: 1, page_size: 1 })
   ]);
 
   // 仪表盘统计：文章数、总阅读、分类数、标签数、最新文章
@@ -296,9 +304,14 @@ async function loadDashboard() {
     recentLogs.value = logsRes.value.data?.list || [];
   }
 
-  // 待审核评论数
+  // 待审核评论数 + 总评论数
   if (commentsRes.status === 'fulfilled' && commentsRes.value.code === 200) {
     pendingComments.value = commentsRes.value.data?.pagination?.total || 0;
+  }
+
+  // 总评论数（不加状态筛选）
+  if (totalCommentsRes.status === 'fulfilled' && totalCommentsRes.value.code === 200) {
+    totalComments.value = totalCommentsRes.value.data?.pagination?.total || 0;
   }
 }
 

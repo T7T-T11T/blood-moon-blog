@@ -55,6 +55,7 @@ commentsRouter.get('/stats', authMiddleware, adminMiddleware, async (c) => {
 /**
  * GET /comments - 管理端获取评论列表（支持分页和状态筛选）
  * 查询参数：status, article_id, page, page_size
+ * 说明：使用原生 Supabase 查询以支持 JOIN articles 表获取文章标题
  */
 commentsRouter.get('/', authMiddleware, adminMiddleware, async (c) => {
   const db = getDatabase(c.env)
@@ -65,24 +66,33 @@ commentsRouter.get('/', authMiddleware, adminMiddleware, async (c) => {
     const status = c.req.query('status')
     const articleId = c.req.query('article_id')
 
-    const filters = {}
-    if (status) filters.status = status
-    if (articleId) filters.article_id = articleId
+    // 构建过滤条件
+    let query = db.supabase
+      .from('comments')
+      .select('id, article_id, nickname, email, avatar_url, content, parent_id, status, ip_address, created_at, articles!inner(title)', { count: 'exact' })
 
-    const total = await db.count('comments', filters)
+    if (status) query = query.eq('status', status)
+    if (articleId) query = query.eq('article_id', articleId)
+
     const offset = (page - 1) * pageSize
+    const { data, count, error } = await query
+      .order('created_at', { ascending: false })
+      .range(offset, offset + pageSize - 1)
 
-    const comments = await db.select('comments', filters, {
-      order: { column: 'created_at', ascending: false },
-      offset,
-      limit: pageSize
-    })
+    if (error) throw error
+
+    // 转换结果：将 articles 嵌套对象拍平为 article_title 字段
+    const list = (data || []).map(comment => ({
+      ...comment,
+      article_title: comment.articles?.title || null,
+      articles: undefined
+    }))
 
     return c.json({
       code: 200,
       data: {
-        list: comments,
-        pagination: { page, page_size: pageSize, total }
+        list,
+        pagination: { page, page_size: pageSize, total: count || 0 }
       }
     })
   } catch (error) {

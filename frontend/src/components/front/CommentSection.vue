@@ -193,19 +193,45 @@ async function submitComment() {
   }
   submitting.value = true;
   try {
-    const payload = {
-      nickname: commentForm.value.nickname.trim(),
-      content: commentForm.value.content.trim()
-    };
+    const nickname = commentForm.value.nickname.trim() || '访客';
+    const content = commentForm.value.content.trim();
+    const payload = { nickname, content };
     if (replyTo.value) {
       payload.parent_id = replyTo.value.id;
     }
-    await postComment(props.articleId, payload);
-    ElMessage.success('评论发表成功，等待审核');
+    const res = await postComment(props.articleId, payload);
+    ElMessage.success('评论发表成功');
+
+    /** 乐观更新：提交成功后立即将新评论插入本地列表，提升访客体验 */
+    const newComment = {
+      id: res?.data?.id || Date.now(),
+      nickname,
+      avatar_url: userStore.avatar_url || '',
+      content,
+      status: '已通过',
+      created_at: new Date().toISOString(),
+      parent_id: replyTo.value?.id || null,
+      children: []
+    };
+
+    if (replyTo.value) {
+      // 回复评论：插入到父评论的 children 数组中
+      const parent = comments.value.find(c => c.id === replyTo.value.id);
+      if (parent) {
+        if (!parent.children) parent.children = [];
+        parent.children.push(newComment);
+      }
+    } else {
+      // 顶级评论：插入到列表头部
+      comments.value.unshift(newComment);
+    }
+
     commentForm.value.nickname = '';
     commentForm.value.content = '';
     replyTo.value = null;
-    await loadComments();
+
+    // 异步刷新以获取服务端真实数据（防止 ID 等字段不一致）
+    loadComments();
   } catch (e) {
     console.error('发表评论失败:', e);
     ElMessage.error('评论发表失败，请稍后重试');

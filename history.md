@@ -1,5 +1,18 @@
 # 版本历史
 
+## v1.17.0 (2026-08-05)
+
+- fix: 修复后台评论列表文章显示"已删除"的问题
+  - **根因**：workers-backend 的管理端评论列表接口 `GET /comments` 直接查询 `comments` 表，未 JOIN `articles` 表获取文章标题，导致前端 `CommentList.vue` 中 `article_title` 永远为空，显示"已删除"。
+  - 修复：改用原生 Supabase 查询（`db.supabase.from('comments').select('..., articles!inner(title)')`）JOIN articles 表，并将嵌套的 `articles.title` 拍平为 `article_title` 字段返回。
+- fix: 前台评论体验优化——不显示审核中提示 + 乐观更新
+  - `CommentSection.vue`：提交成功后提示从"评论发表成功，等待审核"改为"评论发表成功"（评论默认状态为"已通过"，无需审核）。
+  - 新增乐观更新：评论提交成功后立即插入本地列表（顶级评论 unshift，回复评论 push 到父节点 children），无需等待后端刷新；随后异步调用 `loadComments()` 同步服务端真实数据。
+- fix: 后台仪表盘评论统计优化
+  - `Dashboard.vue`：待办提醒面板从仅显示"待审核评论"改为显示"共 N 条评论 · 待审核 M 条"，即使没有待审核评论也能看到总评论数。
+  - 新增 `totalComments` ref 和额外的 `getCommentList({ page: 1, page_size: 1 })` 请求获取总评论数。
+- chore: 前后端 + workers 版本号统一升至 1.17.0
+
 ## v1.16.0 (2026-08-05)
 
 - fix: 修复评论昵称全部显示为 admin 的问题
