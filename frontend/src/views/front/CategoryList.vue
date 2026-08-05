@@ -85,6 +85,7 @@ fade-in-up 错峰（Intersection Observer） * - 悬浮：标题变主色 + 左�
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { View } from '@element-plus/icons-vue';
+import { formatDate } from '@/utils/format';
 import { getArticlesByCategory } from '../../api/articles';
 
 const route = useRoute();
@@ -128,21 +129,6 @@ const heading = computed(() => {
     .replace(/[-_]+/g, ' ')
     .replace(/\b\w/g, (c) => c.toUpperCase());
 });
-
-/**
- * 格式化日期为 YYYY-MM-DD
- * @param {string} dateStr - 后端返回的日期字符串
- * @returns {string} 格式化后的日期，无效时返回空字符串
- */
-function formatDate(dateStr) {
-  if (!dateStr) return '';
-  const date = new Date(dateStr);
-  if (isNaN(date.getTime())) return '';
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
-}
 
 /**
  * 跳转到文章详情页

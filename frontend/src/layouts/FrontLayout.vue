@@ -178,7 +178,7 @@ const isScrolled = ref(false);
 /**
  * 导航菜单项
  * - exact: true 表示仅精确匹配高亮（首页特殊处理）
-* @type {Array<{path: string, label: string, exact: boolean, auth?: boolean}>}
+ * @type {Array<{path: string, label: string, exact: boolean, auth?: boolean}>}
  */
 const navItems = [
   { path: '/', label: '首页', exact: true },

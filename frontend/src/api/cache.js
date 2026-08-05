@@ -60,8 +60,8 @@ class MemoryCache {
   }
 
   /**
- * 清空所有缓存
- */
+   * 清空所有缓存
+   */
   clear() {
     this.cache.clear();
   }

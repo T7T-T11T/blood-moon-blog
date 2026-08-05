@@ -295,7 +295,7 @@ async function handleExportComments() {
     const queryParams = new URLSearchParams(params);
     const res = await fetch(`${apiBase}/export/comments?${queryParams.toString()}`, {
       headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
+        Authorization: `Bearer ${localStorage.getItem('token')}`
       }
     });
 

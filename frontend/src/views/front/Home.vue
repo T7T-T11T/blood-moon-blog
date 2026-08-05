@@ -146,6 +146,7 @@
 import { ref, computed, onMounted, nextTick, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { View } from '@element-plus/icons-vue';
+import { formatDate } from '@/utils/format';
 import { getPublicArticles, getHotArticles } from '../../api/articles';
 import { getCategories } from '../../api/categories';
 import { settingsState } from '../../api/settings';
@@ -190,21 +191,6 @@ const siteDescription = computed(() => settingsState.siteDescription || '分享�
 
 /** 分类列表（从 API 直接获取，避免依赖文章数据派生） */
 const categories = ref([]);
-
-/**
- * 格式化日期为 YYYY-MM-DD
- * @param {string} dateStr
- * @returns {string}
- */
-function formatDate(dateStr) {
-  if (!dateStr) return '';
-  const date = new Date(dateStr);
-  if (isNaN(date.getTime())) return '';
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
-}
 
 /**
  * 处理文章点击（带涟漪效果）

@@ -1,20 +1,8 @@
-/**
- * @file BackToTop.vue
- * @description 返回顶部浮动按钮组件
- *
- * 功能：
- * - 滚动超过 300px 时显示返回顶部按钮
- * - 点击平滑滚动回页面顶部
- * - 带有悬浮动画效果
- */
+/** * @file BackToTop.vue * @description 返回顶部浮动按钮组件 * * 功能： * - 滚动超过 300px
+时显示返回顶部按钮 * - 点击平滑滚动回页面顶部 * - 带有悬浮动画效果 */
 <template>
   <Transition name="fade">
-    <button
-      v-show="visible"
-      class="back-to-top"
-      title="返回顶部"
-      @click="scrollToTop"
-    >
+    <button v-show="visible" class="back-to-top" title="返回顶部" @click="scrollToTop">
       <el-icon :size="20"><ArrowUp /></el-icon>
     </button>
   </Transition>
@@ -73,7 +61,10 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   box-shadow: 0 4px 16px rgba(198, 40, 40, 0.4);
-  transition: transform 0.3s ease, box-shadow 0.3s ease, opacity 0.3s ease;
+  transition:
+    transform 0.3s ease,
+    box-shadow 0.3s ease,
+    opacity 0.3s ease;
   z-index: 999;
 }
 
@@ -89,7 +80,9 @@ onUnmounted(() => {
 /* 过渡动画 */
 .fade-enter-active,
 .fade-leave-active {
-  transition: opacity 0.3s ease, transform 0.3s ease;
+  transition:
+    opacity 0.3s ease,
+    transform 0.3s ease;
 }
 
 .fade-enter-from,

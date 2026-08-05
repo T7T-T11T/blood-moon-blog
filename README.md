@@ -1,6 +1,8 @@
 # 寿冬与秋 - 个人博客系统
 
-基于 Vue 3 + Node.js Express + MySQL 的个人博客系统，采用血月暗黑哥特风格主题，支持文章管理、评论互动、音乐播放等功能。
+基于 Vue 3 + Node.js Express / Cloudflare Workers(Hono) + PostgreSQL(Supabase) 的个人博客系统，采用血月暗黑哥特风格主题，支持文章管理、评论互动、音乐播放等功能。
+
+> 架构说明：本地开发使用 `backend/`（Express + pg）；生产环境使用 `workers-backend/`（Hono + Supabase JS SDK，部署于 Cloudflare Workers）。前端生产环境直连 Workers（跨域），开发环境通过 Vite proxy 代理到本地 Express。
 
 ## 技术栈
 
@@ -17,15 +19,17 @@
 | Markdown 渲染 | marked | ^15.0.0 | 博客内容渲染 |
 | XSS 防护 | DOMPurify | ^3.4.12 | HTML 消毒 |
 | 文件上传 | multer | ^2.2.0 | 后端 multipart/form-data 处理 |
-| 后端框架 | Express | ^4.18.2 | RESTful API |
-| 数据库驱动 | mysql2 | ^3.6.0 | 连接池 + Promise |
+| 后端框架（本地开发） | Express | ^4.18.2 | RESTful API（`backend/` 目录） |
+| 后端框架（生产） | Hono | ^4.7.0 | Cloudflare Workers（`workers-backend/` 目录） |
+| 数据库驱动（本地开发） | pg | ^8.22.0 | PostgreSQL 连接池 + pgCompat 兼容层 |
+| 数据库驱动（生产） | @supabase/supabase-js | ^2.45.0 | Supabase JS SDK |
 | 密码加密 | bcryptjs | ^2.4.3 | 注册密码加密 |
 | 身份认证 | jsonwebtoken | ^9.0.2 | JWT Token |
 | 安全头 | helmet | ^8.3.0 | HTTP 安全响应头 |
 | 限流 | express-rate-limit | ^8.6.1 | API 请求限流 |
 | 环境变量 | dotenv | ^16.4.5 | 配置管理 |
 | 代码规范 | ESLint + Prettier | - | 代码质量保障 |
-| 数据库 | MySQL | 8.0+ | 11 张数据表 |
+| 数据库 | PostgreSQL | 15+（Supabase） | 11 张数据表 |
 
 ## 功能特性
 
@@ -66,9 +70,9 @@
 task_manager_vue/
 ├── database/
 │   └── migrations/              # 数据库迁移脚本
-├── backend/
+├── backend/                     # 本地开发后端（Express + pg）
 │   ├── config/
-│   │   └── db.js                # MySQL 连接池配置
+│   │   └── db.js                # PostgreSQL 连接池配置
 │   ├── controllers/             # 请求控制器
 │   ├── middleware/
 │   │   ├── auth.js              # JWT 认证中间件
@@ -77,6 +81,13 @@ task_manager_vue/
 │   ├── services/                # 业务逻辑层
 │   ├── .env.example             # 环境变量示例
 │   └── server.js                # 后端入口（端口 3000）
+├── workers-backend/             # 生产后端（Hono + Supabase JS SDK，部署到 Cloudflare Workers）
+│   ├── src/
+│   │   ├── routes/              # API 路由（与 backend/ 接口路径对齐）
+│   │   ├── auth.js              # 认证（Web Crypto API）
+│   │   ├── db.js                # Supabase 客户端封装
+│   │   └── index.js             # Workers 入口
+│   └── wrangler.toml            # Cloudflare Workers 部署配置
 ├── frontend/
 │   ├── src/
 │   │   ├── api/                 # API 请求封装
@@ -94,8 +105,8 @@ task_manager_vue/
 │   │   │   └── front/           # 前台展示页面
 │   │   ├── App.vue              # 根组件
 │   │   └── main.js              # 应用入口
-│   ├── .env.development         # 开发环境配置
-│   ├── .env.production          # 生产环境配置
+│   ├── .env.development         # 开发环境配置（Vite proxy → localhost:3000）
+│   ├── .env.production          # 生产环境配置（直连 Workers URL）
 │   ├── vite.config.js           # Vite 配置
 │   └── package.json
 ├── .gitignore
@@ -109,27 +120,25 @@ task_manager_vue/
 ### 1. 环境要求
 
 - Node.js >= 18
-- MySQL >= 8.0
+- PostgreSQL >= 15（推荐使用 Supabase 免费托管）
 - npm 或 yarn
 
 ### 2. 数据库初始化
 
+本项目使用 PostgreSQL（推荐 Supabase 免费托管）。在 Supabase 项目控制台 → SQL Editor 中依次执行迁移脚本：
+
 ```bash
-# 登录 MySQL
-mysql -u root -p
-
-# 创建数据库
-CREATE DATABASE IF NOT EXISTS task_manager DEFAULT CHARSET utf8mb4;
-USE task_manager;
-
-# 执行建表脚本
-source /path/to/database/migrations/001_init.sql
-source /path/to/database/migrations/002_friends.sql
-source /path/to/database/migrations/003_likes_favorites.sql
-source /path/to/database/migrations/004_soft_delete.sql
-source /path/to/database/migrations/005_operation_logs.sql
-source /path/to/database/migrations/006_article_top.sql
+# 迁移脚本位于 database/migrations/ 目录，按编号顺序在 Supabase SQL Editor 执行：
+# 001_init.sql           初始化表结构（users/articles/categories/tags/comments/links 等）
+# 002_friends.sql        友情链接表
+# 003_likes_favorites.sql 点赞与收藏表
+# 004_soft_delete.sql    文章软删除字段
+# 005_operation_logs.sql 操作日志表
+# 006_article_top.sql    文章置顶字段
+# 007_comments_avatar_text.sql  评论头像字段改 TEXT（容纳 base64）
 ```
+
+> 注意：`database/init_postgres.sql` 为全量建表脚本（PostgreSQL 语法），新建库时可一次性执行。
 
 ### 3. 配置环境变量
 

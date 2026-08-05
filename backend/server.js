@@ -116,19 +116,8 @@ app.use(express.json({ limit: '10mb' }))                          // JSON 请求
 app.use(express.urlencoded({ extended: true, limit: '10mb' }))    // URL 编码请求体
 
 // ========== 限流中间件 ==========
-
-/**
- * 登录接口限流：5 次/15 分钟/IP
- * 防止暴力破解管理员密码
- */
-// eslint-disable-next-line no-unused-vars
-const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 5,
-  message: { code: 429, message: '登录尝试过于频繁，请15分钟后再试' },
-  standardHeaders: true,
-  legacyHeaders: false
-})
+// 说明：登录/上传/搜索的限流器分别在各自路由模块（auth.js/upload.js/articles.js）内定义
+// 此处仅保留评论读取的全局限流（供仪表盘轮询使用）
 
 /**
  * 评论读取接口限流：30 次/分钟/IP
@@ -140,32 +129,6 @@ const commentReadLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 30,
   message: { code: 429, message: '请求过于频繁，请稍后再试' },
-  standardHeaders: true,
-  legacyHeaders: false
-})
-
-/**
- * 上传接口限流：10 次/分钟/IP
- * 防止恶意大量上传消耗磁盘
- */
-// eslint-disable-next-line no-unused-vars
-const uploadLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  max: 10,
-  message: { code: 429, message: '上传请求过于频繁，请稍后再试' },
-  standardHeaders: true,
-  legacyHeaders: false
-})
-
-/**
- * 搜索接口限流：10 次/分钟/IP
- * 防止恶意搜索消耗数据库资源（LIKE 模糊查询开销较大）
- */
-// eslint-disable-next-line no-unused-vars
-const searchLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  max: 10,
-  message: { code: 429, message: '搜索过于频繁，请稍后再试' },
   standardHeaders: true,
   legacyHeaders: false
 })

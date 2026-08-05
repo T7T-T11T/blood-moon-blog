@@ -1,13 +1,6 @@
-/**
- * @file Tags.vue
- * @description 标签云页面 - 以词云形式展示所有标签
- *
- * 功能：
- * - 从后端获取所有标签及其文章数量
- * - 根据文章数量调整标签字体大小
- * - 点击标签跳转到该标签的文章列表
- * - 支持字母/颜色随机排列
- */
+/** * @file Tags.vue * @description 标签云页面 - 以词云形式展示所有标签 * * 功能： * -
+从后端获取所有标签及其文章数量 * - 根据文章数量调整标签字体大小 * - 点击标签跳转到该标签的文章列表 *
+- 支持字母/颜色随机排列 */
 <template>
   <div ref="rootRef" class="tags-page">
     <!-- ============ Hero 区域 ============ -->
@@ -251,7 +244,9 @@ onUnmounted(() => {
   padding: 40px 0;
   opacity: 0;
   transform: translateY(20px);
-  transition: opacity 0.6s ease, transform 0.6s ease;
+  transition:
+    opacity 0.6s ease,
+    transform 0.6s ease;
 }
 
 .tag-cloud.visible {
@@ -271,7 +266,10 @@ onUnmounted(() => {
   color: rgba(255, 255, 255, 0.85);
   font-size: var(--font-size);
   font-weight: 500;
-  transition: transform 0.3s ease, background 0.3s ease, border-color 0.3s ease,
+  transition:
+    transform 0.3s ease,
+    background 0.3s ease,
+    border-color 0.3s ease,
     box-shadow 0.3s ease;
   animation: tagFadeIn 0.5s ease forwards;
   animation-delay: var(--delay);

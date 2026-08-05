@@ -1,6 +1,6 @@
 {
   "name": "task-manager-frontend",
-  "version": "1.14.3",
+  "version": "1.15.0",
   "description": "寿冬与秋 - 个人博客系统前端（Vue 3 + Vite + Element Plus）",
   "type": "module",
   "scripts": {
@@ -30,7 +30,6 @@
     "lowlight": "^3.3.0",
     "marked": "^15.0.0",
     "pinia": "^2.1.0",
-    "pinia-plugin-persistedstate": "^3.2.3",
     "vue": "^3.4.0",
     "vue-router": "^4.2.0"
   },

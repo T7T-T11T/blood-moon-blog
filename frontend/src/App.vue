@@ -33,10 +33,8 @@
  * - 自动检测新版本并提示用户刷新
  */
 import { computed, ref, onMounted, onBeforeUnmount } from 'vue';
-import { useSettingsStore } from '@/stores/settings';
+import { settingsState, getSettings } from '@/api/settings';
 import { startVersionCheck } from '@/utils/version';
-
-const settingsStore = useSettingsStore();
 
 /** @type {import('vue').Ref<boolean>} 是否显示版本更新提示 */
 const showUpdateTip = ref(false);
@@ -53,12 +51,11 @@ let stopVersionCheck = null;
  * 包含：网站名称、描述、URL、作者信息等
  */
 const jsonLd = computed(() => {
-  const settings = settingsStore.settings || {};
-  const siteName = settings.siteName || '寿冬与秋';
+  const siteName = settingsState.siteName || '寿冬与秋';
   const siteDescription =
-    settings.siteDescription || '一个专注于技术分享与个人成长的暗夜哥特风博客';
-  const siteUrl = settings.siteUrl || window.location.origin;
-  const authorName = settings.siteAuthor || '寿冬与秋';
+    settingsState.siteDescription || '一个专注于技术分享与个人成长的暗夜哥特风博客';
+  const siteUrl = settingsState.siteUrl || window.location.origin;
+  const authorName = settingsState.siteAuthor || '寿冬与秋';
 
   return JSON.stringify({
     '@context': 'https://schema.org',
@@ -101,6 +98,8 @@ function dismissUpdate() {
  * 应用挂载时启动版本检查
  */
 onMounted(() => {
+  // 加载网站设置到共享状态（供 JSON-LD 使用；FrontLayout 也会触发，此处保证尽早加载）
+  getSettings().catch(() => {});
   stopVersionCheck = startVersionCheck({
     interval: 10 * 60 * 1000, // 10 分钟检查一次
     onUpdate: (version) => {

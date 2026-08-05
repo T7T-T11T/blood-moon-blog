@@ -53,7 +53,9 @@
           <template #default="{ row }">
             <div class="article-cell" @click="goToEdit(row.id)">
               <h4 class="article-title">
-                <el-tag v-if="row.is_top" type="danger" size="small" effect="dark" class="top-tag">置顶</el-tag>
+                <el-tag v-if="row.is_top" type="danger" size="small" effect="dark" class="top-tag"
+                  >置顶</el-tag
+                >
                 {{ row.title }}
               </h4>
               <p v-if="row.summary" class="article-summary">{{ row.summary }}</p>

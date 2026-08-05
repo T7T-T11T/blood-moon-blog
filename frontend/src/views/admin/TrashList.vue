@@ -7,12 +7,7 @@
         <span class="count-badge">{{ total }} 篇已删除文章</span>
       </div>
       <div class="header-right">
-        <el-button
-          v-if="articles.length > 0"
-          type="danger"
-          plain
-          @click="handleClearAll"
-        >
+        <el-button v-if="articles.length > 0" type="danger" plain @click="handleClearAll">
           <el-icon><Delete /></el-icon>
           <span>清空回收站</span>
         </el-button>
@@ -96,7 +91,12 @@
 import { ref, onMounted } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { Delete, RefreshLeft } from '@element-plus/icons-vue';
-import { getTrashArticles, restoreArticle, permanentDeleteArticle, clearAllTrash } from '../../api/trash';
+import {
+  getTrashArticles,
+  restoreArticle,
+  permanentDeleteArticle,
+  clearAllTrash
+} from '../../api/trash';
 
 /** 文章列表 */
 const articles = ref([]);

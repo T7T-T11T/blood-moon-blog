@@ -120,29 +120,7 @@ async function logLogin(req, user) {
   });
 }
 
-/**
- * 登出日志中间件
- * @param {Object} req - Express 请求对象
- * @param {Object} user - 用户对象
- */
-async function logLogout(req, user) {
-  const ip_address = req.ip || req.headers['x-forwarded-for'] || req.connection.remoteAddress;
-  const user_agent = req.headers['user-agent'];
-
-  await logService.log({
-    user_id: user.id,
-    username: user.username,
-    action: '登出',
-    resource_type: 'user',
-    resource_id: user.id,
-    details: JSON.stringify({ logout_time: new Date().toISOString() }),
-    ip_address,
-    user_agent
-  });
-}
-
 module.exports = {
   logAction,
-  logLogin,
-  logLogout
+  logLogin
 };

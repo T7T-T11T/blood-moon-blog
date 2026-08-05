@@ -141,6 +141,7 @@
 
 import { ref, onMounted } from 'vue';
 import { Refresh, Search, Document } from '@element-plus/icons-vue';
+import { formatDateTime } from '@/utils/format';
 import { getLogs } from '../../api/logs';
 
 /** 日志列表 */
@@ -247,18 +248,6 @@ function getResourceLabel(type) {
     settings: '系统设置'
   };
   return map[type] || type;
-}
-
-/**
- * 格式化日期时间
- * @param {string} dateStr - 日期字符串
- * @returns {string} 格式化后的日期时间
- */
-function formatDateTime(dateStr) {
-  if (!dateStr) return '';
-  const date = new Date(dateStr);
-  if (isNaN(date.getTime())) return '';
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`;
 }
 
 /**

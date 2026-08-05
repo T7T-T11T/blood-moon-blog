@@ -81,7 +81,9 @@
         >
           <el-icon :size="28" color="var(--primary)"><component :is="action.icon" /></el-icon>
           <span>{{ action.label }}</span>
-          <span v-if="action.label === '评论管理' && pendingComments > 0" class="badge">{{ pendingComments }}</span>
+          <span v-if="action.label === '评论管理' && pendingComments > 0" class="badge">{{
+            pendingComments
+          }}</span>
         </router-link>
       </div>
     </section>
@@ -559,8 +561,13 @@ onMounted(() => {
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
 }
 
 /* ========== 待办提醒 ========== */
@@ -639,13 +646,27 @@ onMounted(() => {
   flex-shrink: 0;
 }
 
-.log-dot.article { background: var(--primary); }
-.log-dot.category { background: #f59e0b; }
-.log-dot.tag { background: #8b5cf6; }
-.log-dot.comment { background: #10b981; }
-.log-dot.user { background: #3b82f6; }
-.log-dot.link { background: #ec4899; }
-.log-dot.music { background: #06b6d4; }
+.log-dot.article {
+  background: var(--primary);
+}
+.log-dot.category {
+  background: #f59e0b;
+}
+.log-dot.tag {
+  background: #8b5cf6;
+}
+.log-dot.comment {
+  background: #10b981;
+}
+.log-dot.user {
+  background: #3b82f6;
+}
+.log-dot.link {
+  background: #ec4899;
+}
+.log-dot.music {
+  background: #06b6d4;
+}
 
 .log-info {
   flex: 1;

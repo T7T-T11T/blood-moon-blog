@@ -1,5 +1,23 @@
 # 版本历史
 
+## v1.15.0 (2026-08-05)
+
+- refactor: 不破坏功能前提下精简代码，删除死代码并提取重复工具函数
+  - 删除 functions/ 死代码代理层（前端生产环境已直连 Workers，注释明确说明不用 Functions 代理）
+  - 删除 backend/server.js 中 3 个未使用的限流器（loginLimiter/uploadLimiter/searchLimiter，实际定义在各路由模块内）
+  - 删除 backend/middleware/logAction.js 中未被调用的 logLogout 函数
+  - 删除前端 stores/dashboard.js（死模块，全项目无引用，AdminLayout 自行实现评论统计轮询）
+  - 删除前端 stores/settings.js 并修复 App.vue（原读取 settingsStore.settings 不存在的字段导致 JSON-LD 永远用默认值，改为直接使用 api/settings.js 的 settingsState 共享状态）
+  - 删除前端孤立视图 views/admin/Friends.vue 及 api/friends.js（未挂载路由、无入口，LinkList.vue 已承担友链管理）
+  - 提取 utils/format.js 统一 formatDate/formatDateTime，消除 NotFound/Home/ArticleDetail/Archive/CategoryList/TagList/Search/CommentSection/LogList 等 9 个文件中的重复定义
+  - 移除 pinia-plugin-persistedstate 死依赖（user/theme store 各自手动 localStorage 持久化，插件从未被使用）
+- docs: 同步文档与代码不一致处
+  - README.md 技术栈表 MySQL → PostgreSQL（Supabase），补充本地开发（Express+pg）与生产（Hono+Supabase SDK）双后端说明
+  - README.md 项目结构补充 workers-backend/ 目录
+  - README.md 数据库初始化改为 Supabase SQL Editor 执行迁移脚本
+  - DEPLOY.md 架构图更新为前端直连 Workers + Supabase，标注 backend/ 仅用于本地开发
+- chore: 前后端 + workers 版本号统一升级至 1.15.0
+
 ## v1.14.3 (2026-08-01)
 
 - fix(comments): 修复登录用户评论 500 错误

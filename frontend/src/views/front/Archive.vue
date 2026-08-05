@@ -77,6 +77,7 @@ getArticleArchives() 返回数组 [{ year, month, articles: [{ id, title, create
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue';
+import { formatDate } from '@/utils/format';
 import { getArticleArchives } from '../../api/articles';
 
 /** 组件根节点引用（用于作用域内的滚动观察） */
@@ -103,22 +104,6 @@ const totalArticles = computed(() => {
   }
   return count;
 });
-
-/**
- * 格式化日期为 YYYY-MM-DD
- * @param {string} dateStr - 后端返回的日期字符串
- * @returns {string} 格式化后的日期，无效时返回空字符串
- */
-function formatDate(dateStr) {
-  if (!dateStr) return '';
-  const date = new Date(dateStr);
-  // 兼容无效日期，避免展示 NaN
-  if (isNaN(date.getTime())) return '';
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
-}
 
 /**
  * 将月份字段转为中文展示标签

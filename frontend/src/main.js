@@ -4,7 +4,6 @@
  */
 import { createApp } from 'vue';
 import { createPinia } from 'pinia';
-import piniaPluginPersistedstate from 'pinia-plugin-persistedstate';
 import ElementPlus from 'element-plus';
 import 'element-plus/dist/index.css';
 
@@ -15,9 +14,8 @@ import lazyLoad from './directives/lazyLoad';
 
 const app = createApp(App);
 
-// 注册 Pinia 状态管理
+// 注册 Pinia 状态管理（user/theme store 各自手动 localStorage 持久化，无需插件）
 const pinia = createPinia();
-pinia.use(piniaPluginPersistedstate);
 app.use(pinia);
 
 // 注册 Vue Router 路由

@@ -103,6 +103,7 @@
 <script setup>
 import { ref, computed, watch } from 'vue';
 import { ElMessage } from 'element-plus';
+import { formatDate } from '@/utils/format';
 import { getComments, postComment } from '../../api/comments';
 
 const props = defineProps({
@@ -146,19 +147,6 @@ const commentCount = computed(() => {
 const canSubmit = computed(() => {
   return commentForm.value.nickname.trim() !== '' && commentForm.value.content.trim() !== '';
 });
-
-/**
- * 格式化日期 YYYY-MM-DD
- */
-function formatDate(dateStr) {
-  if (!dateStr) return '';
-  const date = new Date(dateStr);
-  if (isNaN(date.getTime())) return '';
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
-}
 
 /** 加载评论列表 */
 async function loadComments() {

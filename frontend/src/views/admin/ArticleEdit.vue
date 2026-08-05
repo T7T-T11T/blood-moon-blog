@@ -393,19 +393,21 @@ async function restoreDraft() {
         cancelButtonText: '使用空内容',
         type: 'info'
       }
-    ).then(() => {
-      form.value.title = draft.title;
-      form.value.summary = draft.summary;
-      form.value.content = draft.content || '';
-      form.value.category_id = draft.category_id;
-      form.value.tag_ids = draft.tag_ids;
-      form.value.status = draft.status;
-      ElMessage.success('草稿已恢复');
-    }).catch(() => {
-      // 用户选择不恢复，清除草稿
-      localStorage.removeItem(draftKey.value);
-      sessionStorage.removeItem(draftKey.value);
-    });
+    )
+      .then(() => {
+        form.value.title = draft.title;
+        form.value.summary = draft.summary;
+        form.value.content = draft.content || '';
+        form.value.category_id = draft.category_id;
+        form.value.tag_ids = draft.tag_ids;
+        form.value.status = draft.status;
+        ElMessage.success('草稿已恢复');
+      })
+      .catch(() => {
+        // 用户选择不恢复，清除草稿
+        localStorage.removeItem(draftKey.value);
+        sessionStorage.removeItem(draftKey.value);
+      });
   } catch (e) {
     console.error('恢复草稿失败:', e);
   }
@@ -456,7 +458,13 @@ function stopAutoSave() {
  * 监听表单变化，标记为已修改
  */
 watch(
-  () => [form.value.title, form.value.summary, form.value.content, form.value.category_id, form.value.tag_ids],
+  () => [
+    form.value.title,
+    form.value.summary,
+    form.value.content,
+    form.value.category_id,
+    form.value.tag_ids
+  ],
   () => {
     isDirty.value = true;
   },

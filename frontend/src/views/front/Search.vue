@@ -94,6 +94,7 @@
 import { ref, onMounted, onUnmounted, nextTick } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { Search, View } from '@element-plus/icons-vue';
+import { formatDate } from '@/utils/format';
 import { searchArticles } from '../../api/articles';
 import AsyncData from '../../components/common/AsyncData.vue';
 
@@ -115,16 +116,6 @@ let observer = null;
 
 /** 当前搜索关键词（记录最近一次搜索，用于高亮） */
 const lastKeyword = ref('');
-
-/** 格式化日期 */
-function formatDate(dateStr) {
-  if (!dateStr) return '';
-  const d = new Date(dateStr);
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-}
 
 /** 高亮关键词（转义 HTML 防止 XSS） */
 function highlightKeyword(text) {
