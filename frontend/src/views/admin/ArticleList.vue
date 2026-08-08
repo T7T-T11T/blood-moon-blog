@@ -112,30 +112,32 @@
         </el-table-column>
 
         <!-- 操作列 -->
-        <el-table-column label="操作" width="260" fixed="right">
+        <el-table-column label="操作" width="280" fixed="right">
           <template #default="{ row }">
-            <el-button type="primary" size="small" text @click="goToEdit(row.id)">编辑</el-button>
-            <el-button
-              :type="row.is_top ? 'warning' : 'info'"
-              size="small"
-              text
-              @click="handleToggleTop(row)"
-            >
-              {{ row.is_top ? '取消置顶' : '置顶' }}
-            </el-button>
-            <el-dropdown trigger="click" @command="(cmd) => handleExportSingle(row.id, cmd)">
-              <el-button type="success" size="small" text>
-                <el-icon><Download /></el-icon>
-                导出
+            <div class="row-actions">
+              <el-button type="primary" size="small" text @click="goToEdit(row.id)">编辑</el-button>
+              <el-button
+                :type="row.is_top ? 'warning' : 'info'"
+                size="small"
+                text
+                @click="handleToggleTop(row)"
+              >
+                {{ row.is_top ? '取消置顶' : '置顶' }}
               </el-button>
-              <template #dropdown>
-                <el-dropdown-menu>
-                  <el-dropdown-item command="markdown">Markdown (.md)</el-dropdown-item>
-                  <el-dropdown-item command="html">HTML (.html)</el-dropdown-item>
-                </el-dropdown-menu>
-              </template>
-            </el-dropdown>
-            <el-button type="danger" size="small" text @click="handleDelete(row)">删除</el-button>
+              <el-dropdown trigger="click" @command="(cmd) => handleExportSingle(row.id, cmd)">
+                <el-button type="success" size="small" text>
+                  <el-icon><Download /></el-icon>
+                  导出
+                </el-button>
+                <template #dropdown>
+                  <el-dropdown-menu>
+                    <el-dropdown-item command="markdown">Markdown (.md)</el-dropdown-item>
+                    <el-dropdown-item command="html">HTML (.html)</el-dropdown-item>
+                  </el-dropdown-menu>
+                </template>
+              </el-dropdown>
+              <el-button type="danger" size="small" text @click="handleDelete(row)">删除</el-button>
+            </div>
           </template>
         </el-table-column>
       </el-table>
@@ -597,4 +599,21 @@ onMounted(() => {
     width: 100%;
   }
 }
-</style>
+
+/* ========== 行操作按钮间距 ========== */
+.row-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.row-actions .el-button,
+.row-actions .el-dropdown {
+  margin-left: 0 !important;
+}
+
+/* 工具栏按钮间距：flex gap 已接管，消除 Element Plus 默认 margin 造成的双倍间距 */
+.header-right .el-button {
+  margin-left: 0;
+}</style>

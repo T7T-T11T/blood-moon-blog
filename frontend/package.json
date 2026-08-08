@@ -1,6 +1,6 @@
 {
   "name": "task-manager-frontend",
-  "version": "1.19.0",
+  "version": "1.19.1",
   "description": "寿冬与秋 - 个人博客系统前端（Vue 3 + Vite + Element Plus）",
   "type": "module",
   "scripts": {

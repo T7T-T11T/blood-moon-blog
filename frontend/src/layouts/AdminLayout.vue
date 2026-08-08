@@ -160,7 +160,6 @@ import {
   Expand,
   RefreshRight,
   Headset,
-  Picture,
   Delete,
   Tickets
 } from '@element-plus/icons-vue';
@@ -323,7 +322,6 @@ const contentMenu = [
   { path: '/admin/comments', label: '评论管理', icon: markRaw(ChatDotRound) },
   { path: '/admin/links', label: '友链管理', icon: markRaw(Link) },
   { path: '/admin/music', label: '音乐管理', icon: markRaw(Headset) },
-  { path: '/admin/media', label: '媒体库', icon: markRaw(Picture) },
   { path: '/admin/trash', label: '回收站', icon: markRaw(Delete) }
 ];
 

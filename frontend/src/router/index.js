@@ -181,12 +181,7 @@ const routes = [
         component: () => import('../views/admin/Profile.vue'),
         meta: { title: '个人中心', requiresAuth: true }
       },
-      {
-        path: 'media',
-        name: 'Media',
-        component: () => import('../views/admin/Media.vue'),
-        meta: { title: '媒体库', requiresAuth: true }
-      },
+
       {
         path: 'trash',
         name: 'TrashList',

@@ -1,6 +1,6 @@
 {
   "name": "blood-moon-blog-workers",
-  "version": "1.19.0",
+  "version": "1.19.1",
   "description": "基于 Cloudflare Workers + Hono 的个人博客后端 API",
   "type": "module",
   "main": "src/index.js",
