@@ -28,9 +28,18 @@ export const settingsState = reactive({
  * 刷新共享设置状态（内部使用，getSettings 成功后自动调用）
  * @param {Object} data - 设置键值对
  */
+/** 下划线键转驼峰：site_name → siteName、footer_text → footerText */
+function toCamel(key) {
+  return key.replace(/_([a-z])/g, (_, ch) => ch.toUpperCase());
+}
+
 function applySettingsToState(data) {
   if (data && typeof data === 'object') {
-    Object.assign(settingsState, data);
+    const normalized = {};
+    for (const [key, value] of Object.entries(data)) {
+      normalized[toCamel(key)] = value;
+    }
+    Object.assign(settingsState, normalized);
   }
 }
 

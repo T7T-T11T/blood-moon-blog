@@ -119,6 +119,8 @@
         <span class="footer-copy">© {{ currentYear }}</span>
         <span v-if="siteDescription" class="footer-divider">·</span>
         <span v-if="siteDescription" class="footer-desc">{{ siteDescription }}</span>
+        <span v-if="footerText" class="footer-divider">·</span>
+        <span v-if="footerText" class="footer-text">{{ footerText }}</span>
         <span class="footer-divider">·</span>
         <a :href="`${apiBase}/rss`" target="_blank" class="footer-rss" title="RSS 订阅">
           <el-icon><Connection /></el-icon> RSS
@@ -155,6 +157,7 @@ const siteName = computed(() => settingsState.siteName || '寿冬与秋');
 
 /** 站点描述（使用模块级共享状态） */
 const siteDescription = computed(() => settingsState.siteDescription || '');
+const footerText = computed(() => settingsState.footerText || '');
 
 /** 当前年份 */
 const currentYear = new Date().getFullYear();
@@ -665,6 +668,10 @@ onUnmounted(() => {
 }
 
 .footer-divider {
+  color: var(--text-tertiary);
+}
+
+.footer-text {
   color: var(--text-tertiary);
 }
 
