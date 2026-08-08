@@ -134,7 +134,24 @@ async function loadStats() {
     await nextTick();
     // 路由级懒加载 echarts，仅首次使用时加载
     if (!echarts) {
-      echarts = await import('echarts');
+      const core = await import('echarts/core');
+      const { LineChart } = await import('echarts/lib/chart/line');
+      const { BarChart } = await import('echarts/lib/chart/bar');
+      const { PieChart } = await import('echarts/lib/chart/pie');
+      const { GridComponent } = await import('echarts/lib/component/grid');
+      const { TooltipComponent } = await import('echarts/lib/component/tooltip');
+      const { LegendComponent } = await import('echarts/lib/component/legend');
+      const { CanvasRenderer } = await import('echarts/renderers');
+      core.use([
+        LineChart,
+        BarChart,
+        PieChart,
+        GridComponent,
+        TooltipComponent,
+        LegendComponent,
+        CanvasRenderer
+      ]);
+      echarts = core;
     }
     initPieChart(stats.articleStats);
     initLineChart(stats.publishTrend);

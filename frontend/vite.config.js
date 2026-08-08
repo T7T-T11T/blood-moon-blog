@@ -95,7 +95,7 @@ export default defineConfig({
   plugins: [
     vue(),
     // Element Plus 按需自动引入（首屏体积优化）
-    AutoImport({ resolvers: [elementPlusResolver()] }),
+    AutoImport({ resolvers: [elementPlusResolver()], eslintrc: { enabled: true } }),
     Components({ resolvers: [elementPlusResolver()], directives: true }),
     // 版本注入插件：将构建版本号写入 index.html 的 meta 标签
     {

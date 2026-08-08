@@ -1,1 +1,4 @@
-/*    /index.html   200
+/api/rss.xml        https://blood-moon-blog-api.2198789717.workers.dev/api/rss.xml    200
+/api/rss            https://blood-moon-blog-api.2198789717.workers.dev/api/rss        200
+/api/sitemap.xml    https://blood-moon-blog-api.2198789717.workers.dev/api/sitemap.xml    200
+/*                  /index.html    200

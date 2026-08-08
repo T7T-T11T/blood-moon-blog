@@ -9,7 +9,7 @@
           <div v-if="uploading" class="avatar-loading">
             <el-icon :size="24" color="#fff" class="is-loading"><Loading /></el-icon>
           </div>
-          <div class="avatar-overlay" v-if="!uploading">
+          <div v-if="!uploading" class="avatar-overlay">
             <el-icon :size="20" color="#fff"><Camera /></el-icon>
           </div>
         </div>

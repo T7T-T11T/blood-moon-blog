@@ -19,4 +19,4 @@ Disallow: /login
 Disallow: /api/
 
 # 站点地图位置（帮助搜索引擎快速发现所有页面）
-Sitemap: /api/sitemap.xml
+Sitemap: https://blood-moon-blog.pages.dev/api/sitemap.xml
