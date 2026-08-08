@@ -147,7 +147,6 @@
  */
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { ElMessage, ElMessageBox } from 'element-plus';
 import { Check, Promotion, Document, Clock, Warning } from '@element-plus/icons-vue';
 import TipTapEditor from '@/components/TipTapEditor.vue';
 import { getAdminArticleDetail, addArticle, updateArticle } from '@/api/articles';

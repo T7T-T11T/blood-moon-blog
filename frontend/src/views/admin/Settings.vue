@@ -55,7 +55,6 @@
  * 依赖 API：getSettings / updateSettings
  */
 import { ref, reactive, onMounted } from 'vue';
-import { ElMessage } from 'element-plus';
 import { getSettings, updateSettings, clearSettingsCache } from '@/api/settings';
 
 /** 当前激活的 Tab（site=站点信息，author=博主信息） */

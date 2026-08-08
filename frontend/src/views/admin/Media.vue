@@ -76,7 +76,6 @@
 
 <script setup>
 import { ref, onMounted } from 'vue';
-import { ElMessage, ElMessageBox } from 'element-plus';
 import { Document, FolderOpened } from '@element-plus/icons-vue';
 import { getUploadList, deleteUploadFile } from '../../api/upload';
 

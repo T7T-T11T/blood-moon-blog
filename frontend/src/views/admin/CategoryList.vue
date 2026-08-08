@@ -120,7 +120,6 @@
  * 依赖 API：getCategories / addCategory / updateCategory / deleteCategory
  */
 import { ref, onMounted } from 'vue';
-import { ElMessage, ElMessageBox } from 'element-plus';
 import { Plus, Folder } from '@element-plus/icons-vue';
 import { getCategories, addCategory, updateCategory, deleteCategory } from '@/api/categories';
 

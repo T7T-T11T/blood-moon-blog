@@ -89,7 +89,6 @@
  */
 
 import { ref, onMounted } from 'vue';
-import { ElMessage, ElMessageBox } from 'element-plus';
 import { Delete, RefreshLeft } from '@element-plus/icons-vue';
 import {
   getTrashArticles,

@@ -7,7 +7,6 @@
  * - 响应拦截：统一处理错误（如 token 过期自动跳转登录页）
  */
 import axios from 'axios';
-import { ElMessage } from 'element-plus';
 import router from '../router';
 
 /**

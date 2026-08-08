@@ -102,7 +102,6 @@
 
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue';
-import { ElMessage } from 'element-plus';
 import { formatDate } from '@/utils/format';
 import { getComments, postComment } from '../../api/comments';
 import { useUserStore } from '@/stores/user';

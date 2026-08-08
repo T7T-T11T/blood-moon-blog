@@ -129,7 +129,6 @@
  * 依赖 API：getCommentList / updateCommentStatus / deleteComment
  */
 import { ref, onMounted } from 'vue';
-import { ElMessage, ElMessageBox } from 'element-plus';
 import { ChatDotRound, Download } from '@element-plus/icons-vue';
 import { getCommentList, updateCommentStatus, deleteComment } from '@/api/comments';
 

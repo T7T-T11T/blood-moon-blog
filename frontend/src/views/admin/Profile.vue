@@ -168,7 +168,6 @@
  * 依赖 API：getProfile / updateProfile / changePassword
  */
 import { ref, reactive, onMounted } from 'vue';
-import { ElMessage } from 'element-plus';
 import { User, Camera, Loading, Link, ChatDotRound, ChatLineSquare } from '@element-plus/icons-vue';
 import { getProfile, updateProfile, changePassword } from '@/api/profile';
 import { getDashboardStatsAPI } from '@/api/dashboard';

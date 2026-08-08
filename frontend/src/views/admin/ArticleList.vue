@@ -173,7 +173,6 @@
  */
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { ElMessage, ElMessageBox } from 'element-plus';
 import { Search, Plus, Document, Download } from '@element-plus/icons-vue';
 import { getArticles, deleteArticle, exportArticle, toggleTop } from '@/api/articles';
 

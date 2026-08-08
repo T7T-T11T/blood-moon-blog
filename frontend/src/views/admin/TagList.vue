@@ -80,7 +80,6 @@
  * 依赖 API：getTags / addTag / updateTag / deleteTag
  */
 import { ref, onMounted } from 'vue';
-import { ElMessage, ElMessageBox } from 'element-plus';
 import { Plus, Edit, Delete, PriceTag } from '@element-plus/icons-vue';
 import { getTags, addTag, updateTag, deleteTag } from '@/api/tags';
 

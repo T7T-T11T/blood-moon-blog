@@ -149,7 +149,6 @@
  * 依赖 API：getAllLinks / createLink / updateLink / deleteLink
  */
 import { ref, onMounted } from 'vue';
-import { ElMessage, ElMessageBox } from 'element-plus';
 import { Plus, Link } from '@element-plus/icons-vue';
 import { getAllLinks, createLink, updateLink, deleteLink } from '@/api/links';
 

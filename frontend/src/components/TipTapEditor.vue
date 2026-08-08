@@ -271,7 +271,6 @@ import Underline from '@tiptap/extension-underline';
 import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight';
 import { common, createLowlight } from 'lowlight';
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
-import { ElMessage, ElMessageBox } from 'element-plus';
 import { uploadImage, uploadAudio, uploadVideo } from '@/api/upload';
 import AudioExtension from './tiptap-extensions/AudioExtension';
 import VideoExtension from './tiptap-extensions/VideoExtension';

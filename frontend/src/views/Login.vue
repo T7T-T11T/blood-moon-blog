@@ -76,7 +76,6 @@
  */
 import { ref, reactive } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { ElMessage } from 'element-plus';
 import { User, Lock } from '@element-plus/icons-vue';
 import { loginAPI } from '../api/auth';
 import { useUserStore } from '../stores/user';

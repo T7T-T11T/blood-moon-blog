@@ -242,7 +242,6 @@ import { useRoute, useRouter } from 'vue-router';
 import { formatDate } from '@/utils/format';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
-import { ElMessage } from 'element-plus';
 import {
   ArrowLeft,
   ArrowRight,
