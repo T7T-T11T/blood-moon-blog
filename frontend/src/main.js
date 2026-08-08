@@ -25,3 +25,12 @@ app.directive('lazy', lazyLoad);
 
 // 挂载到 #app 元素
 app.mount('#app');
+
+// 注册 Service Worker（仅生产环境）：预缓存核心资源，二次访问秒开
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch((err) => {
+      console.warn('Service Worker 注册失败:', err);
+    });
+  });
+}

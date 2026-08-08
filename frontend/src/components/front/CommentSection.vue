@@ -17,6 +17,15 @@
         <button class="cancel-btn" @click="cancelReply">取消</button>
       </div>
       <div class="comment-form">
+        <!-- 蜜罐字段：人类不可见，机器人会自动填写（用于反垃圾） -->
+        <input
+          v-model="commentForm.website"
+          type="text"
+          class="honeypot-field"
+          tabindex="-1"
+          autocomplete="off"
+          aria-hidden="true"
+        />
         <input
           v-model="commentForm.nickname"
           type="text"
@@ -29,9 +38,10 @@
           class="form-textarea"
           placeholder="写下你的评论..."
           rows="4"
-          maxlength="500"
+          maxlength="2000"
         ></textarea>
         <div class="form-actions">
+          <span class="char-count">{{ commentForm.content.length }}/2000</span>
           <button class="submit-btn" :disabled="!canSubmit || submitting" @click="submitComment">
             {{ submitting ? '提交中…' : '发表评论' }}
           </button>
@@ -186,6 +196,11 @@ function cancelReply() {
 
 /** 提交评论 */
 async function submitComment() {
+  // 蜜罐检测：被机器人填写则静默丢弃，不提示
+  if (commentForm.value.website) {
+    commentForm.value.content = '';
+    return;
+  }
   if (!canSubmit.value) {
     ElMessage.warning('请填写评论内容');
     return;
@@ -199,6 +214,15 @@ async function submitComment() {
       payload.parent_id = replyTo.value.id;
     }
     const res = await postComment(props.articleId, payload);
+
+    // 开启审核时：不乐观插入，提示等待审核
+    if (res?.data?.moderated) {
+      ElMessage.success('评论已提交，审核通过后展示');
+      commentForm.value.nickname = '';
+      commentForm.value.content = '';
+      replyTo.value = null;
+      return;
+    }
     ElMessage.success('评论发表成功');
 
     /** 乐观更新：提交成功后立即将新评论插入本地列表，提升访客体验 */
@@ -358,6 +382,22 @@ watch(
 .form-textarea:focus {
   border-color: var(--primary);
   box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.12);
+}
+
+.honeypot-field {
+  position: absolute;
+  left: -9999px;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  overflow: hidden;
+}
+
+.char-count {
+  font-size: 12px;
+  color: var(--text-secondary, #6b7280);
+  margin-right: 12px;
+  align-self: center;
 }
 
 .form-actions {

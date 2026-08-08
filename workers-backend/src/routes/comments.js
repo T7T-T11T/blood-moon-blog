@@ -28,6 +28,34 @@ const REVERSE_STATUS_MAP = {
 }
 
 const ALLOWED_STATUSES = ['待审核', '已通过', '已拒绝']
+// ===== 防垃圾评论：关键词过滤 + 限流 + 长度校验 =====
+const COMMENT_MAX_LENGTH = 2000
+const NICKNAME_MAX_LENGTH = 30
+const SPAM_KEYWORDS = [
+  '加微信', '加v信', '代开发票', '开发票', '刷单', '兼职', '博彩', '彩票', '赌博',
+  '贷款', '网贷', '小姐', '约炮', '色情', '裸聊', '理财推荐', '股票推荐', '稳赚',
+  'a货', '高仿', '外挂', '私服', '低价出售', '担保交易'
+]
+const RATE_LIMIT_WINDOW = 10 * 60 * 1000
+const RATE_LIMIT_MAX = 5
+const rateLimitMap = new Map()
+
+function isSpamComment(text) {
+  const lower = String(text || '').toLowerCase()
+  return SPAM_KEYWORDS.some((kw) => lower.includes(kw))
+}
+
+function checkCommentRateLimit(ip) {
+  const now = Date.now()
+  const records = (rateLimitMap.get(ip) || []).filter((t) => now - t < RATE_LIMIT_WINDOW)
+  if (records.length >= RATE_LIMIT_MAX) {
+    rateLimitMap.set(ip, records)
+    return false
+  }
+  records.push(now)
+  rateLimitMap.set(ip, records)
+  return true
+}
 
 commentsRouter.get('/stats', authMiddleware, adminMiddleware, async (c) => {
   const db = getDatabase(c.env)
@@ -150,11 +178,27 @@ commentsRouter.post('/:articleId', async (c) => {
     const body = await c.req.json()
     const { content, nickname, email, avatar_url, parent_id } = body
 
-    if (!articleId || !content) {
+    const contentText = String(content || '').trim()
+    const nickText = String(nickname || '').trim()
+
+    if (!articleId || !contentText) {
       return c.json({
         code: 400,
         message: '文章ID和评论内容不能为空'
       }, 400)
+    }
+    if (contentText.length > COMMENT_MAX_LENGTH) {
+      return c.json({ code: 400, message: `评论内容不能超过 ${COMMENT_MAX_LENGTH} 字` }, 400)
+    }
+    if (nickText.length > NICKNAME_MAX_LENGTH) {
+      return c.json({ code: 400, message: '昵称不能超过 30 个字符' }, 400)
+    }
+    if (isSpamComment(contentText) || isSpamComment(nickText)) {
+      return c.json({ code: 400, message: '评论内容包含不当词汇' }, 400)
+    }
+    const clientIp = getClientIp(c)
+    if (!checkCommentRateLimit(clientIp)) {
+      return c.json({ code: 429, message: '评论过于频繁，请稍后再试' }, 429)
     }
 
     const article = await db.findOne('articles', { id: articleId })
@@ -191,22 +235,33 @@ commentsRouter.post('/:articleId', async (c) => {
       nick = (nickname && nickname.trim()) ? nickname.trim() : '访客'
     }
 
+    // 读取站点设置：开启评论审核时，新评论进入待审核
+    let commentStatus = '已通过'
+    try {
+      const settingRows = await db.select('site_settings', {}, {
+        order: { column: 'setting_key', ascending: true }
+      })
+      const settingMap = {}
+      for (const row of settingRows) settingMap[row.setting_key] = row.setting_value
+      if (settingMap.comments_moderation === 'true') commentStatus = '待审核'
+    } catch (_) {}
+
     const comment = await db.insert('comments', {
       article_id: articleId,
       nickname: nick,
       email: email || '',
       avatar_url: avatar,
-      content,
+      content: contentText,
       parent_id: parent_id ? parseInt(parent_id) : null,
-      status: '已通过',
-      ip_address: getClientIp(c),
+      status: commentStatus,
+      ip_address: clientIp,
       created_at: new Date().toISOString()
     })
 
     return c.json({
       code: 200,
-      data: comment,
-      message: '评论成功'
+      data: { ...comment, moderated: commentStatus === '待审核' },
+      message: commentStatus === '待审核' ? '评论已提交，审核通过后展示' : '评论成功'
     })
   } catch (error) {
     console.error('Create comment error:', error)

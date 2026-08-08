@@ -3,6 +3,9 @@
 文章内图片懒加载（基于 IntersectionObserver 后处理） * - 评论区 */
 <template>
   <div class="article-detail">
+    <!-- Article + Breadcrumb 结构化数据（SEO） -->
+    <component :is="'script'" type="application/ld+json">{{ articleJsonLd }}</component>
+
     <!-- 阅读进度条 + 返回顶部 -->
     <ReadingProgress />
 
@@ -88,7 +91,9 @@
         <img
           :src="article.cover_image"
           :alt="article.title"
-          loading="lazy"
+          loading="eager"
+          fetchpriority="high"
+          decoding="async"
           @error="coverImageError = true"
         />
       </figure>
@@ -528,8 +533,65 @@ const renderedContent = computed(() => {
     return `<${tag} id="${id}">${text}</${tag}>`;
   });
 
+  // 文章内图片懒加载 + 解码优化（正文图片延迟加载，减少首屏带宽）
+  html = html.replace(/<img\b(?![^>]*\bloading=)[^>]*>/gi, (tag) =>
+    tag.replace(/^<img/i, '<img loading="lazy" decoding="async"')
+  );
+
   return html;
 });
+
+/** 文章结构化数据（Article + BreadcrumbList JSON-LD，SEO） */
+const articleJsonLd = computed(() => {
+  if (!article.value) return '';
+  const a = article.value;
+  const origin = window.location.origin;
+  const url = origin + '/article/' + a.id;
+  const breadcrumb = [{ '@type': 'ListItem', position: 1, name: '首页', item: origin + '/' }];
+  if (a.category_slug) {
+    breadcrumb.push({
+      '@type': 'ListItem',
+      position: 2,
+      name: a.category_name || '分类',
+      item: origin + '/category/' + a.category_slug
+    });
+  }
+  breadcrumb.push({
+    '@type': 'ListItem',
+    position: breadcrumb.length + 1,
+    name: a.title,
+    item: url
+  });
+  return JSON.stringify({
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'Article',
+        headline: a.title,
+        description: a.summary || '',
+        image: a.cover_image || '',
+        datePublished: a.created_at,
+        dateModified: a.updated_at || a.created_at,
+        author: { '@type': 'Person', name: a.author_name || '寿冬与秋' },
+        mainEntityOfPage: { '@type': 'WebPage', '@id': url }
+      },
+      { '@type': 'BreadcrumbList', itemListElement: breadcrumb }
+    ]
+  });
+});
+
+/** 更新页面标题与描述（SEO） */
+function updateSeo() {
+  if (!article.value) return;
+  document.title = article.value.title + ' - 寿冬与秋';
+  let desc = document.querySelector('meta[name="description"]');
+  if (!desc) {
+    desc = document.createElement('meta');
+    desc.name = 'description';
+    document.head.appendChild(desc);
+  }
+  desc.content = article.value.summary || ('寿冬与秋 - ' + article.value.title);
+}
 
 async function loadArticle() {
   loading.value = true;
@@ -538,6 +600,7 @@ async function loadArticle() {
     const id = route.params.id;
     const { data } = await getArticleDetail(id);
     article.value = data;
+    updateSeo();
     await nextTick();
     initRevealObserver();
     initImageLightbox();
