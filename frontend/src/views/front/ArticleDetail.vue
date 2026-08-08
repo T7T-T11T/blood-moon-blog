@@ -15,6 +15,14 @@
         <el-icon><ArrowLeft /></el-icon>
         <span>返回</span>
       </button>
+      <div class="back-bar-spacer"></div>
+      <!-- 阅读字号调节 -->
+      <div class="reading-tools" title="阅读字号">
+        <button class="font-btn" :disabled="fontIndex <= 0" aria-label="减小字号" @click="changeFontSize(-1)">A-</button>
+        <span class="font-size-label">{{ articleFontSize }}px</span>
+        <button class="font-btn" :disabled="fontIndex >= FONT_SIZES.length - 1" aria-label="增大字号" @click="changeFontSize(1)">A+</button>
+        <button v-if="fontIndex !== DEFAULT_FONT_INDEX" class="font-reset" @click="resetFontSize">重置</button>
+      </div>
     </div>
 
     <!-- 面包屑导航 -->
@@ -100,7 +108,7 @@
 
       <!-- Markdown 正文（含 id 锚点的标题） -->
       <!-- eslint-disable-next-line vue/no-v-html -->
-      <div ref="articleBodyRef" class="article-body reveal" v-html="renderedContent"></div>
+      <div ref="articleBodyRef" class="article-body reveal" :style="{ fontSize: articleFontSize + 'px' }" v-html="renderedContent"></div>
 
       <section v-if="article.tags && article.tags.length > 0" class="article-tags reveal">
         <router-link
@@ -593,6 +601,22 @@ function updateSeo() {
   desc.content = article.value.summary || ('寿冬与秋 - ' + article.value.title);
 }
 
+/** 阅读字号调节（A- / A+，记忆用户偏好） */
+const FONT_SIZES = [15, 16, 17, 19, 21];
+const DEFAULT_FONT_INDEX = 2;
+const fontIndex = ref(parseInt(localStorage.getItem('article-font-index') || String(DEFAULT_FONT_INDEX), 10));
+const articleFontSize = computed(() => FONT_SIZES[Math.min(Math.max(fontIndex.value, 0), FONT_SIZES.length - 1)]);
+
+function changeFontSize(delta) {
+  fontIndex.value = Math.min(Math.max(fontIndex.value + delta, 0), FONT_SIZES.length - 1);
+  localStorage.setItem('article-font-index', String(fontIndex.value));
+}
+
+function resetFontSize() {
+  fontIndex.value = DEFAULT_FONT_INDEX;
+  localStorage.setItem('article-font-index', String(DEFAULT_FONT_INDEX));
+}
+
 async function loadArticle() {
   loading.value = true;
   coverImageError.value = false;
@@ -979,8 +1003,8 @@ onUnmounted(() => {
 /* ========== Markdown 正文 ========== */
 .article-body {
   font-size: 17px;
-  line-height: 1.8;
-  color: #334155;
+  line-height: 1.9;
+  color: var(--text-body);
 }
 
 .article-body :deep(h1) {
@@ -1007,6 +1031,11 @@ onUnmounted(() => {
 
 .article-body :deep(p) {
   margin: 16px 0;
+  overflow-wrap: break-word;
+}
+.article-body :deep(strong) {
+  color: var(--text-primary);
+  font-weight: 600;
 }
 
 .article-body :deep(ul),
@@ -1020,10 +1049,10 @@ onUnmounted(() => {
 
 .article-body :deep(code) {
   padding: 2px 8px;
-  background: #f1f5f9;
+  background: var(--code-bg);
   border-radius: 4px;
   font-size: 15px;
-  color: var(--primary-dark);
+  color: var(--code-color);
   font-family: var(--font-mono);
 }
 
@@ -1123,7 +1152,9 @@ onUnmounted(() => {
 }
 
 .article-body :deep(table) {
-  width: 100%;
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
   border-collapse: collapse;
   margin: 24px 0;
 }
@@ -1647,3 +1678,65 @@ onUnmounted(() => {
   opacity: 0;
 }
 </style>
+
+/* ========== 阅读字号调节 ========== */
+.back-bar-spacer {
+  flex: 1;
+}
+
+.reading-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.font-btn {
+  min-width: 34px;
+  height: 30px;
+  padding: 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  transition:
+    color 0.2s,
+    border-color 0.2s,
+    background 0.2s;
+}
+
+.font-btn:hover:not(:disabled) {
+  color: var(--primary);
+  border-color: var(--primary);
+}
+
+.font-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.font-size-label {
+  min-width: 38px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+.font-reset {
+  padding: 4px 10px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  background: transparent;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.font-reset:hover {
+  color: var(--primary);
+  border-color: var(--primary);
+}

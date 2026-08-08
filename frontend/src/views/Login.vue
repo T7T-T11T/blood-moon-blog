@@ -450,7 +450,7 @@ async function handleLogin() {
 .form-footer {
   margin-top: 32px;
   font-size: 12px;
-  color: #334155;
+  color: var(--text-tertiary);
   text-align: center;
 }
 

@@ -24,6 +24,9 @@
   --text-secondary: #94a3b8;
   --text-tertiary: #64748b;
   --text-placeholder: #475569;
+--text-body: #cbd5e1;
+--code-bg: #1e293b;
+--code-color: #fca5a5;
 
   /* 背景色 - 暗色主题 */
   --bg-body: #0a0e1a;
@@ -77,6 +80,9 @@
   --text-secondary: #475569;
   --text-tertiary: #94a3b8;
   --text-placeholder: #cbd5e1;
+--text-body: #334155;
+--code-bg: #f1f5f9;
+--code-color: #b91c1c;
 
   --bg-body: #f8fafc;
   --bg-card: #ffffff;
