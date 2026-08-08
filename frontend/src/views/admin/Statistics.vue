@@ -24,12 +24,14 @@
       <section class="chart-card animate-fade-in-up delay-200">
         <h3 class="chart-title">文章状态分布</h3>
         <div ref="pieChartRef" class="chart-canvas"></div>
+        <div v-if="!hasPieData" class="chart-empty">暂无数据</div>
       </section>
 
       <!-- 7天发布趋势（折线图） -->
       <section class="chart-card animate-fade-in-up delay-300">
         <h3 class="chart-title">7 天发布趋势</h3>
         <div ref="lineChartRef" class="chart-canvas"></div>
+        <div v-if="!hasLineData" class="chart-empty">暂无数据</div>
       </section>
     </div>
 
@@ -37,6 +39,7 @@
     <section class="chart-card full animate-fade-in-up delay-300">
       <h3 class="chart-title">文章阅读量 Top 5</h3>
       <div ref="barChartRef" class="chart-canvas bar"></div>
+      <div v-if="!hasBarData" class="chart-empty">暂无数据</div>
     </section>
   </div>
 </template>
@@ -50,13 +53,20 @@
  * 依赖 API：getDashboardStatsAPI / getArticles
  * 依赖库：echarts
  */
-import { ref, onMounted, onBeforeUnmount, nextTick, markRaw } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount, nextTick, markRaw } from 'vue';
 import { Document, View, Folder, PriceTag, ChatDotRound } from '@element-plus/icons-vue';
 import { getDashboardStatsAPI } from '@/api/dashboard';
 import { getArticles } from '@/api/articles';
 
 /** 统计数据 */
 const statsData = ref(null);
+/** 各图表是否有数据（无数据时显示占位） */
+const hasPieData = computed(() => {
+  const a = statsData.value?.articleStats;
+  return !!a && (Number(a.published) || 0) + (Number(a.drafts ?? a.draft) || 0) > 0;
+});
+const hasLineData = computed(() => (statsData.value?.publishTrend || []).length > 0);
+const hasBarData = computed(() => (statsData.value?.topArticles || []).length > 0);
 
 /** 图表 DOM 引用 */
 const pieChartRef = ref(null);
@@ -121,6 +131,7 @@ async function loadStats() {
       topArticles = [...list].sort((a, b) => (b.view_count || 0) - (a.view_count || 0)).slice(0, 5);
     }
 
+    stats.topArticles = topArticles;
     statsData.value = stats;
 
     // 更新关键指标
@@ -153,9 +164,9 @@ async function loadStats() {
       ]);
       echarts = core;
     }
-    initPieChart(stats.articleStats);
-    initLineChart(stats.publishTrend);
-    initBarChart(topArticles);
+    if (hasPieData.value) initPieChart(stats.articleStats);
+    if (hasLineData.value) initLineChart(stats.publishTrend);
+    if (hasBarData.value) initBarChart(stats.topArticles);
   } catch (e) {
     console.error('加载统计数据失败:', e);
   }
@@ -168,24 +179,54 @@ async function loadStats() {
 function initPieChart(articleStats) {
   if (!pieChartRef.value) return;
   pieChart = echarts.init(pieChartRef.value);
+  const total =
+    (Number(articleStats.published) || 0) + (Number(articleStats.drafts ?? articleStats.draft) || 0);
   pieChart.setOption({
-    tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
-    legend: { bottom: 0, icon: 'circle', textStyle: { color: '#6b7280' } },
-    color: ['#0d9488', '#f59e0b'],
+    tooltip: {
+      trigger: 'item',
+      formatter: '{b}: {c} 篇（{d}%）',
+      backgroundColor: '#121828',
+      borderColor: '#2a3550',
+      textStyle: { color: '#e2e8f0' }
+    },
+    legend: {
+      bottom: 0,
+      icon: 'circle',
+      itemWidth: 8,
+      itemHeight: 8,
+      itemGap: 16,
+      textStyle: { color: '#94a3b8', fontSize: 12 }
+    },
+    color: ['#dc2626', '#64748b'],
+    title: {
+      text: String(total),
+      subtext: '文章总数',
+      left: 'center',
+      top: '35%',
+      textStyle: { color: '#f1f5f9', fontSize: 26, fontWeight: 700 },
+      subtextStyle: { color: '#94a3b8', fontSize: 12 }
+    },
     series: [
       {
         type: 'pie',
-        radius: ['45%', '70%'],
+        radius: ['52%', '72%'],
         center: ['50%', '45%'],
         avoidLabelOverlap: false,
-        itemStyle: { borderRadius: 8, borderColor: '#fff', borderWidth: 2 },
+        itemStyle: { borderRadius: 6, borderColor: '#121828', borderWidth: 3 },
         label: { show: false },
         emphasis: {
-          label: { show: true, fontSize: 14, fontWeight: 600 }
+          scaleSize: 6,
+          label: {
+            show: true,
+            fontSize: 14,
+            fontWeight: 600,
+            color: '#f1f5f9',
+            formatter: '{b}\n{c} 篇'
+          }
         },
         data: [
-          { value: articleStats.published || 0, name: '已发布' },
-          { value: articleStats.draft || 0, name: '草稿' }
+          { value: Number(articleStats.published) || 0, name: '已发布' },
+          { value: Number(articleStats.drafts ?? articleStats.draft) || 0, name: '草稿' }
         ]
       }
     ]
@@ -202,21 +243,28 @@ function initLineChart(trend) {
   const dates = (trend || []).map((t) => t.date);
   const counts = (trend || []).map((t) => t.count);
   lineChart.setOption({
-    tooltip: { trigger: 'axis' },
-    grid: { left: 40, right: 20, top: 20, bottom: 30 },
+    tooltip: {
+      trigger: 'axis',
+      backgroundColor: '#121828',
+      borderColor: '#2a3550',
+      textStyle: { color: '#e2e8f0' }
+    },
+    grid: { left: 36, right: 18, top: 24, bottom: 28 },
     xAxis: {
       type: 'category',
       data: dates,
-      axisLine: { lineStyle: { color: '#e2e8f0' } },
-      axisLabel: { color: '#9ca3af', fontSize: 11 }
+      boundaryGap: false,
+      axisLine: { lineStyle: { color: '#2a3550' } },
+      axisLabel: { color: '#94a3b8', fontSize: 11 },
+      axisTick: { show: false }
     },
     yAxis: {
       type: 'value',
       minInterval: 1,
       axisLine: { show: false },
       axisTick: { show: false },
-      axisLabel: { color: '#9ca3af', fontSize: 11 },
-      splitLine: { lineStyle: { color: '#f1f5f9' } }
+      axisLabel: { color: '#94a3b8', fontSize: 11 },
+      splitLine: { lineStyle: { color: 'rgba(148, 163, 184, 0.14)' } }
     },
     series: [
       {
@@ -224,13 +272,13 @@ function initLineChart(trend) {
         type: 'line',
         smooth: true,
         symbol: 'circle',
-        symbolSize: 6,
-        lineStyle: { width: 3, color: '#0d9488' },
-        itemStyle: { color: '#0d9488' },
+        symbolSize: 7,
+        lineStyle: { width: 3, color: '#f87171' },
+        itemStyle: { color: '#dc2626', borderColor: '#fca5a5', borderWidth: 2 },
         areaStyle: {
           color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-            { offset: 0, color: 'rgba(13, 148, 136, 0.25)' },
-            { offset: 1, color: 'rgba(13, 148, 136, 0.02)' }
+            { offset: 0, color: 'rgba(220, 38, 38, 0.35)' },
+            { offset: 1, color: 'rgba(220, 38, 38, 0.02)' }
           ])
         }
       }
@@ -251,33 +299,42 @@ function initBarChart(articles) {
   );
   const views = (articles || []).map((a) => a.view_count || 0);
   barChart.setOption({
-    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
-    grid: { left: 40, right: 30, top: 20, bottom: 40 },
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
+      backgroundColor: '#121828',
+      borderColor: '#2a3550',
+      textStyle: { color: '#e2e8f0' }
+    },
+    grid: { left: 40, right: 24, top: 20, bottom: 44 },
     xAxis: {
       type: 'category',
       data: names,
-      axisLine: { lineStyle: { color: '#e2e8f0' } },
-      axisLabel: { color: '#9ca3af', fontSize: 11, interval: 0, rotate: 15 }
+      axisLine: { lineStyle: { color: '#2a3550' } },
+      axisLabel: { color: '#94a3b8', fontSize: 11, interval: 0, rotate: 18 },
+      axisTick: { show: false }
     },
     yAxis: {
       type: 'value',
+      minInterval: 1,
       axisLine: { show: false },
       axisTick: { show: false },
-      axisLabel: { color: '#9ca3af', fontSize: 11 },
-      splitLine: { lineStyle: { color: '#f1f5f9' } }
+      axisLabel: { color: '#94a3b8', fontSize: 11 },
+      splitLine: { lineStyle: { color: 'rgba(148, 163, 184, 0.14)' } }
     },
     series: [
       {
         data: views,
         type: 'bar',
-        barWidth: '45%',
+        barWidth: '48%',
         itemStyle: {
           borderRadius: [6, 6, 0, 0],
           color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-            { offset: 0, color: '#14b8a6' },
-            { offset: 1, color: '#0d9488' }
+            { offset: 0, color: '#f87171' },
+            { offset: 1, color: '#991b1b' }
           ])
-        }
+        },
+        emphasis: { itemStyle: { color: '#f87171' } }
       }
     ]
   });
@@ -428,4 +485,23 @@ onBeforeUnmount(() => {
     grid-template-columns: repeat(2, 1fr);
   }
 }
-</style>
+
+/* ========== 图表空状态 ========== */
+.chart-card {
+  position: relative;
+}
+
+.chart-empty {
+  position: absolute;
+  top: 56px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-tertiary);
+  font-size: 13px;
+  letter-spacing: 1px;
+  pointer-events: none;
+}</style>

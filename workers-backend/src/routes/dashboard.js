@@ -65,6 +65,9 @@ dashboardRouter.get('/stats', authMiddleware, adminMiddleware, async (c) => {
       .order('view_count', { ascending: false })
       .limit(10)
 
+    // 最近 7 天发布趋势（按日期分组，含当天）
+    const publishTrend = await getPublishTrend(db)
+
     return c.json({
       code: 200,
       data: {
@@ -90,7 +93,8 @@ dashboardRouter.get('/stats', authMiddleware, adminMiddleware, async (c) => {
           friends: friendCount,
           totalViews
         },
-        hotArticles: hotArticles.data || []
+        hotArticles: hotArticles.data || [],
+        publishTrend
       }
     })
   } catch (error) {
@@ -171,3 +175,37 @@ dashboardRouter.get('/recent-articles', authMiddleware, adminMiddleware, async (
 })
 
 export default dashboardRouter
+
+/**
+ * 计算最近 7 天（含今天）的发布趋势
+ * @param {import('../db.js').Database} db
+ * @returns {Promise<Array<{date:string,count:number}>>}
+ */
+async function getPublishTrend(db) {
+  const now = new Date()
+  const sevenDaysAgo = new Date(now.getTime() - 6 * 24 * 60 * 60 * 1000)
+  const { data, error } = await db.supabase
+    .from('articles')
+    .select('created_at')
+    .eq('status', '已发布')
+    .is('deleted_at', null)
+    .gte('created_at', sevenDaysAgo.toISOString())
+
+  if (error) return []
+
+  // 按本地日期（UTC+8）初始化最近 7 天
+  const map = {}
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000)
+    map[new Date(d.getTime() + 8 * 3600 * 1000).toISOString().slice(0, 10)] = 0
+  }
+
+  for (const row of data || []) {
+    const key = new Date(new Date(row.created_at).getTime() + 8 * 3600 * 1000)
+      .toISOString()
+      .slice(0, 10)
+    if (key in map) map[key]++
+  }
+
+  return Object.entries(map).map(([date, count]) => ({ date, count }))
+}
