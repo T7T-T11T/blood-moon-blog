@@ -65,6 +65,36 @@ const FRIEND_APPLY_WINDOW = 60 * 60 * 1000
 const FRIEND_APPLY_MAX = 3
 const FRIEND_SPAM_WORDS = ['博彩', '彩票', '赌博', '贷款', '代开发票', '加微信', '色情', '裸聊', '刷单']
 
+/** 友链申请限流：优先 KV 跨节点计数，无 KV 时回退内存 Map */
+async function checkFriendApplyLimit(c, ip) {
+  const now = Date.now()
+  const kv = c.env.RATE_LIMIT_KV
+  if (!kv) {
+    const recent = (friendApplyMap.get(ip) || []).filter((t) => now - t < FRIEND_APPLY_WINDOW)
+    if (recent.length >= FRIEND_APPLY_MAX) {
+      friendApplyMap.set(ip, recent)
+      return false
+    }
+    recent.push(now)
+    friendApplyMap.set(ip, recent)
+    return true
+  }
+  try {
+    const key = `friend-${ip}`
+    const raw = await kv.get(key)
+    const recent = (raw ? JSON.parse(raw) : []).filter((t) => now - t < FRIEND_APPLY_WINDOW)
+    if (recent.length >= FRIEND_APPLY_MAX) {
+      await kv.put(key, JSON.stringify(recent), { expirationTtl: 3600 })
+      return false
+    }
+    recent.push(now)
+    await kv.put(key, JSON.stringify(recent), { expirationTtl: 3600 })
+    return true
+  } catch {
+    return true
+  }
+}
+
 linksRouter.post('/apply', async (c) => {
   const db = getDatabase(c.env)
 
@@ -90,14 +120,9 @@ linksRouter.post('/apply', async (c) => {
     }
 
     const ip = getClientIp(c)
-    const now = Date.now()
-    const recent = (friendApplyMap.get(ip) || []).filter((t) => now - t < FRIEND_APPLY_WINDOW)
-    if (recent.length >= FRIEND_APPLY_MAX) {
-      friendApplyMap.set(ip, recent)
+    if (!(await checkFriendApplyLimit(c, ip))) {
       return c.json({ code: 429, message: '申请过于频繁，请稍后再试' }, 429)
     }
-    recent.push(now)
-    friendApplyMap.set(ip, recent)
 
     const friend = await db.insert('friends', {
       name: nameText,

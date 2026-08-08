@@ -2,7 +2,7 @@
 
 基于 Vue 3 + Node.js Express / Cloudflare Workers(Hono) + PostgreSQL(Supabase) 的个人博客系统，采用血月暗黑哥特风格主题，支持文章管理、评论互动、音乐播放等功能。
 
-> 架构说明：本地开发使用 `backend/`（Express + pg）；生产环境使用 `workers-backend/`（Hono + Supabase JS SDK，部署于 Cloudflare Workers）。前端生产环境直连 Workers（跨域），开发环境通过 Vite proxy 代理到本地 Express。
+> 架构说明：生产环境使用 `workers-backend/`（Hono + Supabase JS SDK，部署于 Cloudflare Workers），前端生产环境直连 Workers（跨域）。`backend/`（Express + pg）仅保留作为本地开发后端，两端接口路径保持一致，生产功能以 `workers-backend/` 为准。
 
 ## 技术栈
 
@@ -13,7 +13,7 @@
 | UI 组件库 | Element Plus | ^2.5.0 | 基于 Vue 3 的组件库 |
 | 富文本编辑器 | TipTap | ^3.29.2 | 基于 ProseMirror 的现代编辑器 |
 | 状态管理 | Pinia | ^2.1.0 | 全局用户状态管理（持久化） |
-| 路由 | Vue Router | ^4.2.0 | Hash 模式 + 路由守卫 |
+| 路由 | Vue Router | ^4.2.0 | History 模式（干净 URL）+ 路由守卫 |
 | HTTP 请求 | Axios | ^1.6.0 | 请求/响应拦截器 |
 | 图表 | ECharts | ^6.1.0 | 数据可视化 |
 | Markdown 渲染 | marked | ^15.0.0 | 博客内容渲染 |
@@ -272,6 +272,16 @@ npm run dev
 | /admin/media | 媒体库 | 是 |
 | /admin/trash | 回收站 | 是 |
 | /admin/logs | 操作日志 | 是 |
+
+## 自动化测试
+
+生产环境 API 冒烟测试：
+
+``bash
+node tests/smoke-test.mjs
+``
+
+部署流水线（.github/workflows/deploy.yml）会在发布后自动执行；每小时定时健康检查见 .github/workflows/uptime.yml。
 
 ## 开发命令
 

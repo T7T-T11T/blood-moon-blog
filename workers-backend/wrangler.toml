@@ -18,6 +18,10 @@ compatibility_flags = ["nodejs_compat"]
 ENVIRONMENT = "production"
 CORS_ORIGIN = "https://blood-moon-blog.pages.dev"
 
+[[kv_namespaces]]
+binding = "RATE_LIMIT_KV"
+id = "2ba872f284b145d3867ccc4151228146"
+
 # 开发环境配置
 [dev]
 # 本地开发时允许 localhost

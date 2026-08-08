@@ -5,6 +5,12 @@
 import { createApp } from 'vue';
 import { createPinia } from 'pinia';
 
+
+// 兼容旧版 #/ 链接：自动跳转到干净路径（history 模式）
+if (window.location.hash.startsWith('#/')) {
+  const legacyPath = window.location.hash.slice(1);
+  window.location.replace(legacyPath);
+}
 import App from './App.vue';
 import router from './router';
 import './style.css';

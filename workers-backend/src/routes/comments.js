@@ -45,16 +45,38 @@ function isSpamComment(text) {
   return SPAM_KEYWORDS.some((kw) => lower.includes(kw))
 }
 
-function checkCommentRateLimit(ip) {
+async function checkCommentRateLimit(c, ip) {
   const now = Date.now()
-  const records = (rateLimitMap.get(ip) || []).filter((t) => now - t < RATE_LIMIT_WINDOW)
-  if (records.length >= RATE_LIMIT_MAX) {
+  const kv = c.env.RATE_LIMIT_KV
+
+  // 无 KV 绑定（本地开发等）：回退到内存 Map
+  if (!kv) {
+    const records = (rateLimitMap.get(ip) || []).filter((t) => now - t < RATE_LIMIT_WINDOW)
+    if (records.length >= RATE_LIMIT_MAX) {
+      rateLimitMap.set(ip, records)
+      return false
+    }
+    records.push(now)
     rateLimitMap.set(ip, records)
-    return false
+    return true
   }
-  records.push(now)
-  rateLimitMap.set(ip, records)
-  return true
+
+  // KV 跨节点计数（10 分钟窗口，最多 5 条）
+  try {
+    const key = `comment-${ip}`
+    const raw = await kv.get(key)
+    const records = (raw ? JSON.parse(raw) : []).filter((t) => now - t < RATE_LIMIT_WINDOW)
+    if (records.length >= RATE_LIMIT_MAX) {
+      await kv.put(key, JSON.stringify(records), { expirationTtl: 600 })
+      return false
+    }
+    records.push(now)
+    await kv.put(key, JSON.stringify(records), { expirationTtl: 600 })
+    return true
+  } catch {
+    // KV 异常时放行，避免误伤正常用户
+    return true
+  }
 }
 
 commentsRouter.get('/stats', authMiddleware, adminMiddleware, async (c) => {
@@ -197,7 +219,7 @@ commentsRouter.post('/:articleId', async (c) => {
       return c.json({ code: 400, message: '评论内容包含不当词汇' }, 400)
     }
     const clientIp = getClientIp(c)
-    if (!checkCommentRateLimit(clientIp)) {
+    if (!(await checkCommentRateLimit(c, clientIp))) {
       return c.json({ code: 429, message: '评论过于频繁，请稍后再试' }, 429)
     }
 

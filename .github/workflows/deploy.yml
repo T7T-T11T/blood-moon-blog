@@ -56,6 +56,12 @@ jobs:
         run: wrangler pages deploy frontend/dist --project-name=blood-moon-blog
 
       # 7. 显示部署结果
+      - name: API 冒烟测试
+        run: node tests/smoke-test.mjs
+        env:
+          SMOKE_API_BASE: https://blood-moon-blog-api.2198789717.workers.dev/api
+          SMOKE_SITE: https://blood-moon-blog.pages.dev
+
       - name: Deployment Summary
         run: |
           echo "✅ 部署成功！"
