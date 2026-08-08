@@ -415,6 +415,11 @@ articlesRouter.get('/public/:id', async (c) => {
       return c.json({ code: 404, message: '文章不存在' }, 404)
     }
 
+    // 已软删除的文章视为不存在
+    if (article.deleted_at) {
+      return c.json({ code: 404, message: '文章不存在' }, 404)
+    }
+
     // 增加浏览量
     const newViewCount = (article.view_count || 0) + 1
     await db.supabase
@@ -438,7 +443,7 @@ articlesRouter.get('/public/:id', async (c) => {
     }
 
     // 上一篇/下一篇（按创建时间排序）
-    const allPublished = await db.select('articles', { status: '已发布' }, {
+    const allPublished = await db.select('articles', { status: '已发布', deleted_at: null }, {
       order: { column: 'created_at', ascending: true }
     })
     const pubIndex = allPublished.findIndex((a) => a.id === id)

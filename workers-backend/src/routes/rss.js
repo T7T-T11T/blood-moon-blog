@@ -97,7 +97,7 @@ async function renderSitemap(c) {
   const db = getDatabase(c.env)
   const settings = await getSiteSettings(c)
   const [articles, categories, tags] = await Promise.all([
-    db.select('articles', { status: '已发布' }, { order: { column: 'created_at', ascending: false } }),
+    db.select('articles', { status: '已发布', deleted_at: null }, { order: { column: 'created_at', ascending: false } }),
     db.select('categories', {}, { order: { column: 'id', ascending: true } }),
     db.select('tags', {}, { order: { column: 'id', ascending: true } })
   ])

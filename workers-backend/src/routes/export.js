@@ -16,7 +16,7 @@ exportRouter.get('/comments', authMiddleware, async (c) => {
   try {
     const status = c.req.query('status')
     const articleId = c.req.query('article_id')
-    const filters = {}
+    const filters = { deleted_at: null }
     if (status) filters.status = status
     if (articleId) filters.article_id = parseInt(articleId)
 
@@ -35,7 +35,7 @@ exportRouter.get('/articles', authMiddleware, async (c) => {
   const db = getDatabase(c.env)
   try {
     const status = c.req.query('status')
-    const filters = {}
+    const filters = { deleted_at: null }
     if (status) filters.status = status
 
     const list = await db.select('articles', filters, {
