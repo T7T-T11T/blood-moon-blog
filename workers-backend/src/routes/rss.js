@@ -53,7 +53,7 @@ async function renderRss(c) {
   const settings = await getSiteSettings(c)
   const articles = await db.select(
     'articles',
-    { status: '已发布' },
+    { status: '已发布', deleted_at: null },
     { order: { column: 'created_at', ascending: false }, limit: 20 }
   )
 
