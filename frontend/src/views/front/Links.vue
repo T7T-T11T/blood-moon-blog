@@ -38,12 +38,58 @@
         </article>
       </div>
     </AsyncData>
+
+    <!-- ============ 申请友链 ============ -->
+    <section class="link-apply reveal">
+      <h2 class="apply-title">申请友链</h2>
+      <p class="apply-tip">交换链接，共同成长。提交后经管理员审核通过即可展示。</p>
+      <form class="apply-form" @submit.prevent="submitApply">
+        <div class="apply-row">
+          <input
+            v-model="applyForm.name"
+            type="text"
+            class="apply-input"
+            placeholder="网站名称 *"
+            maxlength="100"
+          />
+          <input
+            v-model="applyForm.url"
+            type="url"
+            class="apply-input"
+            placeholder="网站地址 https://... *"
+            maxlength="500"
+          />
+        </div>
+        <textarea
+          v-model="applyForm.description"
+          class="apply-textarea"
+          placeholder="一句话简介（可选）"
+          rows="3"
+          maxlength="200"
+        ></textarea>
+        <!-- 蜜罐字段（反垃圾） -->
+        <input
+          v-model="applyForm.website"
+          type="text"
+          class="honeypot-field"
+          tabindex="-1"
+          autocomplete="off"
+          aria-hidden="true"
+        />
+        <div class="apply-actions">
+          <span class="apply-status">{{ applyStatus }}</span>
+          <button type="submit" class="apply-btn" :disabled="applying">
+            {{ applying ? '提交中…' : '提交申请' }}
+          </button>
+        </div>
+      </form>
+    </section>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted, onUnmounted, nextTick } from 'vue';
-import { getLinks } from '../../api/links';
+import { getLinks, applyLink } from '../../api/links';
 import AsyncData from '../../components/common/AsyncData.vue';
 
 /** 根元素引用，用于 IntersectionObserver 初始化 */
@@ -125,7 +171,41 @@ onUnmounted(() => {
   if (observer) observer.disconnect();
   if (revealTimeout) clearTimeout(revealTimeout);
 });
-</script>
+
+/** 友链申请表单状态 */
+const applyForm = ref({ name: '', url: '', description: '', website: '' });
+const applying = ref(false);
+const applyStatus = ref('');
+
+/**
+ * 提交友链申请
+ * 蜜罐字段被填写时静默丢弃；成功后清空表单
+ */
+async function submitApply() {
+  if (applyForm.value.website) {
+    applyForm.value.name = '';
+    return;
+  }
+  const name = applyForm.value.name.trim();
+  const url = applyForm.value.url.trim();
+  if (!name || !url) {
+    applyStatus.value = '请填写网站名称和网址';
+    return;
+  }
+  applying.value = true;
+  applyStatus.value = '';
+  try {
+    await applyLink({ name, url, description: applyForm.value.description.trim() });
+    applyStatus.value = '申请已提交，审核通过后展示 ✅';
+    applyForm.value.name = '';
+    applyForm.value.url = '';
+    applyForm.value.description = '';
+  } catch (e) {
+    applyStatus.value = e?.response?.data?.message || '提交失败，请稍后重试';
+  } finally {
+    applying.value = false;
+  }
+}</script>
 
 <style scoped>
 /* ========== Hero 区域 ========== */
@@ -316,4 +396,106 @@ onUnmounted(() => {
     grid-template-columns: 1fr;
   }
 }
-</style>
+
+/* ========== 申请友链 ========== */
+.link-apply {
+  max-width: 760px;
+  margin: 56px auto 0;
+  padding: 28px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+
+.apply-title {
+  font-size: 20px;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.apply-tip {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 20px;
+}
+
+.apply-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.apply-input,
+.apply-textarea {
+  width: 100%;
+  padding: 10px 14px;
+  font-size: 14px;
+  color: var(--text-primary);
+  background: var(--bg-body);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.apply-input:focus,
+.apply-textarea:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.12);
+}
+
+.apply-textarea {
+  resize: vertical;
+  margin-bottom: 12px;
+}
+
+.honeypot-field {
+  position: absolute;
+  left: -9999px;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  overflow: hidden;
+}
+
+.apply-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.apply-status {
+  font-size: 13px;
+  color: var(--success);
+}
+
+.apply-btn {
+  padding: 10px 28px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--primary);
+  border: none;
+  border-radius: 20px;
+  cursor: pointer;
+  transition:
+    background 0.2s,
+    transform 0.2s;
+}
+
+.apply-btn:hover:not(:disabled) {
+  background: var(--primary-light);
+  transform: translateY(-2px);
+}
+
+.apply-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+@media (max-width: 640px) {
+  .apply-row {
+    flex-direction: column;
+  }
+}</style>

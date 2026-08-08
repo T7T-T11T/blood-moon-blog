@@ -5,10 +5,23 @@
 -->
 <template>
   <section class="comment-section reveal">
-    <h2 class="section-title">
-      评论
-      <span class="comment-count">{{ commentCount }}</span>
-    </h2>
+    <div class="comment-header-row">
+      <h2 class="section-title">
+        评论
+        <span class="comment-count">{{ commentCount }}</span>
+      </h2>
+      <div class="comment-sort">
+        <button
+          v-for="opt in sortOptions"
+          :key="opt.value"
+          class="sort-btn"
+          :class="{ active: commentSort === opt.value }"
+          @click="commentSort = opt.value"
+        >
+          {{ opt.label }}
+        </button>
+      </div>
+    </div>
 
     <!-- 评论表单 -->
     <div class="comment-form-wrapper">
@@ -51,7 +64,7 @@
 
     <!-- 评论列表 -->
     <div v-if="comments.length > 0" class="comment-list">
-      <div v-for="comment in comments" :key="comment.id" class="comment-item">
+      <div v-for="comment in sortedComments" :key="comment.id" class="comment-item">
         <div class="comment-main">
           <div class="comment-avatar">
             <img
@@ -195,6 +208,26 @@ function cancelReply() {
 }
 
 /** 提交评论 */
+
+/** 评论排序：最新 / 最热（按回复数）/ 最早 */
+const sortOptions = [
+  { value: 'newest', label: '最新' },
+  { value: 'hottest', label: '最热' },
+  { value: 'oldest', label: '最早' }
+];
+const commentSort = ref('newest');
+const sortedComments = computed(() => {
+  const list = [...comments.value];
+  if (commentSort.value === 'oldest') {
+    list.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+  } else if (commentSort.value === 'hottest') {
+    list.sort((a, b) => (b.children || []).length - (a.children || []).length);
+  } else {
+    list.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+  }
+  return list;
+});
+
 async function submitComment() {
   // 蜜罐检测：被机器人填写则静默丢弃，不提示
   if (commentForm.value.website) {
@@ -568,4 +601,46 @@ watch(
     padding-left: 12px;
   }
 }
-</style>
+
+/* ========== 评论排序 ========== */
+.comment-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.comment-header-row .section-title {
+  margin-bottom: 0;
+}
+
+.comment-sort {
+  display: flex;
+  gap: 6px;
+}
+
+.sort-btn {
+  padding: 4px 12px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  cursor: pointer;
+  transition:
+    color 0.2s,
+    border-color 0.2s,
+    background 0.2s;
+}
+
+.sort-btn:hover {
+  color: var(--primary);
+  border-color: var(--primary);
+}
+
+.sort-btn.active {
+  color: #fff;
+  background: var(--primary);
+  border-color: var(--primary);
+}</style>

@@ -55,6 +55,70 @@ linksRouter.get('/', async (c) => {
  * GET /api/links/all
  * 获取全部链接（含待审核/已拒绝，需管理员）
  */
+
+/**
+ * POST /api/links/apply
+ * 访客自助申请友链（公开），进入待审核
+ */
+const friendApplyMap = new Map()
+const FRIEND_APPLY_WINDOW = 60 * 60 * 1000
+const FRIEND_APPLY_MAX = 3
+const FRIEND_SPAM_WORDS = ['博彩', '彩票', '赌博', '贷款', '代开发票', '加微信', '色情', '裸聊', '刷单']
+
+linksRouter.post('/apply', async (c) => {
+  const db = getDatabase(c.env)
+
+  try {
+    const body = await c.req.json()
+    const { name, url, description } = body
+    const nameText = String(name || '').trim()
+    const urlText = String(url || '').trim()
+    const descText = String(description || '').trim()
+
+    if (!nameText || !urlText) {
+      return c.json({ code: 400, message: '网站名称和网址不能为空' }, 400)
+    }
+    if (nameText.length > 100 || urlText.length > 500) {
+      return c.json({ code: 400, message: '内容超出长度限制' }, 400)
+    }
+    if (!/^https?:\/\/.+/i.test(urlText)) {
+      return c.json({ code: 400, message: '网址需以 http:// 或 https:// 开头' }, 400)
+    }
+    const joined = (nameText + urlText + descText).toLowerCase()
+    if (FRIEND_SPAM_WORDS.some((w) => joined.includes(w))) {
+      return c.json({ code: 400, message: '内容包含不当词汇' }, 400)
+    }
+
+    const ip = getClientIp(c)
+    const now = Date.now()
+    const recent = (friendApplyMap.get(ip) || []).filter((t) => now - t < FRIEND_APPLY_WINDOW)
+    if (recent.length >= FRIEND_APPLY_MAX) {
+      friendApplyMap.set(ip, recent)
+      return c.json({ code: 429, message: '申请过于频繁，请稍后再试' }, 429)
+    }
+    recent.push(now)
+    friendApplyMap.set(ip, recent)
+
+    const friend = await db.insert('friends', {
+      name: nameText,
+      url: urlText,
+      description: descText || '',
+      avatar: '',
+      sort_order: 0,
+      status: '待审核',
+      created_at: new Date().toISOString()
+    })
+
+    return c.json({
+      code: 200,
+      data: friend,
+      message: '友链申请已提交，审核通过后展示'
+    })
+  } catch (error) {
+    console.error('Friend apply error:', error)
+    return c.json({ code: 500, message: '服务器错误' }, 500)
+  }
+})
 linksRouter.get('/all', authMiddleware, adminMiddleware, async (c) => {
   const db = getDatabase(c.env)
 

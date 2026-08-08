@@ -135,6 +135,14 @@
           <el-icon><Link /></el-icon>
           <span>复制链接</span>
         </button>
+        <button class="share-btn md" @click="copyMarkdown">
+          <el-icon><Document /></el-icon>
+          <span>复制 MD</span>
+        </button>
+        <button class="share-btn print" @click="printArticle">
+          <el-icon><Printer /></el-icon>
+          <span>打印/PDF</span>
+        </button>
       </section>
 
       <section class="interaction-bar reveal">
@@ -268,7 +276,8 @@ import {
   Star,
   StarFilled,
   Document,
-  Timer
+  Timer,
+  Printer
 } from '@element-plus/icons-vue';
 import { getArticleDetail, getRelatedArticles } from '../../api/articles';
 import { toggleLike, getLikeStatus, getLikeCount } from '../../api/likes';
@@ -615,6 +624,24 @@ function changeFontSize(delta) {
 function resetFontSize() {
   fontIndex.value = DEFAULT_FONT_INDEX;
   localStorage.setItem('article-font-index', String(DEFAULT_FONT_INDEX));
+}
+
+
+/** 复制文章 Markdown 源码 */
+async function copyMarkdown() {
+  if (!article.value || !article.value.content) return;
+  try {
+    await navigator.clipboard.writeText(article.value.content);
+    ElMessage.success('Markdown 已复制到剪贴板');
+  } catch (e) {
+    console.error('复制 Markdown 失败:', e);
+    ElMessage.error('复制失败，请手动选择复制');
+  }
+}
+
+/** 打印 / 导出 PDF（浏览器打印对话框另存为 PDF） */
+function printArticle() {
+  window.print();
 }
 
 async function loadArticle() {
@@ -1462,7 +1489,54 @@ onUnmounted(() => {
     display: block;
   }
 }
-</style>
+
+/* ========== 打印 / PDF 导出 ========== */
+@media print {
+  .back-bar,
+  .breadcrumb,
+  .toc-mobile,
+  .toc-sidebar,
+  .reading-tools,
+  .share-bar,
+  .interaction-bar,
+  .article-tags,
+  .article-footer,
+  .comment-section,
+  .related-section,
+  .back-to-top,
+  .reading-progress,
+  .version-update-tip {
+    display: none !important;
+  }
+  body {
+    background: #fff !important;
+  }
+  .article-detail {
+    max-width: 100% !important;
+    padding: 0 !important;
+  }
+  .article-body {
+    color: #1f2937 !important;
+    font-size: 14px !important;
+    line-height: 1.7 !important;
+  }
+  .article-body :deep(.code-block-wrapper),
+  .article-body :deep(pre) {
+    background: #f5f5f5 !important;
+    color: #1f2937 !important;
+  }
+  .article-body :deep(code) {
+    background: #f1f5f9 !important;
+    color: #b91c1c !important;
+  }
+  .article-body :deep(a) {
+    color: #b91c1c !important;
+  }
+  .article-cover img {
+    max-height: 320px !important;
+    object-fit: cover;
+  }
+}</style>
 
 <style scoped>
 /* ========== 相关文章推荐 ========== */
@@ -1677,7 +1751,54 @@ onUnmounted(() => {
 .fade-leave-to {
   opacity: 0;
 }
-</style>
+
+/* ========== 打印 / PDF 导出 ========== */
+@media print {
+  .back-bar,
+  .breadcrumb,
+  .toc-mobile,
+  .toc-sidebar,
+  .reading-tools,
+  .share-bar,
+  .interaction-bar,
+  .article-tags,
+  .article-footer,
+  .comment-section,
+  .related-section,
+  .back-to-top,
+  .reading-progress,
+  .version-update-tip {
+    display: none !important;
+  }
+  body {
+    background: #fff !important;
+  }
+  .article-detail {
+    max-width: 100% !important;
+    padding: 0 !important;
+  }
+  .article-body {
+    color: #1f2937 !important;
+    font-size: 14px !important;
+    line-height: 1.7 !important;
+  }
+  .article-body :deep(.code-block-wrapper),
+  .article-body :deep(pre) {
+    background: #f5f5f5 !important;
+    color: #1f2937 !important;
+  }
+  .article-body :deep(code) {
+    background: #f1f5f9 !important;
+    color: #b91c1c !important;
+  }
+  .article-body :deep(a) {
+    color: #b91c1c !important;
+  }
+  .article-cover img {
+    max-height: 320px !important;
+    object-fit: cover;
+  }
+}</style>
 
 /* ========== 阅读字号调节 ========== */
 .back-bar-spacer {

@@ -399,6 +399,11 @@ articlesRouter.get('/public/related/:id', async (c) => {
  * GET /articles/public/:id
  * 获取文章详情
  */
+
+/**
+ * GET /articles/public/prev-next/:id
+ * 获取上一篇/下一篇（按创建时间排序，公开）
+ */
 articlesRouter.get('/public/:id', async (c) => {
   const db = getDatabase(c.env)
   
@@ -431,6 +436,18 @@ articlesRouter.get('/public/:id', async (c) => {
       const category = await db.findOne('categories', { id: article.category_id })
       article.category = category
     }
+
+    // 上一篇/下一篇（按创建时间排序）
+    const allPublished = await db.select('articles', { status: '已发布' }, {
+      order: { column: 'created_at', ascending: true }
+    })
+    const pubIndex = allPublished.findIndex((a) => a.id === id)
+    article.prev_article = pubIndex > 0
+      ? { id: allPublished[pubIndex - 1].id, title: allPublished[pubIndex - 1].title }
+      : null
+    article.next_article = pubIndex < allPublished.length - 1
+      ? { id: allPublished[pubIndex + 1].id, title: allPublished[pubIndex + 1].title }
+      : null
 
     return c.json({
       code: 200,

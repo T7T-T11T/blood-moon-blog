@@ -55,3 +55,12 @@ export function updateLink(id, data) {
 export function deleteLink(id) {
   return request.delete(`/links/${id}`);
 }
+
+/**
+ * 访客自助申请友链（公开接口）
+ * @param {Object} data - { name, url, description }
+ * @returns {Promise} 申请结果
+ */
+export function applyLink(data) {
+  return request.post('/links/apply', data);
+}
