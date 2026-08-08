@@ -78,7 +78,7 @@ wrangler secret put JWT_SECRET          # JWT 签名密钥
 npm run deploy
 ```
 
-部署成功后获得 Workers 地址：`https://blood-moon-blog-api.<account>.workers.dev`
+部署成功后获得 Workers 地址：`https://blood-moon-blog-api.2198789717.workers.dev`
 
 ### 部署前端（Pages）
 
@@ -97,7 +97,7 @@ wrangler pages deploy frontend/dist --project-name=blood-moon-blog
 确保 `frontend/.env.production` 中的 API 地址指向 Workers：
 
 ```
-VITE_API_BASE_URL=https://blood-moon-blog-api.<account>.workers.dev
+VITE_API_BASE_URL=https://blood-moon-blog-api.2198789717.workers.dev
 ```
 
 ---
@@ -110,6 +110,7 @@ VITE_API_BASE_URL=https://blood-moon-blog-api.<account>.workers.dev
 | `SUPABASE_ANON_KEY` | Supabase 匿名 Key | `wrangler secret put` |
 | `JWT_SECRET` | JWT 签名密钥（至少 32 字符） | `wrangler secret put` |
 | `CORS_ORIGIN` | 允许的前端域名 | `wrangler.toml [vars]` |
+| `RATE_LIMIT_KV` | KV 命名空间（评论/友链跨节点限流） | `wrangler kv namespace create` 后写入 `wrangler.toml` |
 
 ---
 
@@ -117,15 +118,17 @@ VITE_API_BASE_URL=https://blood-moon-blog-api.<account>.workers.dev
 
 ```bash
 # 健康检查
-curl https://blood-moon-blog-api.<account>.workers.dev/api/health
+curl https://blood-moon-blog-api.2198789717.workers.dev/api/health
 
 # 登录测试
-curl -X POST https://blood-moon-blog-api.<account>.workers.dev/api/auth/login \
+curl -X POST https://blood-moon-blog-api.2198789717.workers.dev/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{"username":"admin","password":"admin123"}'
 ```
 
 检查项：
+- [ ] 自动化冒烟测试通过（部署流水线自动执行；也可手动运行 `node tests/smoke-test.mjs`）
+- [ ] 每小时健康检查工作流（.github/workflows/uptime.yml）已注册
 - [ ] 前端页面正常加载
 - [ ] 登录功能正常
 - [ ] 文章列表正常显示

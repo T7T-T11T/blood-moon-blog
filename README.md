@@ -28,7 +28,9 @@
 | 安全头 | helmet | ^8.3.0 | HTTP 安全响应头 |
 | 限流 | express-rate-limit | ^8.6.1 | API 请求限流 |
 | 环境变量 | dotenv | ^16.4.5 | 配置管理 |
-| 代码规范 | ESLint + Prettier | - | 代码质量保障 |
+| 代码规范 | ESLint + Prettier | - | 代码质量保障（lint 零错误） |
+| 按需引入 | unplugin-vue-components / unplugin-auto-import | - | Element Plus 按单组件打包（自定义解析器） |
+| 代码高亮 | highlight.js（经 lowlight） | - | 文章代码块语法高亮 |
 | 数据库 | PostgreSQL | 15+（Supabase） | 11 张数据表 |
 
 ## 功能特性
@@ -41,7 +43,12 @@
 - **归档浏览**：时间线视图、标签云
 - **音乐播放**：全局浮动播放器，后台音乐管理
 - **友情链接**：友链展示与管理
-- **评论互动**：树形评论、点赞收藏
+- **评论互动**：树形评论、点赞、最新/最热/最早排序
+- **阅读体验**：字号调节（A-/A+）、复制 Markdown、打印/导出 PDF、明暗主题切换
+- **文章导航**：上一篇/下一篇、相关推荐、目录、阅读进度条
+- **防垃圾评论**：蜜罐字段 + 关键词过滤 + 审核机制
+- **RSS 订阅**：支持 RSS 2.0（`/api/rss`）
+- **PWA**：可添加到主屏幕，离线可访问
 
 ### 🛠️ 后台管理
 - **仪表盘**：数据统计、趋势图表、快捷操作
@@ -54,6 +61,8 @@
 - **数据统计**：文章/评论/访问数据可视化
 - **操作日志**：管理员操作审计记录
 - **回收站**：软删除恢复、永久删除
+- **数据导出**：文章/评论一键导出 JSON
+- **友链审核**：访客自助申请，后台审核后展示
 
 ### 🔒 安全特性
 - JWT Token 认证 + bcrypt 密码加密
@@ -63,6 +72,15 @@
 - SQL 注入防护（参数化查询）
 - XSS 防护（DOMPurify HTML 消毒）
 - 软删除支持（可恢复）
+- 评论防垃圾：蜜罐字段 + 关键词过滤 + Cloudflare KV 跨节点限流
+- 评论审核开关：开启后新评论进入待审核，审核通过才展示
+
+### 🚀 性能与运维
+- **首屏体积**：约 858 KB（gzip 252 KB），对比初版降低约 2/3
+- **懒加载**：路由级按需加载，编辑器/图表/高亮库不进首屏
+- **缓存**：CDN 长缓存 + Service Worker 预缓存，二次访问秒开
+- **自动化测试**：部署后自动运行 API 冒烟测试（`tests/smoke-test.mjs`）
+- **定时监控**：每小时健康检查（GitHub Actions），异常自动通知
 
 ## 项目结构
 
@@ -109,7 +127,7 @@ task_manager_vue/
 │   ├── .env.production          # 生产环境配置（直连 Workers URL）
 │   ├── vite.config.js           # Vite 配置
 │   └── package.json
-├── .github/workflows/       # GitHub Actions CI（自动部署到 Cloudflare Pages）
+├── .github/workflows/       # GitHub Actions（部署 + 冒烟测试 + 每小时监控）
 ├── .gitignore
 ├── .prettierrc
 ├── DEPLOY.md                # 部署指南
@@ -186,7 +204,7 @@ npm run dev
 ### 6. 默认账号
 
 - 用户名：`admin`
-- 密码：`admin123`
+- 密码：初始为 `admin123`，**首次登录后请立即在"个人中心"修改**
 
 ## API 接口
 
@@ -203,15 +221,21 @@ npm run dev
 ### 文章接口
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| GET | /api/articles/public | 公开文章列表 |
-| GET | /api/articles/public/:id | 文章详情 |
+| GET | /api/articles/public | 公开文章列表（分页） |
+| GET | /api/articles/public/:id | 文章详情（含上一篇/下一篇） |
+| GET | /api/articles/public/hot | 热门文章 |
+| GET | /api/articles/public/latest | 最新文章 |
 | GET | /api/articles/public/search | 搜索文章 |
+| GET | /api/articles/public/category/:slug | 分类文章 |
+| GET | /api/articles/public/tag/:slug | 标签文章 |
+| GET | /api/articles/public/archives | 文章归档 |
 | GET | /api/articles/public/related/:id | 相关文章推荐 |
 | GET | /api/articles | 管理文章列表 |
 | POST | /api/articles | 创建文章 |
 | PUT | /api/articles/:id | 更新文章 |
 | DELETE | /api/articles/:id | 删除文章 |
-| PATCH | /api/articles/:id/toggle-top | 切换置顶 |
+| PUT | /api/articles/:id/toggle-top | 切换置顶 |
+| GET | /api/articles/:id/export | 导出文章（管理员） |
 
 ### 分类/标签接口
 | 方法 | 路径 | 说明 |
@@ -224,23 +248,25 @@ npm run dev
 ### 评论接口
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| POST | /api/comments | 发表评论 |
+| GET | /api/comments/:articleId | 文章评论树（公开） |
+| POST | /api/comments/:articleId | 发表评论（含防垃圾校验） |
 | GET | /api/comments | 评论列表（管理） |
-| PATCH | /api/comments/:id/approve | 审核评论 |
+| PUT | /api/comments/:id/status | 审核/修改评论状态 |
 | DELETE | /api/comments/:id | 删除评论 |
 
 ### 其他接口
 | 模块 | 路径 | 说明 |
 |------|------|------|
-| 友情链接 | /api/friends | CRUD 操作 |
+| 友情链接 | /api/friends、/api/links | 友链 CRUD（管理） |
+| 友链申请 | POST /api/links/apply | 访客自助申请（进入待审核） |
 | 音乐管理 | /api/music | 音乐 CRUD + 上传 |
 | 系统设置 | /api/settings | 读取/更新设置 |
 | 仪表盘 | /api/dashboard/stats | 统计数据 |
 | 回收站 | /api/trash | 软删除恢复 |
 | 操作日志 | /api/logs | 日志查询 |
-| 数据导出 | /api/export | JSON 导出 |
+| 数据导出 | /api/export/comments、/api/export/articles | JSON 导出（管理） |
 | 访问统计 | /api/visits | PV/UV 统计 |
-| RSS | /api/rss.xml | RSS 订阅 |
+| RSS | /api/rss、/api/rss.xml | RSS 2.0 订阅 |
 | Sitemap | /api/sitemap.xml | 站点地图 |
 
 ## 前端路由
@@ -277,9 +303,9 @@ npm run dev
 
 生产环境 API 冒烟测试：
 
-``bash
+```bash
 node tests/smoke-test.mjs
-``
+```
 
 部署流水线（.github/workflows/deploy.yml）会在发布后自动执行；每小时定时健康检查见 .github/workflows/uptime.yml。
 
@@ -342,6 +368,7 @@ npm run format    # Prettier 格式化
 | 1.15.0 | 2026-08-05 | 代码精简：删除死代码 + 提取重复工具函数 |
 | 1.16.0 | 2026-08-05 | 修复评论昵称显示为 admin 的问题 |
 | 1.17.0 | 2026-08-05 | 评论体验优化 + 后台评论列表修复 + GitHub Actions CI |
+| 1.18.0 | 2026-08-08 | 全面接管优化：性能、SEO、RSS/Sitemap、防垃圾、PWA、新功能、自动化测试与监控 |
 
 ## License
 

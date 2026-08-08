@@ -1,5 +1,27 @@
 # 版本历史
 
+## v1.19.0 (2026-08-08)
+
+- perf: 首屏性能优化（Element Plus 按需引入 + 代码分割）
+  - Element Plus 改为单组件按需打包（自定义 resolver），首屏 JS 约 2MB → 680KB（gzip 约 252KB）
+  - 分包规则精确化：编辑器/代码高亮/Markdown 库全部懒加载；ECharts 深路径按需导入（913KB → 589KB）
+  - index.html 增加 API 域名预连接
+- feat: 生产后端补齐 RSS / Sitemap（/api/rss、/api/rss.xml、/api/sitemap.xml）
+- feat: SEO 增强——文章页 Article + BreadcrumbList JSON-LD、动态标题与描述
+- feat: Service Worker 预缓存 + PWA manifest（可安装、离线可访问）
+- feat: 评论防垃圾——蜜罐字段、关键词过滤、长度校验、跨节点限流、审核开关生效
+- feat: 友链自助申请（POST /api/links/apply，进入待审核）
+- feat: 阅读体验——字号调节、复制 Markdown、打印/PDF 导出、深色主题下正文配色修复
+- feat: 文章上一篇/下一篇导航（详情接口返回 prev_article/next_article）
+- feat: 评论排序（最新/最热/最早）
+- fix: 正文与登录页深色主题下文字不可读（硬编码深色文字改为主题变量）
+- fix: 评论审核设置被忽略（写死"已通过"）；生产端评论导出接口 404
+- test: 新增 API 冒烟测试（tests/smoke-test.mjs）并接入 CI 部署流水线
+- ops: 每小时健康检查工作流（uptime.yml）；评论/友链限流升级为 Cloudflare KV 跨节点计数
+- docs: README/DEPLOY/history 全面校订（History 路由、真实部署信息、API 表、版本记录）
+- chore: 前后端 + workers 版本号统一升至 1.19.0
+
+
 ## v1.18.0 (2026-08-05)
 
 - ci: 触发 CI 验证新的 Cloudflare API Token 权限（第二次验证）
