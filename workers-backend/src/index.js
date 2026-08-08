@@ -37,6 +37,7 @@ import uploadsRouter from './routes/upload.js'
 import trashRouter from './routes/trash.js'
 import rssRouter from './routes/rss.js'
 import exportRouter from './routes/export.js'
+import { runLogBackup } from './services/logBackup.js'
 
 // 创建 Hono 应用
 const app = new Hono()
@@ -142,5 +143,17 @@ app.onError((err, c) => {
   }, 500)
 })
 
-// 导出 Worker
-export default app
+/**
+ * 定时任务：每月 15 日 07:00（北京时间）自动备份并清理操作日志
+ * cron 表达式（UTC）：0 23 14 * *  = 北京时间每月 15 日 07:00
+ */
+async function scheduled(event, env, ctx) {
+  const result = await runLogBackup(env)
+  console.log(`[Scheduled] ${result.message}`)
+}
+
+// 导出 Worker（fetch 处理 HTTP 请求，scheduled 处理定时任务）
+export default {
+  fetch: app.fetch,
+  scheduled
+}

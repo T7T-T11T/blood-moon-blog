@@ -12,6 +12,7 @@
 import { Hono } from 'hono'
 import { getDatabase } from '../db.js'
 import { authMiddleware, adminMiddleware } from '../auth.js'
+import { runLogBackup } from '../services/logBackup.js'
 
 const logsRouter = new Hono()
 
@@ -255,4 +256,81 @@ logsRouter.get('/stats', authMiddleware, adminMiddleware, async (c) => {
   }
 })
 
+
+/**
+ * POST /api/logs/backup
+ * 手动执行日志备份（管理员）：备份到 KV 后清空日志表
+ */
+logsRouter.post('/backup', authMiddleware, adminMiddleware, async (c) => {
+  try {
+    const result = await runLogBackup(c.env)
+    if (!result.ok) {
+      return c.json({ code: 500, message: result.message }, 500)
+    }
+    return c.json({ code: 200, data: result, message: result.message })
+  } catch (error) {
+    console.error('Manual log backup error:', error)
+    return c.json({ code: 500, message: '服务器错误' }, 500)
+  }
+})
+
+/**
+ * GET /api/logs/backups
+ * 获取日志备份列表（管理员）
+ */
+logsRouter.get('/backups', authMiddleware, adminMiddleware, async (c) => {
+  try {
+    const kv = c.env.RATE_LIMIT_KV
+    if (!kv) return c.json({ code: 200, data: [] })
+    const indexRaw = await kv.get('log-backups-index')
+    const index = indexRaw ? JSON.parse(indexRaw) : []
+    return c.json({ code: 200, data: index })
+  } catch (error) {
+    console.error('Get log backups error:', error)
+    return c.json({ code: 500, message: '服务器错误' }, 500)
+  }
+})
+
+/**
+ * GET /api/logs/backups/:date
+ * 下载指定日期的日志备份（管理员）
+ */
+logsRouter.get('/backups/:date', authMiddleware, adminMiddleware, async (c) => {
+  try {
+    const kv = c.env.RATE_LIMIT_KV
+    const date = c.req.param('date')
+    if (!kv) return c.json({ code: 404, message: '未配置备份存储' }, 404)
+    const raw = await kv.get(`log-backup-${date}`)
+    if (!raw) return c.json({ code: 404, message: '备份不存在' }, 404)
+    return c.body(raw, 200, {
+      'Content-Type': 'application/json; charset=utf-8',
+      'Content-Disposition': `attachment; filename="operation-logs-${date}.json"`
+    })
+  } catch (error) {
+    console.error('Download log backup error:', error)
+    return c.json({ code: 500, message: '服务器错误' }, 500)
+  }
+})
+
+/**
+ * DELETE /api/logs/backups/:date
+ * 删除指定日期的日志备份（管理员）
+ */
+logsRouter.delete('/backups/:date', authMiddleware, adminMiddleware, async (c) => {
+  try {
+    const kv = c.env.RATE_LIMIT_KV
+    const date = c.req.param('date')
+    if (!kv) return c.json({ code: 404, message: '未配置备份存储' }, 404)
+    await kv.delete(`log-backup-${date}`)
+    const indexRaw = await kv.get('log-backups-index')
+    if (indexRaw) {
+      const index = JSON.parse(indexRaw).filter((b) => b.date !== date)
+      await kv.put('log-backups-index', JSON.stringify(index), { expirationTtl: 31536000 })
+    }
+    return c.json({ code: 200, message: '备份已删除' })
+  } catch (error) {
+    console.error('Delete log backup error:', error)
+    return c.json({ code: 500, message: '服务器错误' }, 500)
+  }
+})
 export default logsRouter

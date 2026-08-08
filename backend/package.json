@@ -1,6 +1,6 @@
 {
   "name": "task-manager-backend",
-  "version": "1.19.1",
+  "version": "1.19.2",
   "description": "寿冬与秋 - 个人博客系统后端（Express + PostgreSQL）",
   "main": "server.js",
   "scripts": {

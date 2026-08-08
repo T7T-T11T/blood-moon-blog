@@ -7,6 +7,10 @@
         <span class="count-badge">共 {{ total }} 条记录</span>
       </div>
       <div class="header-right">
+        <el-button @click="openBackups">
+          <el-icon><Document /></el-icon>
+          <span>备份记录</span>
+        </el-button>
         <el-button @click="handleReset">
           <el-icon><Refresh /></el-icon>
           <span>重置筛选</span>
@@ -130,7 +134,28 @@
       />
     </div>
   </div>
-</template>
+    <!-- 日志备份记录 -->
+    <el-dialog v-model="backupVisible" title="日志备份记录" width="560px">
+      <div class="backup-toolbar">
+        <span class="backup-tip">每月 15 日 07:00 自动备份并清空日志，也可手动立即备份。</span>
+        <el-button type="primary" size="small" :loading="backingUp" @click="handleBackupNow">
+          立即备份
+        </el-button>
+      </div>
+      <el-table v-loading="backupLoading" :data="backups" empty-text="暂无备份记录">
+        <el-table-column label="备份日期" prop="date" width="140" />
+        <el-table-column label="日志条数" prop="count" width="110" />
+        <el-table-column label="备份时间" min-width="170">
+          <template #default="{ row }">{{ formatDateTime(row.created_at) }}</template>
+        </el-table-column>
+        <el-table-column label="操作" width="150">
+          <template #default="{ row }">
+            <el-button type="primary" size="small" text @click="handleDownloadBackup(row.date)">下载</el-button>
+            <el-button type="danger" size="small" text @click="handleDeleteBackup(row.date)">删除</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-dialog></template>
 
 <script setup>
 /**
@@ -142,7 +167,7 @@
 import { ref, onMounted } from 'vue';
 import { Refresh, Search, Document } from '@element-plus/icons-vue';
 import { formatDateTime } from '@/utils/format';
-import { getLogs } from '../../api/logs';
+import { getLogs, getLogBackups, backupLogs, downloadLogBackup, deleteLogBackup } from '../../api/logs';
 
 /** 日志列表 */
 const logs = ref([]);
@@ -317,7 +342,67 @@ function handlePageChange(page) {
 onMounted(() => {
   loadLogs();
 });
-</script>
+
+/** 日志备份记录 */
+const backupVisible = ref(false);
+const backups = ref([]);
+const backupLoading = ref(false);
+const backingUp = ref(false);
+
+async function openBackups() {
+  backupVisible.value = true;
+  backupLoading.value = true;
+  try {
+    const res = await getLogBackups();
+    backups.value = res?.data || [];
+  } catch (e) {
+    console.error('获取备份列表失败:', e);
+  } finally {
+    backupLoading.value = false;
+  }
+}
+
+async function handleBackupNow() {
+  backingUp.value = true;
+  try {
+    const res = await backupLogs();
+    ElMessage.success(res?.message || '备份完成');
+    await openBackups();
+  } catch (e) {
+    console.error('手动备份失败:', e);
+    ElMessage.error('备份失败，请稍后重试');
+  } finally {
+    backingUp.value = false;
+  }
+}
+
+async function handleDownloadBackup(date) {
+  try {
+    const blob = await downloadLogBackup(date);
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `operation-logs-${date}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  } catch (e) {
+    console.error('下载备份失败:', e);
+    ElMessage.error('下载失败，请稍后重试');
+  }
+}
+
+async function handleDeleteBackup(date) {
+  try {
+    await ElMessageBox.confirm(`确定删除 ${date} 的日志备份吗？`, '删除确认', { type: 'warning' });
+    await deleteLogBackup(date);
+    ElMessage.success('备份已删除');
+    backups.value = backups.value.filter((b) => b.date !== date);
+  } catch (e) {
+    if (e !== 'cancel') console.error('删除备份失败:', e);
+  }
+}</script>
 
 <style scoped>
 /* ========== 页面头部 ========== */

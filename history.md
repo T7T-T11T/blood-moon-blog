@@ -1,5 +1,14 @@
 # 版本历史
 
+## v1.19.2 (2026-08-08)
+
+- feat: 操作日志每月 15 日 07:00（北京时间）自动备份并清空
+  - Workers Cron 定时任务：备份操作日志为 JSON 存入 Cloudflare KV（保留 1 年），成功后清空日志表
+  - 新增接口：GET /api/logs/backups（列表）、GET /api/logs/backups/:date（下载）、DELETE /api/logs/backups/:date（删除）、POST /api/logs/backup（手动立即备份）
+  - 后台"操作日志"页新增"备份记录"弹窗：查看/下载/删除历史备份，支持手动立即备份
+- chore: 前后端 + workers 版本号统一升至 1.19.2
+
+
 ## v1.19.1 (2026-08-08)
 
 - fix(ui): 文章管理"导出/删除"按钮样式与间距修复

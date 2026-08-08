@@ -55,3 +55,35 @@ export function getLogStats(params = {}) {
     params
   });
 }
+
+/**
+ * 获取日志备份列表（管理端）
+ * @returns {Promise<Array>} 备份列表 [{ date, count, created_at }]
+ */
+export function getLogBackups() {
+  return request.get('/logs/backups');
+}
+
+/**
+ * 手动执行日志备份（管理端）
+ */
+export function backupLogs() {
+  return request.post('/logs/backup');
+}
+
+/**
+ * 下载日志备份（管理端，返回 Blob）
+ * @param {string} date - 备份日期 YYYY-MM-DD
+ * @returns {Promise<Blob>}
+ */
+export function downloadLogBackup(date) {
+  return request.get(`/logs/backups/${date}`, { responseType: 'blob' });
+}
+
+/**
+ * 删除日志备份（管理端）
+ * @param {string} date - 备份日期 YYYY-MM-DD
+ */
+export function deleteLogBackup(date) {
+  return request.delete(`/logs/backups/${date}`);
+}
