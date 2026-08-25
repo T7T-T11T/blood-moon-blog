@@ -9,6 +9,7 @@
     <!-- 错误状态 -->
     <div v-if="error" class="async-state async-error">
       <slot name="error">
+        <GGBondSticker mood="exhausted" size="md" caption="网络把我累坏了" />
         <p class="state-text">{{ errorMessage }}</p>
         <button v-if="retryText" class="retry-btn" @click="$emit('retry')">{{ retryText }}</button>
       </slot>
@@ -17,7 +18,7 @@
     <!-- 加载状态 -->
     <div v-else-if="loading" class="async-state async-loading">
       <slot name="loading">
-        <div class="loading-spinner" aria-label="加载中"></div>
+        <GGBondSticker mood="spinWalk" size="sm" caption="猪猪侠转圈搬数据" />
         <p class="state-text">{{ loadingMessage }}</p>
       </slot>
     </div>
@@ -25,6 +26,7 @@
     <!-- 空状态 -->
     <div v-else-if="empty" class="async-state async-empty">
       <slot name="empty">
+        <GGBondSticker mood="fishing" size="md" caption="这里暂时没钓到内容" />
         <p class="state-text">{{ emptyMessage }}</p>
       </slot>
     </div>
@@ -35,6 +37,8 @@
 </template>
 
 <script setup>
+import GGBondSticker from './GGBondSticker.vue';
+
 defineProps({
   loading: { type: Boolean, default: false },
   error: { type: Boolean, default: false },
@@ -55,11 +59,14 @@ defineEmits(['retry']);
 
 .async-state {
   text-align: center;
-  padding: 80px 20px;
+  padding: 56px 20px;
+  border: 2px dashed rgba(79, 143, 220, 0.35);
+  border-radius: 24px;
+  background: rgba(255, 253, 247, 0.88);
 }
 
 .state-text {
-  margin: 0;
+  margin: 17px 0 0;
   font-size: 15px;
   color: var(--text-tertiary);
 }

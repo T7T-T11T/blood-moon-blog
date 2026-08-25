@@ -54,13 +54,13 @@ onUnmounted(() => {
   height: 44px;
   border: none;
   border-radius: 50%;
-  background: linear-gradient(135deg, #c62828 0%, #8e0000 100%);
+  background: linear-gradient(135deg, #78c8a0 0%, #4f8fdc 100%);
   color: #fff;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 16px rgba(198, 40, 40, 0.4);
+  box-shadow: 0 4px 16px rgba(79, 143, 220, 0.3);
   transition:
     transform 0.3s ease,
     box-shadow 0.3s ease,
@@ -70,7 +70,7 @@ onUnmounted(() => {
 
 .back-to-top:hover {
   transform: translateY(-4px) scale(1.05);
-  box-shadow: 0 8px 24px rgba(198, 40, 40, 0.5);
+  box-shadow: 0 8px 24px rgba(79, 143, 220, 0.42);
 }
 
 .back-to-top:active {

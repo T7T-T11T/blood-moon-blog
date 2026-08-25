@@ -14,16 +14,17 @@
       <div class="brand-overlay"></div>
       <!-- 右侧血月红光延伸 -->
       <div class="brand-glow"></div>
+      <img class="brand-mascot" src="@/assets/ggbond/bug-costume.jpg" alt="" aria-hidden="true" />
 
       <div class="brand-inner">
         <div class="brand-mark">
           <div class="moon-icon"></div>
         </div>
         <h1 class="brand-title">
-          暗夜之下<br />
-          笔墨不灭
+          记录不打烊<br />
+          慢慢长大
         </h1>
-        <p class="brand-tagline">在深夜的光辉下，记录属于你的思考与故事</p>
+        <p class="brand-tagline">回来整理今天的心情、故事与一点点成长</p>
       </div>
     </aside>
 
@@ -60,7 +61,7 @@
           </el-button>
         </el-form>
 
-        <p class="form-footer">© 2026 管理后台 · 暗夜</p>
+        <p class="form-footer">© 2026 GG Bond Studio</p>
       </div>
     </main>
   </div>
@@ -472,4 +473,24 @@ async function handleLogin() {
     font-size: 24px;
   }
 }
+/* 奶油游乐场登录主题 */
+.login-page { background: #fff9ec; color: #29334a; }
+.brand-panel { color: #29334a; background: #c9f0dc; }
+.brand-bg { background: linear-gradient(135deg,#cbeaff 0%,#fff1ad 100%); opacity: 1; }
+.brand-overlay { background: linear-gradient(90deg,rgba(255,253,247,.96) 0%,rgba(255,253,247,.82) 55%,rgba(255,253,247,.18) 100%); }
+.brand-glow { background: radial-gradient(circle,rgba(241,167,189,.38),transparent 70%); }
+.brand-mascot { position: absolute; right: 2%; bottom: -2%; z-index: 2; width: min(48%,360px); max-height: 86%; object-fit: contain; opacity: .92; filter: drop-shadow(0 18px 18px rgba(55,80,106,.18)); pointer-events: none; }
+.brand-inner { z-index: 3; width: min(100%,440px); padding: 30px; background: rgba(255,253,247,.7); border: 1px solid rgba(255,255,255,.9); border-radius: 28px; box-shadow: 0 18px 40px rgba(79,143,220,.12); backdrop-filter: blur(8px); }
+.moon-icon { background: radial-gradient(circle at 35% 35%,#fff6b8,#f2c84b 55%,#e5ae32); box-shadow: 0 0 20px rgba(242,200,75,.45); }
+.brand-title { color: #29334a; background: none; -webkit-text-fill-color: #29334a; filter: none; }
+.brand-tagline { color: #526176; }
+.form-panel { background: #eef8ff; }
+.form-card { background: #fffdf7; border-color: #d9d2c2; box-shadow: 0 20px 60px rgba(79,143,220,.14); }
+.form-title { color: #29334a; }.form-subtitle { color: #7a8799; }
+.login-form { --el-input-bg-color: #ffffff; --el-input-text-color: #29334a; --el-input-border-color: #d9d2c2; --el-input-focus-border-color: #4f8fdc; }
+.login-form :deep(.el-input__wrapper),.login-form :deep(.el-input__wrapper:hover),.login-form :deep(.el-input__wrapper.is-focus) { background: #fff !important; border-color: #d9d2c2 !important; box-shadow: 0 0 0 1px #d9d2c2 inset !important; }
+.login-form :deep(.el-input__wrapper.is-focus) { box-shadow: 0 0 0 1px #4f8fdc inset,0 0 0 4px rgba(79,143,220,.14) !important; }
+.login-form :deep(.el-input__inner),.login-form :deep(.el-input__inner:-webkit-autofill) { color: #29334a !important; -webkit-text-fill-color: #29334a !important; -webkit-box-shadow: 0 0 0 1000px #fff inset !important; caret-color: #4f8fdc; }
+.login-form :deep(.el-input__prefix),.login-form :deep(.el-input__clear:hover),.login-form :deep(.el-input__password),.login-form :deep(.el-input__wrapper.is-focus .el-input__password) { color: #4f8fdc !important; filter: none; }
+.submit-btn,.submit-btn:hover { background: linear-gradient(135deg,#78c8a0,#4f8fdc) !important; box-shadow: 0 12px 28px rgba(79,143,220,.24); }
 </style>

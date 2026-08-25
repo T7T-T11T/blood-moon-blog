@@ -52,6 +52,7 @@ app.use('/*', cors({
     if (origin.includes('.pages.dev') || 
         origin.includes('.workers.dev') ||
         origin.includes('localhost') ||
+        origin.includes('127.0.0.1') ||
         origin === c.env.CORS_ORIGIN) {
       return origin
     }

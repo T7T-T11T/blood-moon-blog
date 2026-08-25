@@ -32,8 +32,8 @@
 
 在仓库 **Settings → Secrets and variables → Actions** 中添加：
 
-| Secret 名称 | 值 | 说明 |
-|-------------|-----|------|
+| Secret 名称            | 值                   | 说明               |
+| ---------------------- | -------------------- | ------------------ |
 | `CLOUDFLARE_API_TOKEN` | Cloudflare API Token | 需 Pages:Edit 权限 |
 
 创建 Token：[dash.cloudflare.com/profile/api-tokens](https://dash.cloudflare.com/profile/api-tokens) → Create Token → Edit Cloudflare Workers → 添加 Pages:Edit 权限。
@@ -104,13 +104,19 @@ VITE_API_BASE_URL=https://blood-moon-blog-api.2198789717.workers.dev
 
 ## Workers 环境变量
 
-| 变量名 | 说明 | 设置方式 |
-|--------|------|----------|
-| `SUPABASE_URL` | Supabase 项目 URL | `wrangler secret put` |
-| `SUPABASE_ANON_KEY` | Supabase 匿名 Key | `wrangler secret put` |
-| `JWT_SECRET` | JWT 签名密钥（至少 32 字符） | `wrangler secret put` |
-| `CORS_ORIGIN` | 允许的前端域名 | `wrangler.toml [vars]` |
-| `RATE_LIMIT_KV` | KV 命名空间（评论/友链跨节点限流） | `wrangler kv namespace create` 后写入 `wrangler.toml` |
+| 变量名              | 说明                               | 设置方式                                              |
+| ------------------- | ---------------------------------- | ----------------------------------------------------- |
+| `SUPABASE_URL`      | Supabase 项目 URL                  | `wrangler secret put`                                 |
+| `SUPABASE_ANON_KEY` | Supabase 匿名 Key                  | `wrangler secret put`                                 |
+| `JWT_SECRET`        | JWT 签名密钥（至少 32 字符）       | `wrangler secret put`                                 |
+| `CORS_ORIGIN`       | 允许的前端域名                     | `wrangler.toml [vars]`                                |
+| `RATE_LIMIT_KV`     | KV 命名空间（评论/友链跨节点限流） | `wrangler kv namespace create` 后写入 `wrangler.toml` |
+
+## 媒体存储（必须配置）
+
+图片、音频和视频不要保存成 base64 正文。推荐为 Worker 配置 Cloudflare R2：创建 `blood-moon-blog-media` bucket，为它绑定一个公开域名（例如 `media.example.com`），然后在 `workers-backend/wrangler.toml` 中启用 `MEDIA_BUCKET` 并填写 `MEDIA_PUBLIC_URL`。媒体上传会优先写入 R2；如果 R2 未配置，才尝试原有 Supabase Storage；两者都不可用时上传会明确失败，不会污染文章数据。
+
+建议上限：图片 10MB（编辑器会将较大位图压缩成 WebP）、音频 25MB、视频 95MB。更大的视频建议用哔哩哔哩或 YouTube 嵌入，而不是直传 Worker。
 
 ---
 
@@ -127,6 +133,7 @@ curl -X POST https://blood-moon-blog-api.2198789717.workers.dev/api/auth/login \
 ```
 
 检查项：
+
 - [ ] 自动化冒烟测试通过（部署流水线自动执行；也可手动运行 `node tests/smoke-test.mjs`）
 - [ ] 每小时健康检查工作流（.github/workflows/uptime.yml）已注册
 - [ ] 前端页面正常加载
@@ -158,4 +165,4 @@ curl -X POST https://blood-moon-blog-api.2198789717.workers.dev/api/auth/login \
 
 ---
 
-*文档版本：v2.0 | 更新时间：2026-08-05*
+_文档版本：v2.0 | 更新时间：2026-08-05_

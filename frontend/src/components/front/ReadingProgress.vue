@@ -42,6 +42,6 @@ onUnmounted(() => {
   background: linear-gradient(to right, var(--primary), var(--primary-light));
   z-index: 200;
   transition: width 0.1s linear;
-  box-shadow: 0 0 8px rgba(220, 38, 38, 0.4);
+  box-shadow: 0 0 8px rgba(79, 143, 220, 0.35);
 }
 </style>

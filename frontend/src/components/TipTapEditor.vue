@@ -237,7 +237,7 @@
     <input
       ref="imageInputRef"
       type="file"
-      accept="image/*"
+      accept="image/jpeg,image/png,image/webp,image/gif,image/avif"
       style="display: none"
       @change="handleImageFileChange"
     />
@@ -351,6 +351,63 @@ const videoInputRef = ref(null);
 const imageUploading = ref(false);
 const audioUploading = ref(false);
 const videoUploading = ref(false);
+
+const MEDIA_LIMITS = {
+  image: 10 * 1024 * 1024,
+  audio: 25 * 1024 * 1024,
+  video: 95 * 1024 * 1024
+};
+
+function uploadErrorMessage(error) {
+  return error?.response?.data?.message || error?.message || '上传失败，请稍后重试';
+}
+
+function validateMedia(file, kind) {
+  if (!file.type.startsWith(`${kind}/`)) {
+    ElMessage.error(
+      `请选择有效的${kind === 'image' ? '图片' : kind === 'audio' ? '音频' : '视频'}文件`
+    );
+    return false;
+  }
+  if (file.size > MEDIA_LIMITS[kind]) {
+    ElMessage.error(`文件不能超过 ${(MEDIA_LIMITS[kind] / 1024 / 1024).toFixed(0)}MB`);
+    return false;
+  }
+  return true;
+}
+
+/**
+ * 在浏览器端将大尺寸位图限制到 2560px，并转为 WebP。
+ * 动图与 SVG 保持原样，避免损失动画/矢量信息。
+ */
+async function optimizeImage(file) {
+  if (
+    file.size <= 800 * 1024 ||
+    ['image/gif', 'image/svg+xml'].includes(file.type) ||
+    !window.createImageBitmap
+  ) {
+    return file;
+  }
+  try {
+    const bitmap = await createImageBitmap(file);
+    const longestSide = Math.max(bitmap.width, bitmap.height);
+    const scale = Math.min(1, 2560 / longestSide);
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+    canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+    canvas.getContext('2d').drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    bitmap.close();
+    const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/webp', 0.84));
+    return blob && blob.size < file.size
+      ? new File([blob], `${file.name.replace(/\.[^.]+$/, '') || 'image'}.webp`, {
+          type: 'image/webp'
+        })
+      : file;
+  } catch (error) {
+    console.warn('图片压缩失败，改用原文件上传：', error);
+    return file;
+  }
+}
 
 const wordCount = computed(() => {
   return editor?.value?.state?.doc?.textContent?.length || 0;
@@ -521,10 +578,15 @@ const triggerImageUpload = () => {
 const handleImageFileChange = async (event) => {
   const file = event.target.files?.[0];
   if (!file) return;
+  if (!validateMedia(file, 'image')) {
+    event.target.value = '';
+    return;
+  }
 
   try {
     imageUploading.value = true;
-    const res = await uploadImage(file);
+    const optimizedFile = await optimizeImage(file);
+    const res = await uploadImage(optimizedFile);
     if (res.code === 200) {
       const url = res.data.url;
       editor.value.chain().focus().setImage({ src: url }).run();
@@ -534,7 +596,7 @@ const handleImageFileChange = async (event) => {
     }
   } catch (err) {
     console.error('图片上传错误:', err);
-    ElMessage.error('图片上传失败');
+    ElMessage.error(uploadErrorMessage(err));
   } finally {
     imageUploading.value = false;
     // 清空 input 以便重复选择同一文件
@@ -551,6 +613,10 @@ const triggerAudioUpload = () => {
 const handleAudioFileChange = async (event) => {
   const file = event.target.files?.[0];
   if (!file) return;
+  if (!validateMedia(file, 'audio')) {
+    event.target.value = '';
+    return;
+  }
 
   try {
     audioUploading.value = true;
@@ -565,7 +631,7 @@ const handleAudioFileChange = async (event) => {
     }
   } catch (err) {
     console.error('音频上传错误:', err);
-    ElMessage.error('音频上传失败');
+    ElMessage.error(uploadErrorMessage(err));
   } finally {
     audioUploading.value = false;
     event.target.value = '';
@@ -581,6 +647,10 @@ const triggerVideoUpload = () => {
 const handleVideoFileChange = async (event) => {
   const file = event.target.files?.[0];
   if (!file) return;
+  if (!validateMedia(file, 'video')) {
+    event.target.value = '';
+    return;
+  }
 
   try {
     videoUploading.value = true;
@@ -595,7 +665,7 @@ const handleVideoFileChange = async (event) => {
     }
   } catch (err) {
     console.error('视频上传错误:', err);
-    ElMessage.error('视频上传失败');
+    ElMessage.error(uploadErrorMessage(err));
   } finally {
     videoUploading.value = false;
     event.target.value = '';

@@ -11,6 +11,14 @@ if (window.location.hash.startsWith('#/')) {
   const legacyPath = window.location.hash.slice(1);
   window.location.replace(legacyPath);
 }
+
+// 本地开发统一使用 localhost：线上 API 仅将 localhost 视为本地调试来源。
+// 这样从旧的 127.0.0.1 书签进入时，也不会因为跨域而丢失标签、设置等数据。
+if (import.meta.env.DEV && window.location.hostname === '127.0.0.1') {
+  const localUrl = new URL(window.location.href);
+  localUrl.hostname = 'localhost';
+  window.location.replace(localUrl.toString());
+}
 import App from './App.vue';
 import router from './router';
 import './style.css';

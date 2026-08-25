@@ -114,14 +114,15 @@ export default defineConfig({
   server: {
     port: 5173, // 前端开发服务器端口
     open: true, // 启动时自动打开浏览器
-    // 代理配置：前端请求自动转发到后端 http://localhost:3000
+    // 代理配置：本地预览复用已部署的 Workers API，免去本地数据库配置。
+    // 浏览器只访问 127.0.0.1:5173，由 Vite 在服务端转发，因此不会触发跨域限制。
     proxy: {
       '/api': {
-        target: 'http://localhost:3000',
+        target: 'https://blood-moon-blog-api.2198789717.workers.dev',
         changeOrigin: true
       },
       '/uploads': {
-        target: 'http://localhost:3000',
+        target: 'https://blood-moon-blog-api.2198789717.workers.dev',
         changeOrigin: true
       }
     }

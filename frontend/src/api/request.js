@@ -11,13 +11,13 @@ import router from '../router';
 
 /**
  * 获取 API 基础地址
- * 开发环境使用 /api（配合 Vite proxy）
- * 生产环境使用 .env.production 中配置的 VITE_API_BASE_URL
+ * 本地和生产环境都优先使用对应 .env 文件中的 VITE_API_BASE_URL。
+ * 未配置时才回退到同源 /api。
  */
 const baseURL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 const request = axios.create({
-  baseURL: baseURL, // 基础路径，开发环境配合 vite proxy 代理到后端
+  baseURL: baseURL,
   timeout: 60000 // 请求超时时间 60 秒（上传大文件/含 base64 图片的文章内容需要足够时间）
 });
 

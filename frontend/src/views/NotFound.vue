@@ -2,6 +2,7 @@
 <template>
   <div class="not-found-page">
     <div class="nf-container">
+      <GGBondSticker mood="floorRoll" size="lg" caption="这路怎么走歪了" />
       <!-- 大号 404 -->
       <h1 class="nf-code">404</h1>
       <p class="nf-title">页面不见了</p>
@@ -55,6 +56,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { Search } from '@element-plus/icons-vue';
 import { formatDate } from '@/utils/format';
 import { getPublicArticles } from '../api/articles';
+import GGBondSticker from '../components/common/GGBondSticker.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -109,6 +111,8 @@ onMounted(() => {
   max-width: 560px;
   width: 100%;
 }
+
+.nf-container :deep(.ggbond-sticker) { margin-bottom: 14px; }
 
 .nf-code {
   margin: 0 0 8px;
@@ -175,7 +179,7 @@ onMounted(() => {
 .nf-btn.primary:hover {
   background: var(--primary-dark);
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(220, 38, 38, 0.35);
+  box-shadow: 0 8px 24px rgba(79, 143, 220, 0.28);
 }
 
 .nf-btn.secondary {
@@ -208,7 +212,7 @@ onMounted(() => {
 
 .nf-search:focus-within {
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.12);
+  box-shadow: 0 0 0 3px rgba(79, 143, 220, 0.14);
 }
 
 .search-icon {

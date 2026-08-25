@@ -21,7 +21,7 @@ import { defaultCache } from './cache';
  */
 export const settingsState = reactive({
   siteName: '个人博客',
-  siteDescription: '分享技术，记录成长'
+  siteDescription: '记录生活、成长与每一个值得珍藏的瞬间'
 });
 
 /**

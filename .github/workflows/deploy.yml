@@ -1,4 +1,4 @@
-# GitHub Actions 工作流 - 自动部署到 Cloudflare Pages
+# GitHub Actions 工作流 - 自动部署 Workers API 和 Cloudflare Pages
 #
 # 触发时机：推送到 master 分支时自动构建并部署
 #
@@ -7,7 +7,7 @@
 #   Key: CLOUDFLARE_API_TOKEN
 #   Value: Cloudflare API Token（从 dash.cloudflare.com/profile/api-tokens 创建，需 Workers Scripts:Edit + Pages:Edit 权限）
 
-name: Deploy to Cloudflare Pages
+name: Deploy blog
 
 on:
   push:
@@ -34,28 +34,40 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
-          cache-dependency-path: 'frontend/package-lock.json'
+          cache-dependency-path: |
+            frontend/package-lock.json
+            workers-backend/package-lock.json
 
       # 3. 安装前端依赖
       - name: Install frontend dependencies
         working-directory: ./frontend
         run: npm ci
 
-      # 4. 构建前端
+      # 4. 安装 Workers 依赖，确保后端和前端来自同一提交
+      - name: Install Workers dependencies
+        working-directory: ./workers-backend
+        run: npm ci
+
+      # 5. 构建前端
       - name: Build frontend
         working-directory: ./frontend
         run: npm run build
 
-      # 5. 安装 wrangler CLI
+      # 6. 安装 wrangler CLI
       - name: Install wrangler
         run: npm install -g wrangler
 
-      # 6. 部署到 Cloudflare Pages
+      # 7. 先部署 API，再部署依赖该 API 的前台页面
+      - name: Deploy Workers API
+        working-directory: ./workers-backend
+        run: wrangler deploy
+
+      # 8. 部署到 Cloudflare Pages
       - name: Deploy to Cloudflare Pages
         working-directory: .
         run: wrangler pages deploy frontend/dist --project-name=blood-moon-blog
 
-      # 7. 显示部署结果
+      # 9. 验证线上服务
       - name: API 冒烟测试
         run: node tests/smoke-test.mjs
         env:

@@ -9,9 +9,10 @@
         <p class="hero-eyebrow animate-fade-in-down">TAGS</p>
         <h1 class="hero-title animate-fade-in-up">标签云</h1>
         <p class="hero-subtitle animate-fade-in-up delay-100">
-          共 {{ tags.length }} 个标签 · {{ totalArticles }} 篇文章
+          共 {{ tags.length }} 个已使用标签
         </p>
       </div>
+      <GGBondSticker mood="underwater" size="lg" floating caption="潜入话题海洋" :style="{ top: '14px', right: 'clamp(22px, 12vw, 190px)' }" />
       <div class="hero-orb" aria-hidden="true"></div>
     </section>
 
@@ -51,9 +52,10 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 import { CollectionTag } from '@element-plus/icons-vue';
 import { getTags } from '@/api/tags';
+import GGBondSticker from '../../components/common/GGBondSticker.vue';
 
 /** 根节点引用 */
 const rootRef = ref(null);
@@ -63,11 +65,6 @@ const tags = ref([]);
 
 /** 加载状态 */
 const loading = ref(false);
-
-/** 文章总数 */
-const totalArticles = computed(() => {
-  return tags.value.reduce((sum, tag) => sum + (tag.article_count || 0), 0);
-});
 
 /**
  * 根据文章数量计算标签字体大小
@@ -100,7 +97,8 @@ async function loadTags() {
   try {
     const res = await getTags();
     // 按文章数量降序排列
-    tags.value = (res.data.data || []).sort(
+    const tagList = Array.isArray(res?.data) ? res.data : (res?.data?.data || []);
+    tags.value = tagList.filter((tag) => Number(tag.article_count || 0) > 0).sort(
       (a, b) => (b.article_count || 0) - (a.article_count || 0)
     );
   } catch (e) {

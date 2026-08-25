@@ -7,6 +7,7 @@
         <h1 class="hero-title animate-fade-in-up">{{ authorName }}</h1>
         <p class="hero-tagline animate-fade-in-up delay-100">{{ siteDescription }}</p>
       </div>
+      <GGBondSticker mood="intro" size="lg" floating caption="我是 Bond，GG Bond" :style="{ top: '14px', right: 'clamp(22px, 12vw, 190px)' }" />
       <div class="hero-orb" aria-hidden="true"></div>
     </section>
 
@@ -26,9 +27,9 @@
           <p class="block-text">{{ authorBio }}</p>
         </section>
 
-        <!-- 技能 / 兴趣 -->
+        <!-- 生活兴趣 -->
         <section class="block reveal">
-          <h2 class="block-title">技能 / 兴趣</h2>
+          <h2 class="block-title">喜欢的事</h2>
           <div class="skill-list">
             <span v-for="skill in skills" :key="skill" class="skill-tag">{{ skill }}</span>
           </div>
@@ -63,6 +64,7 @@
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue';
 import { getSettings } from '../../api/settings';
 import AsyncData from '../../components/common/AsyncData.vue';
+import GGBondSticker from '../../components/common/GGBondSticker.vue';
 
 /** 根元素引用，用于 IntersectionObserver 初始化 */
 const rootRef = ref(null);
@@ -81,14 +83,12 @@ let observer = null;
 let revealTimeout = null;
 
 const skills = [
-  'Vue 3',
-  'JavaScript',
-  'TypeScript',
-  'Node.js',
-  'Element Plus',
-  'Vite',
-  'Pinia',
-  'Vue Router'
+  '生活碎片',
+  '旅行散步',
+  '读书观影',
+  '日常灵感',
+  '认真感受',
+  '慢慢成长'
 ];
 
 /**
@@ -104,9 +104,9 @@ function pick(camel, snake) {
 }
 
 const authorName = computed(() => pick('authorName', 'author_name') || '匿名博主');
-const authorBio = computed(() => pick('authorBio', 'author_bio') || '热爱技术，喜欢分享。');
+const authorBio = computed(() => pick('authorBio', 'author_bio') || '在日常里收集故事，也在时间里慢慢长大。');
 const siteDescription = computed(
-  () => pick('siteDescription', 'site_description') || '分享技术，记录成长'
+  () => pick('siteDescription', 'site_description') || '记录生活、成长与每一个值得珍藏的瞬间'
 );
 const authorEmail = computed(() => pick('email', 'author_email'));
 const authorGithub = computed(() => pick('githubUrl', 'author_github'));

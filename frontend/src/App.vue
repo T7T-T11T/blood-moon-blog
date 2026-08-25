@@ -53,7 +53,7 @@ let stopVersionCheck = null;
 const jsonLd = computed(() => {
   const siteName = settingsState.siteName || '寿冬与秋';
   const siteDescription =
-    settingsState.siteDescription || '一个专注于技术分享与个人成长的暗夜哥特风博客';
+    settingsState.siteDescription || '一个记录生活、成长与日常灵感的个人博客';
   const siteUrl = settingsState.siteUrl || window.location.origin;
   const authorName = settingsState.siteAuthor || '寿冬与秋';
 
@@ -127,11 +127,11 @@ onBeforeUnmount(() => {
   bottom: 20px;
   left: 50%;
   transform: translateX(-50%);
-  background: linear-gradient(135deg, #dc2626, #7f1d1d);
+  background: linear-gradient(135deg, #4f8fdc, #78c8a0);
   color: white;
   padding: 12px 20px;
   border-radius: 8px;
-  box-shadow: 0 4px 20px rgba(220, 38, 38, 0.4);
+  box-shadow: 0 4px 20px rgba(79, 143, 220, 0.32);
   display: flex;
   align-items: center;
   gap: 12px;

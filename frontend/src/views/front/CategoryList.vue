@@ -14,6 +14,7 @@ fade-in-up 错峰（Intersection Observer） * - 悬浮：标题变主色 + 左�
       <p v-if="total > 0" class="page-subtitle animate-fade-in-up delay-100">
         共 {{ total }} 篇文章
       </p>
+      <GGBondSticker mood="upsideDown" size="md" floating :style="{ top: '24px', right: 'clamp(20px, 13vw, 190px)' }" />
     </section>
 
     <!-- ============ 文章列表 ============ -->
@@ -87,6 +88,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { View } from '@element-plus/icons-vue';
 import { formatDate } from '@/utils/format';
 import { getArticlesByCategory } from '../../api/articles';
+import GGBondSticker from '../../components/common/GGBondSticker.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -226,6 +228,7 @@ onUnmounted(() => {
 <style scoped>
 /* ========== 页面头部 ========== */
 .page-header {
+  position: relative;
   max-width: 960px;
   margin: 0 auto;
   padding: 72px 32px 48px;

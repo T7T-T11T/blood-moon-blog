@@ -355,7 +355,7 @@ watch(
   justify-content: space-between;
   margin-bottom: 16px;
   padding: 10px 14px;
-  background: rgba(220, 38, 38, 0.08);
+  background: rgba(79, 143, 220, 0.10);
   border-left: 3px solid var(--primary);
   border-radius: 6px;
   font-size: 13px;
@@ -393,7 +393,7 @@ watch(
 
 .form-input:focus {
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.12);
+  box-shadow: 0 0 0 3px rgba(79, 143, 220, 0.14);
 }
 
 .form-textarea {
@@ -414,7 +414,7 @@ watch(
 
 .form-textarea:focus {
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.12);
+  box-shadow: 0 0 0 3px rgba(79, 143, 220, 0.14);
 }
 
 .honeypot-field {
@@ -457,7 +457,7 @@ watch(
 .submit-btn:hover:not(:disabled) {
   background: var(--primary-dark);
   transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(220, 38, 38, 0.35);
+  box-shadow: 0 8px 20px rgba(79, 143, 220, 0.26);
 }
 
 .submit-btn:disabled {

@@ -17,6 +17,13 @@ compatibility_flags = ["nodejs_compat"]
 [vars]
 ENVIRONMENT = "production"
 CORS_ORIGIN = "https://blood-moon-blog.pages.dev"
+# R2 自定义域名或 r2.dev 公共地址，例如 https://media.example.com
+# 部署前创建 bucket 后，取消下面的 r2_buckets 注释，并填写 bucket_name。
+# MEDIA_PUBLIC_URL = "https://media.example.com"
+
+# [[r2_buckets]]
+# binding = "MEDIA_BUCKET"
+# bucket_name = "blood-moon-blog-media"
 
 [[kv_namespaces]]
 binding = "RATE_LIMIT_KV"

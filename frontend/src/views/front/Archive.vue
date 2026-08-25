@@ -16,6 +16,7 @@ getArticleArchives() 返回数组 [{ year, month, articles: [{ id, title, create
           共 {{ totalArticles }} 篇文章 · 按时间倒序
         </p>
       </div>
+      <GGBondSticker mood="iceWalk" size="lg" floating caption="沿着时间线散步" :style="{ top: '14px', right: 'clamp(22px, 12vw, 190px)' }" />
       <!-- 装饰光斑（纯视觉） -->
       <div class="hero-orb" aria-hidden="true"></div>
     </section>
@@ -79,6 +80,7 @@ getArticleArchives() 返回数组 [{ year, month, articles: [{ id, title, create
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue';
 import { formatDate } from '@/utils/format';
 import { getArticleArchives } from '../../api/articles';
+import GGBondSticker from '../../components/common/GGBondSticker.vue';
 
 /** 组件根节点引用（用于作用域内的滚动观察） */
 const rootRef = ref(null);

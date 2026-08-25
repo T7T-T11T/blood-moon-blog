@@ -17,10 +17,11 @@
       </button>
       <div class="back-bar-spacer"></div>
       <!-- 阅读字号调节 -->
-      <div class="reading-tools" title="阅读字号">
-        <button class="font-btn" :disabled="fontIndex <= 0" aria-label="减小字号" @click="changeFontSize(-1)">A-</button>
-        <span class="font-size-label">{{ articleFontSize }}px</span>
-        <button class="font-btn" :disabled="fontIndex >= FONT_SIZES.length - 1" aria-label="增大字号" @click="changeFontSize(1)">A+</button>
+      <div class="reading-tools" aria-label="阅读字号调节">
+        <span class="reading-label">字号</span>
+        <button class="font-btn" :disabled="fontIndex <= 0" aria-label="减小字号" @click="changeFontSize(-1)">−</button>
+        <span class="font-size-label">{{ articleFontSize }}</span>
+        <button class="font-btn" :disabled="fontIndex >= FONT_SIZES.length - 1" aria-label="增大字号" @click="changeFontSize(1)">+</button>
         <button v-if="fontIndex !== DEFAULT_FONT_INDEX" class="font-reset" @click="resetFontSize">重置</button>
       </div>
     </div>
@@ -70,6 +71,12 @@
     <!-- 文章正文 -->
     <article v-if="article" class="article-content">
       <header class="article-header reveal">
+        <GGBondSticker
+          class="article-mascot"
+          :mood="articleMood.key"
+          size="md"
+          :caption="articleMood.label"
+        />
         <div class="article-meta">
           <router-link
             v-if="article.category_slug"
@@ -241,6 +248,7 @@
 
     <!-- 错误状态 -->
     <div v-if="!loading && !article" class="error-state">
+      <GGBondSticker mood="leaving" size="lg" caption="这篇好像先走了" />
       <p class="error-text">文章不存在或已被删除</p>
       <button class="back-home-btn" @click="goHome">返回首页</button>
     </div>
@@ -284,6 +292,8 @@ import { toggleLike, getLikeStatus, getLikeCount } from '../../api/likes';
 import { useUserStore } from '../../stores/user';
 import CommentSection from '../../components/front/CommentSection.vue';
 import ReadingProgress from '../../components/front/ReadingProgress.vue';
+import GGBondSticker from '../../components/common/GGBondSticker.vue';
+import { getGGBondMood } from '@/utils/ggbond';
 
 const route = useRoute();
 const router = useRouter();
@@ -294,6 +304,7 @@ const article = shallowRef(null);
 const loading = ref(true);
 const coverImageError = ref(false);
 const articleBodyRef = ref(null);
+const articleMood = computed(() => getGGBondMood(Number(article.value?.id) || 0));
 
 // ---- 图片灯箱 ----
 const previewImage = ref('');
@@ -960,9 +971,16 @@ onUnmounted(() => {
 
 /* ========== 文章头部 ========== */
 .article-header {
+  position: relative;
   margin-bottom: 40px;
   padding-bottom: 32px;
   border-bottom: 1px solid var(--border);
+}
+
+.article-mascot {
+  position: absolute;
+  top: -16px;
+  right: 0;
 }
 
 .article-meta {
@@ -1166,16 +1184,28 @@ onUnmounted(() => {
 }
 
 .article-body :deep(img) {
+  display: block;
   max-width: 100%;
+  width: auto;
+  max-height: min(72vh, 760px);
+  object-fit: contain;
   border-radius: 8px;
   margin: 16px 0;
 }
 
 .article-body :deep(video) {
   max-width: 100%;
+  width: 100%;
+  max-height: min(72vh, 760px);
+  object-fit: contain;
   border-radius: 8px;
   margin: 16px 0;
   display: block;
+}
+
+.article-body :deep(audio) {
+  width: min(100%, 620px);
+  margin: 16px 0;
 }
 
 .article-body :deep(table) {
@@ -1394,7 +1424,7 @@ onUnmounted(() => {
   padding: 80px 20px;
 }
 .error-text {
-  margin: 0 0 24px;
+  margin: 22px 0 24px;
   font-size: 16px;
   color: var(--text-secondary);
 }
@@ -1800,7 +1830,15 @@ onUnmounted(() => {
   }
 }</style>
 
+<style scoped>
 /* ========== 阅读字号调节 ========== */
+.back-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
 .back-bar-spacer {
   flex: 1;
 }
@@ -1808,19 +1846,30 @@ onUnmounted(() => {
 .reading-tools {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
+  padding: 4px;
+  color: var(--text-secondary);
+  background: rgba(255, 253, 247, 0.78);
+  border-radius: 999px;
+  box-shadow: 0 4px 14px rgba(67, 93, 118, 0.1);
+}
+
+.reading-label {
+  padding: 0 6px 0 8px;
+  font-size: 12px;
+  color: var(--text-tertiary);
 }
 
 .font-btn {
-  min-width: 34px;
-  height: 30px;
-  padding: 0 8px;
-  font-size: 13px;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  font-size: 17px;
   font-weight: 600;
   color: var(--text-secondary);
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  background: transparent;
+  border: 0;
+  border-radius: 50%;
   cursor: pointer;
   transition:
     color 0.2s,
@@ -1829,8 +1878,8 @@ onUnmounted(() => {
 }
 
 .font-btn:hover:not(:disabled) {
-  color: var(--primary);
-  border-color: var(--primary);
+  color: #fff;
+  background: var(--primary);
 }
 
 .font-btn:disabled {
@@ -1839,25 +1888,27 @@ onUnmounted(() => {
 }
 
 .font-size-label {
-  min-width: 38px;
+  min-width: 26px;
   text-align: center;
   font-size: 12px;
-  color: var(--text-tertiary);
+  font-weight: 700;
+  color: var(--text-primary);
   font-variant-numeric: tabular-nums;
 }
 
 .font-reset {
-  padding: 4px 10px;
+  padding: 4px 8px;
   font-size: 12px;
   color: var(--text-secondary);
   background: transparent;
-  border: 1px dashed var(--border);
-  border-radius: 8px;
+  border: 0;
+  border-radius: 999px;
   cursor: pointer;
   transition: color 0.2s;
 }
 
 .font-reset:hover {
   color: var(--primary);
-  border-color: var(--primary);
+  background: var(--primary-bg);
 }
+</style>

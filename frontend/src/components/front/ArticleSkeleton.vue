@@ -36,7 +36,7 @@ defineProps({
 .skeleton-line {
   height: 14px;
   border-radius: 6px;
-  background: #1a2035;
+  background: #e2edf4;
 }
 
 .w-40 {

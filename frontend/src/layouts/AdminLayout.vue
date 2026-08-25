@@ -9,10 +9,8 @@
     <aside class="admin-sidebar" :class="{ open: sidebarOpen }">
       <!-- Logo 区域 -->
       <div class="sidebar-header">
-        <div class="logo-wrapper">
-          <el-icon :size="22" color="#fff"><DataLine /></el-icon>
-        </div>
-        <span class="logo-text">博客管理</span>
+        <img src="@/assets/ggbond/tongue.gif" class="admin-brand-image" alt="猪猪侠开工" />
+        <span class="logo-text"><small>GG BOND STUDIO</small>博客管理</span>
         <!-- 刷新按钮：点击手动刷新评论统计等数据 -->
         <div
           class="sidebar-refresh"
@@ -70,6 +68,11 @@
           </router-link>
         </div>
       </nav>
+
+      <div class="sidebar-mascot">
+        <GGBondSticker mood="sly" size="md" />
+        <p>今日写作任务：<br /><strong>把想法存下来</strong></p>
+      </div>
 
       <!-- 底部返回首页 -->
       <div class="sidebar-footer">
@@ -143,8 +146,8 @@ import { ref, markRaw, onMounted, onUnmounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useUserStore } from '../stores/user';
 import { getCommentStats } from '../api/comments';
+import GGBondSticker from '../components/common/GGBondSticker.vue';
 import {
-  DataLine,
   Monitor,
   Document,
   Folder,
@@ -360,17 +363,17 @@ async function handleCommand(command) {
 <style scoped>
 /* ========== 管理后台黑红暗色主题 ========== */
 .admin-layout {
-  --admin-bg: #0a0e1a;
-  --admin-card: #121828;
-  --admin-hover: #1a2035;
-  --admin-border: #1e293b;
-  --admin-text: #f1f5f9;
-  --admin-text-secondary: #94a3b8;
-  --admin-text-tertiary: #64748b;
-  --admin-primary: #dc2626;
-  --admin-primary-light: #f87171;
-  --admin-primary-dark: #991b1b;
-  --admin-shadow: rgba(0, 0, 0, 0.3);
+  --admin-bg: #eef5fb;
+  --admin-card: #fffdf7;
+  --admin-hover: #eaf6ff;
+  --admin-border: #d9d2c2;
+  --admin-text: #29334a;
+  --admin-text-secondary: #626b7c;
+  --admin-text-tertiary: #9298a3;
+  --admin-primary: #4f8fdc;
+  --admin-primary-light: #78b8ef;
+  --admin-primary-dark: #3267a8;
+  --admin-shadow: rgba(79, 113, 143, 0.14);
 }
 
 /* ========== 布局主容器 ========== */
@@ -391,7 +394,7 @@ async function handleCommand(command) {
 /* ========== 左侧导航栏 ========== */
 .admin-sidebar {
   width: 220px;
-  background: linear-gradient(180deg, #0c1220 0%, #060912 100%);
+  background: linear-gradient(180deg, #dff2ff 0%, #fff4c8 100%);
   display: flex;
   flex-direction: column;
   position: fixed;
@@ -406,27 +409,50 @@ async function handleCommand(command) {
 .sidebar-header {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   padding: 20px 24px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid rgba(79, 143, 220, 0.16);
 }
 
-.logo-wrapper {
-  width: 38px;
-  height: 38px;
-  background: linear-gradient(135deg, var(--admin-primary) 0%, #991b1b 100%);
-  border-radius: var(--radius-md);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 4px 14px rgba(220, 38, 38, 0.35);
+.admin-brand-image {
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+  border: 2px solid #ffffff;
+  border-radius: 12px 8px 14px 9px;
+  box-shadow: 3px 3px 0 #78c8a0;
 }
 
 .logo-text {
-  color: #fff;
-  font-size: 17px;
-  font-weight: 600;
+  color: #29334a;
+  font-size: 16px;
+  font-weight: 800;
+  display: grid;
+  line-height: 1.15;
 }
+
+.logo-text small {
+  color: #3979ba;
+  font-size: 8px;
+  letter-spacing: .12em;
+}
+
+.sidebar-mascot {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin: 0 14px 14px;
+  padding: 11px;
+  color: #46536a;
+  background: linear-gradient(135deg, rgba(120, 200, 160, .28), rgba(255, 225, 122, .34));
+  border: 1px dashed rgba(79, 143, 220, .4);
+  border-radius: 18px;
+}
+
+.sidebar-mascot p { font-size: 11px; line-height: 1.4; }
+.sidebar-mascot strong { color: #3267a8; }
+.sidebar-mascot :deep(.ggbond-sticker) { flex: 0 0 auto; }
+.sidebar-mascot :deep(.ggbond-sticker img) { box-shadow: 2px 3px 0 #4f8fdc; border-width: 2px; }
 
 .sidebar-nav {
   flex: 1;

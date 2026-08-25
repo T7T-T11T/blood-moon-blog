@@ -37,13 +37,19 @@ npm run deploy
 
 ## 环境变量
 
-| 变量名 | 说明 | 必填 | 设置方式 |
-|--------|------|------|----------|
-| `SUPABASE_URL` | Supabase 项目 URL | 是 | `wrangler secret put` |
-| `SUPABASE_ANON_KEY` | Supabase 匿名 Key | 是 | `wrangler secret put` |
-| `JWT_SECRET` | JWT 签名密钥 | 是 | `wrangler secret put` |
-| `CORS_ORIGIN` | 允许的前端域名 | 否 | `wrangler.toml [vars]` |
-| `ENVIRONMENT` | 环境标识 | 否 | `wrangler.toml [vars]` |
+| 变量名              | 说明                      | 必填 | 设置方式               |
+| ------------------- | ------------------------- | ---- | ---------------------- |
+| `SUPABASE_URL`      | Supabase 项目 URL         | 是   | `wrangler secret put`  |
+| `SUPABASE_ANON_KEY` | Supabase 匿名 Key         | 是   | `wrangler secret put`  |
+| `JWT_SECRET`        | JWT 签名密钥              | 是   | `wrangler secret put`  |
+| `CORS_ORIGIN`       | 允许的前端域名            | 否   | `wrangler.toml [vars]` |
+| `ENVIRONMENT`       | 环境标识                  | 否   | `wrangler.toml [vars]` |
+| `MEDIA_BUCKET`      | Cloudflare R2 bucket 绑定 | 推荐 | `wrangler.toml`        |
+| `MEDIA_PUBLIC_URL`  | R2 公共域名               | 推荐 | `wrangler.toml [vars]` |
+
+## 媒体存储（图片、音频、视频）
+
+媒体文件不会再写入文章正文的 base64 字符串。请优先配置 Cloudflare R2：创建一个 bucket，为它绑定公开自定义域名，然后在 `wrangler.toml` 中启用 `MEDIA_BUCKET` 和 `MEDIA_PUBLIC_URL`。上传顺序是 **R2 → Supabase Storage → 明确报错**；存储未配置时文件不会被悄悄塞进数据库。
 
 ## API 接口
 

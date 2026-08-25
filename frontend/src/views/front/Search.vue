@@ -20,6 +20,7 @@
           <button class="search-btn" @click="doSearch">搜索</button>
         </div>
       </div>
+      <GGBondSticker mood="confused" size="lg" floating caption="关键词到底藏哪了" :style="{ top: '16px', right: 'clamp(22px, 12vw, 190px)' }" />
     </section>
 
     <!-- ============ 搜索结果 ============ -->
@@ -97,6 +98,7 @@ import { Search, View } from '@element-plus/icons-vue';
 import { formatDate } from '@/utils/format';
 import { searchArticles } from '../../api/articles';
 import AsyncData from '../../components/common/AsyncData.vue';
+import GGBondSticker from '../../components/common/GGBondSticker.vue';
 
 const route = useRoute();
 const router = useRouter();

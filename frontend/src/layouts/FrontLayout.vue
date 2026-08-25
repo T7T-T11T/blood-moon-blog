@@ -5,17 +5,20 @@
 + 悬浮微动效 + 路由过渡 共三组动效 */
 <template>
   <div class="front-layout">
-    <!-- ============ 固定背景层（所有前台页面共享，不随滚动） ============ -->
-    <div class="fixed-bg" :style="{ backgroundImage: `url(${heroBg})` }" aria-hidden="true"></div>
+    <!-- ============ 固定背景层（纯黑红，不使用暗月插画） ============ -->
+    <div class="fixed-bg" aria-hidden="true"></div>
     <div class="fixed-bg-overlay" aria-hidden="true"></div>
     <div class="fixed-bg-glow" aria-hidden="true"></div>
 
     <!-- 顶部固定毛玻璃导航栏 -->
     <header class="navbar" :class="{ scrolled: isScrolled }">
       <div class="navbar-inner">
-        <!-- 品牌：仅 Logo 字母图标 -->
+        <!-- 品牌 -->
         <router-link to="/" class="brand" @click="closeMobileMenu">
-          <img src="@/assets/blood-moon-logo.webp" alt="logo" class="brand-mark" />
+          <img src="@/assets/ggbond/cool-jacket.jpg" alt="猪猪侠" class="brand-mark" />
+          <span class="brand-copy"
+            ><small>GG BOND'S NOTEBOOK</small><strong>{{ siteName }}</strong></span
+          >
         </router-link>
 
         <!-- 桌面端导航 -->
@@ -46,16 +49,6 @@
           <router-link to="/admin" class="admin-entry" title="管理后台">
             <el-icon><Setting /></el-icon>
           </router-link>
-          <button
-            class="theme-toggle"
-            :title="themeStore.theme === 'dark' ? '切换亮色主题' : '切换暗色主题'"
-            @click="themeStore.toggleTheme()"
-          >
-            <el-icon>
-              <Sunny v-if="themeStore.theme === 'dark'" />
-              <Moon v-else />
-            </el-icon>
-          </button>
           <button
             class="menu-toggle"
             :class="{ open: mobileMenuOpen }"
@@ -114,6 +107,7 @@
     <!-- 极简页脚 -->
     <footer class="footer">
       <div class="footer-inner">
+        <GGBondSticker mood="sleeping" size="sm" />
         <span class="footer-brand">{{ siteName }}</span>
         <span class="footer-divider">·</span>
         <span class="footer-copy">© {{ currentYear }}</span>
@@ -121,10 +115,6 @@
         <span v-if="siteDescription" class="footer-desc">{{ siteDescription }}</span>
         <span v-if="footerText" class="footer-divider">·</span>
         <span v-if="footerText" class="footer-text">{{ footerText }}</span>
-        <span class="footer-divider">·</span>
-        <a :href="`${apiBase}/rss`" target="_blank" class="footer-rss" title="RSS 订阅">
-          <el-icon><Connection /></el-icon> RSS
-        </a>
       </div>
     </footer>
 
@@ -136,20 +126,15 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { Search, Setting, Sunny, Moon, Connection } from '@element-plus/icons-vue';
+import { Search, Setting } from '@element-plus/icons-vue';
 import { getSettings, settingsState } from '../api/settings';
-import heroBg from '../assets/hero-bg.webp';
 import MusicPlayer from '../components/MusicPlayer.vue';
 import BackToTop from '../components/common/BackToTop.vue';
-import { useThemeStore } from '../stores/theme';
+import GGBondSticker from '../components/common/GGBondSticker.vue';
 import { useUserStore } from '../stores/user';
-
-/** API 基础路径（开发环境 /api，生产环境为 Workers 完整 URL） */
-const apiBase = import.meta.env.VITE_API_BASE_URL || '/api';
 
 const route = useRoute();
 const router = useRouter();
-const themeStore = useThemeStore();
 const userStore = useUserStore();
 
 /** 站点名（使用模块级共享状态） */
@@ -185,8 +170,8 @@ const isScrolled = ref(false);
  */
 const navItems = [
   { path: '/', label: '首页', exact: true },
+  { path: '/tags', label: '主题', exact: false },
   { path: '/archive', label: '归档', exact: false },
-  { path: '/links', label: '友链', exact: false },
   { path: '/about', label: '关于', exact: false }
 ];
 
@@ -264,10 +249,10 @@ onUnmounted(() => {
   width: 100vw;
   height: 100vh;
   z-index: 0;
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  background-attachment: fixed;
+  background:
+    radial-gradient(circle at 10% 14%, rgba(242, 200, 75, 0.22), transparent 30%),
+    radial-gradient(circle at 87% 22%, rgba(120, 200, 160, 0.18), transparent 29%),
+    #f8f7f1;
 }
 
 .fixed-bg-overlay {
@@ -277,32 +262,14 @@ onUnmounted(() => {
   width: 100vw;
   height: 100vh;
   z-index: 1;
-  background: linear-gradient(
-    180deg,
-    rgba(6, 9, 18, 0.55) 0%,
-    rgba(10, 14, 26, 0.45) 30%,
-    rgba(10, 14, 26, 0.65) 70%,
-    rgba(6, 9, 18, 0.92) 100%
-  );
+  background:
+    radial-gradient(circle at 35% 74%, rgba(79, 143, 220, 0.07), transparent 28%),
+    radial-gradient(circle at 74% 83%, rgba(241, 167, 189, 0.07), transparent 24%);
   pointer-events: none;
 }
 
 .fixed-bg-glow {
-  position: fixed;
-  top: 12%;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 380px;
-  height: 380px;
-  z-index: 2;
-  background: radial-gradient(
-    circle,
-    rgba(220, 38, 38, 0.14) 0%,
-    rgba(220, 38, 38, 0.05) 40%,
-    transparent 70%
-  );
-  border-radius: 50%;
-  pointer-events: none;
+  display: none;
 }
 
 /* ========== 布局骨架 ========== */
@@ -339,7 +306,7 @@ onUnmounted(() => {
   left: 0;
   right: 0;
   z-index: 100;
-  background: rgba(6, 9, 18, 0.6);
+  background: rgba(255, 253, 247, 0.82);
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
   border-bottom: 1px solid transparent;
@@ -351,13 +318,13 @@ onUnmounted(() => {
 
 /* 滚动后加深背景与边框 */
 .navbar.scrolled {
-  background: rgba(6, 9, 18, 0.85);
+  background: rgba(255, 253, 247, 0.96);
   border-bottom-color: var(--border);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 4px 20px rgba(67, 93, 118, 0.12);
 }
 
 .navbar-inner {
-  max-width: 1200px;
+  max-width: 1240px;
   margin: 0 auto;
   height: 72px;
   padding: 0 32px;
@@ -383,11 +350,32 @@ onUnmounted(() => {
   border-radius: 50%;
   object-fit: cover;
   box-shadow:
-    0 0 0 1px rgba(220, 38, 38, 0.3),
-    0 0 16px rgba(220, 38, 38, 0.35);
+    0 0 0 2px #ffffff,
+    3px 4px 0 #f2c84b;
   transition:
     transform 0.3s var(--ease-spring),
     box-shadow 0.3s var(--ease-out);
+}
+
+.brand-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  line-height: 1.1;
+}
+
+.brand-copy small {
+  color: var(--text-tertiary);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+}
+
+.brand-copy strong {
+  color: var(--text-primary);
+  font-family: Georgia, 'Songti SC', serif;
+  font-size: 16px;
+  font-weight: 500;
 }
 
 /* 品牌悬浮：Logo 轻微旋转放大 */
@@ -433,7 +421,7 @@ onUnmounted(() => {
   transform: scaleX(0);
   transform-origin: center;
   transition: transform 0.3s var(--ease-spring);
-  box-shadow: 0 0 6px rgba(220, 38, 38, 0.5);
+  box-shadow: 0 0 6px rgba(79, 143, 220, 0.4);
 }
 
 .nav-link:hover {
@@ -464,7 +452,7 @@ onUnmounted(() => {
   gap: 8px;
   height: 40px;
   padding: 0 16px;
-  background: rgba(26, 32, 53, 0.6);
+  background: rgba(255, 255, 255, 0.82);
   border: 1px solid var(--border);
   border-radius: 20px;
   width: 220px;
@@ -478,8 +466,8 @@ onUnmounted(() => {
 /* 聚焦时：宽度扩展 + 主色描边 */
 .search-box:focus-within {
   border-color: var(--primary);
-  background: rgba(26, 32, 53, 0.9);
-  box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.12);
+  background: #ffffff;
+  box-shadow: 0 0 0 4px rgba(79, 143, 220, 0.14);
   width: 260px;
 }
 
@@ -511,7 +499,7 @@ onUnmounted(() => {
   height: 40px;
   color: var(--text-secondary);
   text-decoration: none;
-  background: rgba(26, 32, 53, 0.6);
+  background: rgba(255, 255, 255, 0.82);
   border: 1px solid var(--border);
   border-radius: 12px;
   font-size: 18px;
@@ -538,7 +526,7 @@ onUnmounted(() => {
   height: 40px;
   padding: 0;
   color: var(--text-secondary);
-  background: rgba(26, 32, 53, 0.6);
+  background: rgba(255, 255, 255, 0.82);
   border: 1px solid var(--border);
   border-radius: 12px;
   font-size: 18px;
@@ -599,7 +587,7 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   padding: 12px 20px 20px;
-  background: rgba(6, 9, 18, 0.98);
+  background: rgba(255, 253, 247, 0.98);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-bottom: 1px solid var(--border);
@@ -739,6 +727,9 @@ onUnmounted(() => {
 }
 
 @media (max-width: 768px) {
+  .brand-copy {
+    display: none;
+  }
   .navbar-inner {
     padding: 0 16px;
     height: 64px;

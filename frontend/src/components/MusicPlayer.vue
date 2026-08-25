@@ -358,13 +358,13 @@ onUnmounted(() => {
   align-items: center;
   gap: 16px;
   padding: 10px 24px;
-  background: linear-gradient(180deg, rgba(10, 5, 8, 0.88), rgba(15, 8, 12, 0.96));
-  border: 1px solid rgba(220, 38, 38, 0.2);
+  background: linear-gradient(180deg, rgba(255, 253, 247, 0.94), rgba(234, 246, 255, 0.96));
+  border: 1px solid rgba(79, 143, 220, 0.24);
   border-radius: 40px;
   backdrop-filter: blur(16px);
   box-shadow:
-    0 4px 24px rgba(0, 0, 0, 0.5),
-    0 0 20px rgba(220, 38, 38, 0.1);
+    0 4px 24px rgba(67, 93, 118, 0.18),
+    0 0 20px rgba(79, 143, 220, 0.08);
   transition: all 0.3s ease;
   animation: player-slide-up 0.5s ease-out;
 }
@@ -410,15 +410,15 @@ onUnmounted(() => {
   height: 30px;
   border: none;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.08);
-  color: #e2e8f0;
+  background: rgba(79, 143, 220, 0.10);
+  color: #3f5876;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .ctrl-btn:hover:not(:disabled) {
-  background: rgba(220, 38, 38, 0.3);
-  color: #fff;
+  background: rgba(79, 143, 220, 0.22);
+  color: #29334a;
   transform: scale(1.1);
 }
 
@@ -431,20 +431,20 @@ onUnmounted(() => {
 .play-btn {
   width: 36px;
   height: 36px;
-  background: linear-gradient(135deg, #dc2626, #991b1b) !important;
+  background: linear-gradient(135deg, #78c8a0, #4f8fdc) !important;
   color: #fff !important;
-  box-shadow: 0 0 10px rgba(220, 38, 38, 0.4);
+  box-shadow: 0 0 10px rgba(79, 143, 220, 0.3);
 }
 
 .play-btn:hover:not(:disabled) {
-  box-shadow: 0 0 16px rgba(220, 38, 38, 0.6);
+  box-shadow: 0 0 16px rgba(79, 143, 220, 0.42);
 }
 
 /* 收起状态的迷你播放按钮 */
 .mini-play {
   width: 44px;
   height: 44px;
-  box-shadow: 0 4px 16px rgba(220, 38, 38, 0.4);
+  box-shadow: 0 4px 16px rgba(79, 143, 220, 0.28);
 }
 
 /* ========== 音乐信息区 ========== */
@@ -468,14 +468,14 @@ onUnmounted(() => {
 .player-title {
   font-size: 13px;
   font-weight: 500;
-  color: #fff;
+  color: #29334a;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .player-artist {
   font-size: 11px;
-  color: #94a3b8;
+  color: #7a8799;
   flex-shrink: 0;
 }
 
@@ -490,7 +490,7 @@ onUnmounted(() => {
 
 .audio-bars span {
   width: 3px;
-  background: #f87171;
+  background: #f2c84b;
   border-radius: 2px;
   animation: audio-bar 0.8s ease-in-out infinite;
 }
@@ -528,7 +528,7 @@ onUnmounted(() => {
 .progress-bar {
   flex: 1;
   height: 4px;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(79, 143, 220, 0.13);
   border-radius: 2px;
   cursor: pointer;
   overflow: hidden;
@@ -541,14 +541,14 @@ onUnmounted(() => {
 
 .progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, #dc2626, #f87171);
+  background: linear-gradient(90deg, #4f8fdc, #78c8a0);
   border-radius: 2px;
   transition: width 0.1s linear;
 }
 
 .progress-time {
   font-size: 11px;
-  color: #64748b;
+  color: #7a8799;
   min-width: 36px;
   text-align: center;
   flex-shrink: 0;

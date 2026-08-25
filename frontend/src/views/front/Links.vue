@@ -7,6 +7,7 @@
         <h1 class="hero-title animate-fade-in-up">友情链接</h1>
         <p class="hero-tagline animate-fade-in-up delay-100">交换链接，共同成长</p>
       </div>
+      <GGBondSticker mood="happyWave" size="lg" floating caption="交个朋友吧" :style="{ top: '14px', right: 'clamp(22px, 12vw, 190px)' }" />
     </section>
 
     <!-- ============ 友链列表 ============ -->
@@ -91,6 +92,7 @@
 import { ref, onMounted, onUnmounted, nextTick } from 'vue';
 import { getLinks, applyLink } from '../../api/links';
 import AsyncData from '../../components/common/AsyncData.vue';
+import GGBondSticker from '../../components/common/GGBondSticker.vue';
 
 /** 根元素引用，用于 IntersectionObserver 初始化 */
 const rootRef = ref(null);
