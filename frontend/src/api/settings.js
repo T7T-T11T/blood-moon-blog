@@ -94,5 +94,10 @@ export function getSetting(key) {
  * @returns {Promise} 更新结果
  */
 export function updateSettings(settings) {
-  return request.put('/settings', { settings });
+  return request.put('/settings', { settings }).then((res) => {
+    // 后台保存后立刻同步前台共享状态，单页跳转回首页也能看到最新资料。
+    applySettingsToState(settings);
+    clearSettingsCache();
+    return res;
+  });
 }

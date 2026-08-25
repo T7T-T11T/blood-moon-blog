@@ -29,28 +29,15 @@ async function silentResolveUser(req) {
 }
 
 /**
- * GET /api/comments/stats - 获取评论统计数据
- */
-exports.getStats = async (req, res) => {
-  try {
-    const stats = await commentService.getCommentStats();
-    res.json({ code: 200, data: stats });
-  } catch (e) {
-    console.error('获取评论统计失败：', e);
-    res.status(500).json({ code: 500, message: '服务器错误' });
-  }
-};
-
-/**
  * GET /api/comments - 获取所有评论列表（管理端）
  */
 exports.getComments = async (req, res) => {
   try {
-    const { status, article_id } = req.query;
+    const { article_id } = req.query;
     const page = parseInt(req.query.page) || 1;
     const pageSize = parseInt(req.query.page_size) || 10;
 
-    const result = await commentService.getCommentsList({ status, article_id, page, pageSize });
+    const result = await commentService.getCommentsList({ article_id, page, pageSize });
     res.json({ code: 200, data: result, message: '获取评论列表成功' });
   } catch (e) {
     console.error('获取评论列表失败：', e);
@@ -123,33 +110,9 @@ exports.createComment = async (req, res) => {
       ipAddress
     });
 
-    res.json({ code: 200, data: { id: newId }, message: '评论成功，等待审核' });
+    res.json({ code: 200, data: { id: newId }, message: '评论发表成功' });
   } catch (e) {
     console.error('发表评论失败：', e);
-    res.status(500).json({ code: 500, message: '服务器错误' });
-  }
-};
-
-/**
- * PUT /api/comments/:id/status - 更新评论状态
- */
-exports.updateStatus = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { status } = req.body;
-
-    const validStatuses = ['待审核', '已通过', '已拒绝'];
-    if (!status || !validStatuses.includes(status)) {
-      return res.status(400).json({ code: 400, message: '状态值不合法（可选：待审核/已通过/已拒绝）' });
-    }
-
-    const updated = await commentService.updateCommentStatus({ id, status });
-    if (!updated) {
-      return res.status(404).json({ code: 404, message: '评论不存在' });
-    }
-    res.json({ code: 200, message: '状态更新成功' });
-  } catch (e) {
-    console.error('更新评论状态失败：', e);
     res.status(500).json({ code: 500, message: '服务器错误' });
   }
 };

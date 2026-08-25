@@ -533,7 +533,7 @@ const renderedContent = computed(() => {
 
   // DOMPurify 消毒：配置允许 data: URL、video 标签、占位符 URL
   let html = DOMPurify.sanitize(rawHtml, {
-    ADD_TAGS: ['video', 'source'],
+    ADD_TAGS: ['audio', 'video', 'source'],
     ADD_ATTR: ['controls', 'autoplay', 'loop', 'muted', 'playsinline', 'poster', 'preload'],
     ALLOWED_URI_REGEXP:
       /^(?:(?:f|ht)tps?|mailto|tel|callto|sms|cid|xmpp|data):|[^a-z]|[a-z+.-]+(?:[^a-z+.-:]|$)/i

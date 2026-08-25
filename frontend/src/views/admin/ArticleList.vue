@@ -278,7 +278,10 @@ async function loadArticles() {
 
 /** 跳转到新增文章页 */
 function goToAdd() {
-  router.push('/admin/articles/add');
+  router.push({ name: 'ArticleAdd' }).catch((error) => {
+    console.error('打开写文章页面失败：', error);
+    ElMessage.error('写文章页面打开失败，请刷新后重试');
+  });
 }
 
 /**

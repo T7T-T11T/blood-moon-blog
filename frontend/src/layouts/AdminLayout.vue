@@ -38,17 +38,6 @@
           >
             <el-icon><component :is="item.icon" /></el-icon>
             <span>{{ item.label }}</span>
-            <!-- 评论管理：显示待审核数量徽章（有待审核或加载中时显示） -->
-            <span
-              v-if="item.label === '评论管理' && (pendingComments > 0 || statsLoading)"
-              class="nav-badge"
-              :class="{ 'is-loading': statsLoading && pendingComments === 0 }"
-            >
-              <span v-if="pendingComments > 0">{{
-                pendingComments > 99 ? '99+' : pendingComments
-              }}</span>
-              <span v-else>!</span>
-            </span>
           </router-link>
         </div>
 
@@ -142,10 +131,9 @@
  *       支持移动端侧边栏折叠展开，路由切换带淡入淡出过渡动画。
  * 依赖：useUserStore（用户信息）、vue-router（路由导航）
  */
-import { ref, markRaw, onMounted, onUnmounted } from 'vue';
+import { ref, markRaw } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useUserStore } from '../stores/user';
-import { getCommentStats } from '../api/comments';
 import GGBondSticker from '../components/common/GGBondSticker.vue';
 import {
   Monitor,
@@ -173,148 +161,6 @@ const route = useRoute();
 
 /** 移动端侧边栏是否展开 */
 const sidebarOpen = ref(false);
-
-/** 待审核评论数量 */
-const pendingComments = ref(0);
-
-/** 评论总数（含各状态） */
-const totalComments = ref(0);
-
-/** 统计加载中状态 */
-const statsLoading = ref(false);
-
-/** 定时刷新定时器ID */
-let statsTimer = null;
-
-/** 自动刷新是否已暂停（因限流等原因） */
-let autoRefreshPaused = false;
-
-/** 上次待审核数量（用于检测变化并弹窗通知） */
-let lastPendingCount = -1;
-
-/**
- * 获取评论统计数据
- * 立即获取一次，之后每15秒自动刷新
- * 遇到 429 限流时自动停止定时器，避免持续报错
- */
-async function fetchCommentStats() {
-  statsLoading.value = true;
-  try {
-    const res = await getCommentStats();
-    autoRefreshPaused = false;
-
-    if (res.code === 200 && res.data) {
-      const newPending = res.data.pending || 0;
-      const newTotal =
-        (res.data.pending || 0) + (res.data.approved || 0) + (res.data.rejected || 0);
-
-      pendingComments.value = newPending;
-      totalComments.value = newTotal;
-
-      // 首次加载：如果有待审核评论，显示欢迎通知
-      if (lastPendingCount === -1 && newPending > 0) {
-        ElNotification({
-          title: '📬 评论待审核',
-          message: `当前有 ${newPending} 条评论等待审核，请到评论管理处理`,
-          type: 'warning',
-          duration: 6000,
-          onClick: () => {
-            router.push('/admin/comments');
-          }
-        });
-      } else if (newPending > lastPendingCount && lastPendingCount >= 0) {
-        // 新增评论时弹窗通知
-        const diff = newPending - lastPendingCount;
-        ElNotification({
-          title: '📬 新评论待审核',
-          message: `有 ${diff} 条新评论等待审核，请及时处理`,
-          type: 'warning',
-          duration: 5000,
-          onClick: () => {
-            router.push('/admin/comments');
-          }
-        });
-      }
-      lastPendingCount = newPending;
-    } else {
-      console.warn('[评论统计] 接口返回异常:', res?.message || '未知错误');
-    }
-  } catch (e) {
-    // 429 限流：停止自动刷新，提示用户
-    if (e?.response?.status === 429) {
-      if (!autoRefreshPaused) {
-        autoRefreshPaused = true;
-        stopStatsTimer();
-        ElNotification({
-          title: '⏱️ 自动刷新已暂停',
-          message: '评论统计请求过于频繁，已自动暂停轮询。点击刷新按钮可手动刷新。',
-          type: 'info',
-          duration: 4000
-        });
-      }
-    } else {
-      console.error('[评论统计] 获取失败:', e?.message);
-    }
-  } finally {
-    statsLoading.value = false;
-  }
-}
-
-/**
- * 停止评论统计定时刷新
- */
-function stopStatsTimer() {
-  if (statsTimer) {
-    clearInterval(statsTimer);
-    statsTimer = null;
-  }
-}
-
-/**
- * 启动评论统计定时刷新
- * 每 30 秒自动获取一次，仅在页面可见时轮询
- */
-function startStatsTimer() {
-  stopStatsTimer();
-  statsTimer = setInterval(() => {
-    if (!autoRefreshPaused && document.visibilityState === 'visible') {
-      fetchCommentStats();
-    }
-  }, 30000);
-}
-
-/**
- * 页面可见性变化回调：恢复可见时立即刷新一次
- */
-function handleVisibilityChange() {
-  if (document.visibilityState === 'visible' && !autoRefreshPaused) {
-    fetchCommentStats();
-  }
-}
-
-/**
- * 手动刷新评论统计
- * 同时重启自动刷新定时器（如果因限流被暂停）
- */
-function refreshStats() {
-  if (autoRefreshPaused) {
-    autoRefreshPaused = false;
-    startStatsTimer();
-  }
-  fetchCommentStats();
-  ElMessage.success('正在刷新评论统计...');
-}
-
-onMounted(() => {
-  fetchCommentStats();
-  startStatsTimer();
-  document.addEventListener('visibilitychange', handleVisibilityChange);
-});
-
-onUnmounted(() => {
-  stopStatsTimer();
-  document.removeEventListener('visibilitychange', handleVisibilityChange);
-});
 
 /** 内容管理菜单项（markRaw 避免图标组件被转为响应式） */
 const contentMenu = [
@@ -489,14 +335,14 @@ async function handleCommand(command) {
 }
 
 .nav-item:hover {
-  color: #f1f5f9;
-  background: rgba(220, 38, 38, 0.08);
+  color: #3267a8;
+  background: rgba(79, 143, 220, 0.1);
 }
 
 .nav-item.active {
-  color: #fff;
-  background: linear-gradient(135deg, rgba(220, 38, 38, 0.25), rgba(153, 27, 27, 0.15));
-  box-shadow: 0 4px 14px rgba(220, 38, 38, 0.2);
+  color: #29334a;
+  background: linear-gradient(135deg, rgba(120, 200, 160, 0.26), rgba(255, 225, 122, 0.3));
+  box-shadow: 0 4px 12px rgba(79, 143, 220, 0.1);
 }
 
 /* 激活态左侧指示条 */
@@ -504,42 +350,9 @@ async function handleCommand(command) {
   content: '';
   width: 3px;
   height: 16px;
-  background: linear-gradient(180deg, var(--admin-primary), #f87171);
+  background: linear-gradient(180deg, var(--admin-primary), #78c8a0);
   border-radius: 2px;
   margin-right: -6px;
-}
-
-/* 待审核评论徽章 */
-.nav-badge {
-  margin-left: auto;
-  min-width: 18px;
-  height: 18px;
-  padding: 0 5px;
-  background: linear-gradient(135deg, #dc2626, #f87171);
-  color: #fff;
-  font-size: 11px;
-  font-weight: 700;
-  line-height: 18px;
-  text-align: center;
-  border-radius: 9px;
-  box-shadow: 0 0 8px rgba(220, 38, 38, 0.4);
-  transition: all 0.3s var(--ease-out);
-}
-
-/* 加载中状态：脉冲动画 */
-.nav-badge.is-loading {
-  background: linear-gradient(135deg, #64748b, #94a3b8);
-  animation: badge-pulse 1.5s ease-in-out infinite;
-}
-
-@keyframes badge-pulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.5;
-  }
 }
 
 /* 侧边栏刷新按钮 */
@@ -558,7 +371,7 @@ async function handleCommand(command) {
 
 .sidebar-refresh:hover {
   color: var(--primary-light);
-  background: rgba(220, 38, 38, 0.1);
+  background: rgba(79, 143, 220, 0.1);
 }
 
 .sidebar-refresh .rotating {
@@ -590,7 +403,7 @@ async function handleCommand(command) {
 
 .back-to-site:hover {
   color: var(--admin-primary-light);
-  background: rgba(220, 38, 38, 0.1);
+  background: rgba(79, 143, 220, 0.1);
 }
 
 /* ========== 右侧主区域 ========== */

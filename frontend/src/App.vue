@@ -55,7 +55,7 @@ const jsonLd = computed(() => {
   const siteDescription =
     settingsState.siteDescription || '一个记录生活、成长与日常灵感的个人博客';
   const siteUrl = settingsState.siteUrl || window.location.origin;
-  const authorName = settingsState.siteAuthor || '寿冬与秋';
+  const authorName = settingsState.authorName || '寿冬与秋';
 
   return JSON.stringify({
     '@context': 'https://schema.org',

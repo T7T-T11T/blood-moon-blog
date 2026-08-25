@@ -5,13 +5,11 @@
  *
  * 接口列表：
  * 【公开接口】（无需登录）
- *   GET    /api/comments/:articleId        - 获取文章的已通过评论（返回树形结构）
- *   POST   /api/comments/:articleId        - 发表评论（status 默认"待审核"）
+ *   GET    /api/comments/:articleId        - 获取文章评论（返回树形结构）
+ *   POST   /api/comments/:articleId        - 发表评论（直接展示）
  *
  * 【管理接口】（需要登录）
- *   GET    /api/comments/stats             - 获取评论统计（待审核数量）
- *   GET    /api/comments                   - 获取所有评论列表（支持分页与筛选）
- *   PUT    /api/comments/:id/status        - 更新评论状态（待审核/已通过/已拒绝）
+ *   GET    /api/comments                   - 获取所有评论列表（支持分页）
  *   DELETE /api/comments/:id               - 删除评论
  */
 
@@ -36,7 +34,6 @@ const commentPostLimiter = rateLimit({
 
 // ==================== 管理接口（必须在公开参数路由之前注册） ====================
 
-router.get('/stats', commentsController.getStats);
 router.get('/', authMiddleware, commentsController.getComments);
 
 // ==================== 公开接口 ====================
@@ -46,7 +43,6 @@ router.post('/:articleId', commentPostLimiter, commentsController.createComment)
 
 // ==================== 管理接口（参数路由） ====================
 
-router.put('/:id/status', authMiddleware, logAction('审核评论', { resource_type: 'comment' }), commentsController.updateStatus);
 router.delete('/:id', authMiddleware, logAction('删除评论', { resource_type: 'comment' }), commentsController.deleteComment);
 
 module.exports = router;

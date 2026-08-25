@@ -53,6 +53,18 @@
                 <span class="contact-arrow" aria-hidden="true">→</span>
               </a>
             </li>
+            <li v-if="authorQQ" class="contact-item">
+              <div class="contact-link">
+                <span class="contact-label">QQ</span>
+                <span class="contact-value">{{ authorQQ }}</span>
+              </div>
+            </li>
+            <li v-if="authorWechat" class="contact-item">
+              <div class="contact-link">
+                <span class="contact-label">微信</span>
+                <span class="contact-value">{{ authorWechat }}</span>
+              </div>
+            </li>
           </ul>
         </section>
       </div>
@@ -82,14 +94,7 @@ let observer = null;
 /** 安全超时定时器，确保内容在数据加载后立即可见 */
 let revealTimeout = null;
 
-const skills = [
-  '生活碎片',
-  '旅行散步',
-  '读书观影',
-  '日常灵感',
-  '认真感受',
-  '慢慢成长'
-];
+const fallbackSkills = ['生活碎片', '旅行散步', '读书观影', '日常灵感', '认真感受', '慢慢成长'];
 
 /**
  * 从设置对象中按优先级获取值
@@ -110,6 +115,13 @@ const siteDescription = computed(
 );
 const authorEmail = computed(() => pick('email', 'author_email'));
 const authorGithub = computed(() => pick('githubUrl', 'author_github'));
+const authorQQ = computed(() => pick('authorQq', 'author_qq'));
+const authorWechat = computed(() => pick('authorWechat', 'author_wechat'));
+const skills = computed(() => {
+  const raw = pick('authorSkills', 'author_skills');
+  const list = raw.split(/[,，\n]/).map((item) => item.trim()).filter(Boolean);
+  return list.length ? list : fallbackSkills;
+});
 
 const githubUrl = computed(() => {
   const gh = authorGithub.value;
@@ -128,7 +140,7 @@ const githubHandle = computed(() => {
   return gh;
 });
 
-const hasContact = computed(() => Boolean(githubUrl.value || authorEmail.value));
+const hasContact = computed(() => Boolean(githubUrl.value || authorEmail.value || authorQQ.value || authorWechat.value));
 
 /**
  * 加载网站设置

@@ -4,7 +4,7 @@
   Props: articleId - 文章 ID
 -->
 <template>
-  <section class="comment-section reveal">
+  <section class="comment-section">
     <div class="comment-header-row">
       <h2 class="section-title">
         评论
@@ -64,56 +64,12 @@
 
     <!-- 评论列表 -->
     <div v-if="comments.length > 0" class="comment-list">
-      <div v-for="comment in sortedComments" :key="comment.id" class="comment-item">
-        <div class="comment-main">
-          <div class="comment-avatar">
-            <img
-              v-if="comment.avatar_url"
-              :src="comment.avatar_url"
-              :alt="comment.nickname"
-              class="avatar-img"
-            />
-            <div v-else class="avatar-placeholder">
-              {{ comment.nickname.charAt(0).toUpperCase() }}
-            </div>
-          </div>
-          <div class="comment-body">
-            <div class="comment-header">
-              <span class="comment-nickname">{{ comment.nickname }}</span>
-              <span class="comment-time">{{ formatDate(comment.created_at) }}</span>
-            </div>
-            <div class="comment-content">{{ comment.content }}</div>
-            <button class="reply-btn" @click="setReplyTo(comment)">回复</button>
-          </div>
-        </div>
-
-        <!-- 子评论：递归渲染 children -->
-        <div v-if="comment.children && comment.children.length > 0" class="comment-children">
-          <div v-for="child in comment.children" :key="child.id" class="comment-item child">
-            <div class="comment-main">
-              <div class="comment-avatar">
-                <img
-                  v-if="child.avatar_url"
-                  :src="child.avatar_url"
-                  :alt="child.nickname"
-                  class="avatar-img"
-                />
-                <div v-else class="avatar-placeholder">
-                  {{ child.nickname.charAt(0).toUpperCase() }}
-                </div>
-              </div>
-              <div class="comment-body">
-                <div class="comment-header">
-                  <span class="comment-nickname">{{ child.nickname }}</span>
-                  <span class="comment-time">{{ formatDate(child.created_at) }}</span>
-                </div>
-                <div class="comment-content">{{ child.content }}</div>
-                <button class="reply-btn" @click="setReplyTo(child)">回复</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <CommentNode
+        v-for="comment in sortedComments"
+        :key="comment.id"
+        :comment="comment"
+        @reply="setReplyTo"
+      />
     </div>
 
     <!-- 评论空状态 -->
@@ -125,9 +81,9 @@
 
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue';
-import { formatDate } from '@/utils/format';
 import { getComments, postComment } from '../../api/comments';
 import { useUserStore } from '@/stores/user';
+import CommentNode from './CommentNode.vue';
 
 const props = defineProps({
   articleId: { type: [String, Number], required: true }
@@ -163,14 +119,11 @@ onMounted(() => {
  * @returns {number}
  */
 const commentCount = computed(() => {
-  let count = 0;
-  for (const comment of comments.value) {
-    count += 1;
-    if (comment.children && Array.isArray(comment.children)) {
-      count += comment.children.length;
-    }
-  }
-  return count;
+  const countBranch = (items) => items.reduce(
+    (count, item) => count + 1 + countBranch(item.children || []),
+    0
+  );
+  return countBranch(comments.value);
 });
 
 /**
@@ -186,11 +139,33 @@ const canSubmit = computed(() => {
 async function loadComments() {
   try {
     const { data } = await getComments(props.articleId);
-    comments.value = Array.isArray(data) ? data : (data?.list ?? []);
+    const list = Array.isArray(data) ? data : (data?.list ?? []);
+    comments.value = buildCommentTree(list);
   } catch (e) {
     console.error('加载评论失败:', e);
     comments.value = [];
   }
+}
+
+/** 将接口的扁平评论列表恢复成树，兼容旧、新两套评论接口。 */
+function buildCommentTree(list) {
+  const map = new Map(list.map((comment) => [String(comment.id), { ...comment, children: [] }]));
+  const roots = [];
+  for (const comment of map.values()) {
+    const parent = comment.parent_id ? map.get(String(comment.parent_id)) : null;
+    if (parent) parent.children.push(comment);
+    else roots.push(comment);
+  }
+  return roots;
+}
+
+function findComment(items, id) {
+  for (const item of items) {
+    if (String(item.id) === String(id)) return item;
+    const found = findComment(item.children || [], id);
+    if (found) return found;
+  }
+  return null;
 }
 
 /** 设置回复目标 */
@@ -248,14 +223,6 @@ async function submitComment() {
     }
     const res = await postComment(props.articleId, payload);
 
-    // 开启审核时：不乐观插入，提示等待审核
-    if (res?.data?.moderated) {
-      ElMessage.success('评论已提交，审核通过后展示');
-      commentForm.value.nickname = '';
-      commentForm.value.content = '';
-      replyTo.value = null;
-      return;
-    }
     ElMessage.success('评论发表成功');
 
     /** 乐观更新：提交成功后立即将新评论插入本地列表，提升访客体验 */
@@ -272,7 +239,7 @@ async function submitComment() {
 
     if (replyTo.value) {
       // 回复评论：插入到父评论的 children 数组中
-      const parent = comments.value.find(c => c.id === replyTo.value.id);
+      const parent = findComment(comments.value, replyTo.value.id);
       if (parent) {
         if (!parent.children) parent.children = [];
         parent.children.push(newComment);
@@ -472,102 +439,6 @@ watch(
   gap: 24px;
 }
 
-.comment-item {
-  position: relative;
-}
-
-.comment-main {
-  display: flex;
-  gap: 14px;
-}
-
-.comment-avatar {
-  flex-shrink: 0;
-  width: 40px;
-  height: 40px;
-}
-
-.avatar-img {
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  object-fit: cover;
-}
-
-.avatar-placeholder {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
-  color: #fff;
-  font-size: 16px;
-  font-weight: 600;
-  border-radius: 50%;
-}
-
-.comment-body {
-  flex: 1;
-  min-width: 0;
-}
-
-.comment-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 6px;
-}
-
-.comment-nickname {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.comment-time {
-  font-size: 12px;
-  color: var(--text-tertiary);
-}
-
-.comment-content {
-  margin-bottom: 8px;
-  font-size: 14px;
-  line-height: 1.7;
-  color: var(--text-secondary);
-  word-break: break-word;
-}
-
-.reply-btn {
-  background: none;
-  border: none;
-  color: var(--text-tertiary);
-  font-size: 13px;
-  cursor: pointer;
-  padding: 0;
-  transition: color 0.2s var(--ease-out);
-}
-
-.reply-btn:hover {
-  color: var(--primary);
-}
-
-/* 子评论 */
-.comment-children {
-  margin-top: 16px;
-  margin-left: 26px;
-  padding-left: 20px;
-  border-left: 2px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.comment-item.child .comment-avatar {
-  width: 32px;
-  height: 32px;
-}
-
 /* 评论空状态 */
 .comment-empty {
   text-align: center;
@@ -580,26 +451,8 @@ watch(
   color: var(--text-tertiary);
 }
 
-/* ========== 滚动揭示动画 ========== */
-.reveal {
-  opacity: 0;
-  transform: translateY(24px);
-  transition:
-    opacity 0.7s var(--ease-out),
-    transform 0.7s var(--ease-out);
-}
-
-.reveal.visible {
-  opacity: 1;
-  transform: translateY(0);
-}
-
 /* ========== 响应式 ========== */
 @media (max-width: 768px) {
-  .comment-children {
-    margin-left: 12px;
-    padding-left: 12px;
-  }
 }
 
 /* ========== 评论排序 ========== */

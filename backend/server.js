@@ -26,7 +26,7 @@
  * - /api/articles    博客文章管理
  * - /api/categories  分类管理
  * - /api/tags        标签管理
- * - /api/comments    评论管理（审核/删除）
+ * - /api/comments    评论管理（查看/删除）
  * - /api/links       友链管理（增删改查）
  * - /api/settings    网站设置管理（批量更新）
  * - /api/dashboard   仪表盘统计

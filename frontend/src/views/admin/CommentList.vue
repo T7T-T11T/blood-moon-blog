@@ -7,18 +7,6 @@
         <span class="count-badge">共 {{ total }} 条</span>
       </div>
       <div class="header-right">
-        <!-- 状态筛选标签 -->
-        <div class="filter-tabs">
-          <div
-            v-for="tab in statusTabs"
-            :key="tab.value"
-            class="filter-tab"
-            :class="{ active: filterStatus === tab.value }"
-            @click="filterByStatus(tab.value)"
-          >
-            {{ tab.label }}
-          </div>
-        </div>
         <!-- 导出按钮 -->
         <el-button @click="handleExportComments">
           <el-icon><Download /></el-icon>
@@ -56,13 +44,6 @@
           </template>
         </el-table-column>
 
-        <!-- 状态列 -->
-        <el-table-column label="状态" width="100">
-          <template #default="{ row }">
-            <el-tag :type="getStatusTagType(row.status)" effect="light">{{ row.status }}</el-tag>
-          </template>
-        </el-table-column>
-
         <!-- 时间列 -->
         <el-table-column label="时间" width="160">
           <template #default="{ row }">
@@ -71,28 +52,8 @@
         </el-table-column>
 
         <!-- 操作列 -->
-        <el-table-column label="操作" width="200" fixed="right">
+        <el-table-column label="操作" width="110" fixed="right">
           <template #default="{ row }">
-            <!-- 仅未通过状态显示通过按钮 -->
-            <el-button
-              v-if="row.status !== '已通过'"
-              type="success"
-              size="small"
-              text
-              @click="handleUpdateStatus(row, '已通过')"
-            >
-              通过
-            </el-button>
-            <!-- 仅未拒绝状态显示拒绝按钮 -->
-            <el-button
-              v-if="row.status !== '已拒绝'"
-              type="warning"
-              size="small"
-              text
-              @click="handleUpdateStatus(row, '已拒绝')"
-            >
-              拒绝
-            </el-button>
             <el-button type="danger" size="small" text @click="handleDelete(row)">删除</el-button>
           </template>
         </el-table-column>
@@ -125,12 +86,12 @@
 /**
  * @file CommentList.vue
  * @description 评论管理页面（管理端）
- * 作用：展示所有评论（含待审核），支持按状态筛选、分页，提供通过、拒绝、删除审核操作。
- * 依赖 API：getCommentList / updateCommentStatus / deleteComment
+ * 作用：展示所有评论，支持查看、导出、分页和删除。
+ * 依赖 API：getCommentList / deleteComment
  */
 import { ref, onMounted } from 'vue';
 import { ChatDotRound, Download } from '@element-plus/icons-vue';
-import { getCommentList, updateCommentStatus, deleteComment } from '@/api/comments';
+import { getCommentList, deleteComment } from '@/api/comments';
 
 /** 评论列表数据 */
 const comments = ref([]);
@@ -146,29 +107,6 @@ const pageSize = ref(10);
 
 /** 总条数 */
 const total = ref(0);
-
-/** 状态筛选值（空字符串表示全部） */
-const filterStatus = ref('');
-
-/** 状态筛选标签选项 */
-const statusTabs = [
-  { label: '全部', value: '' },
-  { label: '待审核', value: '待审核' },
-  { label: '已通过', value: '已通过' },
-  { label: '已拒绝', value: '已拒绝' }
-];
-
-/**
- * 根据评论状态返回对应的 ElTag 类型
- * @param {string} status - 评论状态（待审核/已通过/已拒绝）
- * @returns {string} ElTag 类型
- */
-function getStatusTagType(status) {
-  if (status === '已通过') return 'success';
-  if (status === '已拒绝') return 'danger';
-  if (status === '待审核') return 'warning';
-  return 'info';
-}
 
 /**
  * 格式化日期为 yyyy-MM-dd HH:mm
@@ -186,16 +124,6 @@ function formatDate(dateStr) {
   });
 }
 
-/**
- * 按状态筛选评论
- * @param {string} status - 状态值（空字符串表示全部）
- */
-function filterByStatus(status) {
-  filterStatus.value = status;
-  page.value = 1;
-  loadComments();
-}
-
 /** 每页数量变化时重置页码 */
 function handleSizeChange() {
   page.value = 1;
@@ -209,9 +137,7 @@ function handleSizeChange() {
 async function loadComments() {
   loading.value = true;
   try {
-    // 组装查询参数：仅携带非空条件
     const params = { page: page.value, page_size: pageSize.value };
-    if (filterStatus.value) params.status = filterStatus.value;
 
     const res = await getCommentList(params);
     if (res.code === 200) {
@@ -233,21 +159,6 @@ async function loadComments() {
     }
   } finally {
     loading.value = false;
-  }
-}
-
-/**
- * 更新评论状态（通过/拒绝）
- * @param {Object} comment - 当前评论对象
- * @param {string} status - 目标状态（已通过/已拒绝）
- */
-async function handleUpdateStatus(comment, status) {
-  try {
-    await updateCommentStatus(comment.id, status);
-    ElMessage.success(`已${status === '已通过' ? '通过' : '拒绝'}该评论`);
-    loadComments();
-  } catch (e) {
-    console.error('更新评论状态失败:', e);
   }
 }
 
@@ -288,10 +199,7 @@ const apiBase = import.meta.env.VITE_API_BASE_URL || '/api';
 async function handleExportComments() {
   try {
     loading.value = true;
-    const params = {};
-    if (filterStatus.value) params.status = filterStatus.value;
-
-    const queryParams = new URLSearchParams(params);
+    const queryParams = new URLSearchParams();
     const res = await fetch(`${apiBase}/export/comments?${queryParams.toString()}`, {
       headers: {
         Authorization: `Bearer ${localStorage.getItem('token')}`
@@ -367,34 +275,6 @@ onMounted(() => {
   border-radius: 16px;
 }
 
-/* 筛选标签 */
-.filter-tabs {
-  display: flex;
-  gap: 6px;
-  background: var(--bg-card);
-  padding: 4px;
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-sm);
-}
-
-.filter-tab {
-  padding: 6px 14px;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  font-size: 13px;
-  color: var(--text-secondary);
-  transition: all 0.2s var(--ease-out);
-}
-
-.filter-tab:hover {
-  color: var(--primary);
-}
-
-.filter-tab.active {
-  background: var(--primary);
-  color: #fff;
-}
-
 /* ========== 表格容器 ========== */
 .table-container {
   background: var(--bg-card);
@@ -467,9 +347,5 @@ onMounted(() => {
     align-items: flex-start;
   }
 
-  .filter-tabs {
-    width: 100%;
-    overflow-x: auto;
-  }
 }
 </style>

@@ -4,11 +4,16 @@
       <!-- 左侧编辑主区域 -->
       <div class="editor-main">
         <el-form ref="formRef" :model="form" :rules="rules" class="article-form">
-          <!-- 标题输入（大号无边框） -->
+          <div class="writing-intro">
+            <span class="writing-kicker">LIFE NOTES</span>
+            <p>先记录，再整理。工具栏可切换所见即所得、即时渲染和分屏预览。</p>
+          </div>
+
+          <!-- 标题输入 -->
           <el-form-item prop="title" class="title-form-item">
             <el-input
               v-model="form.title"
-              placeholder="请输入文章标题"
+              placeholder="给这段记忆起个名字"
               class="title-input"
               size="large"
             />
@@ -20,17 +25,22 @@
               v-model="form.summary"
               type="textarea"
               :rows="2"
-              placeholder="请输入文章摘要（可选）"
+              placeholder="用一两句话写下这篇记录想留下什么（可选）"
               maxlength="200"
               show-word-limit
               class="summary-input"
             />
           </el-form-item>
 
+          <div class="editor-caption">
+            <span>正文</span>
+            <span>支持粘贴内容、图片压缩上传、音频和视频插入</span>
+          </div>
+
           <!-- 内容编辑器 -->
           <el-form-item prop="content" class="content-form-item">
             <div class="editor-wrapper">
-              <TipTapEditor ref="editorRef" v-model="form.content" placeholder="开始写作..." />
+              <VditorEditor ref="editorRef" v-model="form.content" placeholder="从这一刻开始记录……" />
             </div>
           </el-form-item>
         </el-form>
@@ -40,7 +50,7 @@
       <div class="settings-panel">
         <!-- 发布设置 -->
         <div class="panel-section">
-          <h3 class="panel-title">发布设置</h3>
+          <h3 class="panel-title">发布这篇记录</h3>
 
           <div class="setting-item">
             <span class="setting-label">状态</span>
@@ -49,7 +59,7 @@
               effect="dark"
               size="small"
             >
-              {{ form.status }}
+              {{ form.status === '已发布' ? '已公开' : '仅自己可见' }}
             </el-tag>
           </div>
 
@@ -89,21 +99,17 @@
 
         <!-- 操作按钮 -->
         <div class="panel-section">
-          <h3 class="panel-title">操作</h3>
+          <h3 class="panel-title">保存</h3>
           <div class="action-buttons">
-            <el-button type="success" size="large" :loading="saving" @click="handleSave">
-              <el-icon><Check /></el-icon>
-              <span>保存</span>
-            </el-button>
-            <el-button size="large" :loading="saving" @click="handleSaveAndPublish">
+            <el-button type="primary" size="large" :loading="saving" @click="handleSaveAndPublish">
               <el-icon><Promotion /></el-icon>
-              <span>保存并发布</span>
+              <span>{{ isNew ? '发布文章' : '保存并更新' }}</span>
             </el-button>
             <el-button size="large" :loading="saving" @click="handleDraft">
               <el-icon><Document /></el-icon>
-              <span>存为草稿</span>
+              <span>保存为草稿</span>
             </el-button>
-            <el-button size="large" :disabled="isNew" @click="handleCancel">取消</el-button>
+            <el-button text class="cancel-button" @click="handleCancel">放弃并返回</el-button>
           </div>
           <!-- 自动保存状态 -->
           <div v-if="lastSavedAt" class="auto-save-tip">
@@ -147,8 +153,8 @@
  */
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { Check, Promotion, Document, Clock, Warning } from '@element-plus/icons-vue';
-import TipTapEditor from '@/components/TipTapEditor.vue';
+import { Promotion, Document, Clock, Warning } from '@element-plus/icons-vue';
+import VditorEditor from '@/components/VditorEditor.vue';
 import { getAdminArticleDetail, addArticle, updateArticle } from '@/api/articles';
 import { getCategories } from '@/api/categories';
 import { getTags } from '@/api/tags';
@@ -607,11 +613,6 @@ async function saveArticle(status = '草稿') {
   }
 }
 
-/** 保存（保持当前状态） */
-function handleSave() {
-  saveArticle(form.value.status);
-}
-
 /** 保存并发布 */
 function handleSaveAndPublish() {
   saveArticle('已发布');
@@ -658,23 +659,42 @@ onUnmounted(() => {
   padding: 0;
   margin: -24px -32px;
   min-height: calc(100vh - 60px);
-  background: var(--bg-card);
+  background: linear-gradient(135deg, #f6f9f5 0%, #fffcf3 48%, #f2faf7 100%);
 }
 
 .edit-container {
   display: flex;
-  height: calc(100vh - 60px);
+  min-height: calc(100vh - 60px);
 }
 
 /* ========== 左侧编辑主区域 ========== */
 .editor-main {
   flex: 1;
-  padding: 32px 40px;
+  padding: 42px clamp(28px, 5vw, 76px) 60px;
   overflow-y: auto;
 }
 
 .article-form {
-  max-width: 860px;
+  max-width: 980px;
+}
+
+.writing-intro {
+  margin: 0 0 18px;
+}
+
+.writing-kicker {
+  display: block;
+  margin-bottom: 7px;
+  color: #579678;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+}
+
+.writing-intro p {
+  margin: 0;
+  color: #84938d;
+  font-size: 13px;
 }
 
 /* 标题输入：大号无边框 */
@@ -683,15 +703,18 @@ onUnmounted(() => {
 }
 
 .title-input :deep(.el-input__wrapper) {
-  box-shadow: none;
-  border: none;
-  padding: 0;
+  min-height: 58px;
+  padding: 0 18px;
+  border: 1px solid #dde7dc;
+  border-radius: 16px;
+  background: rgba(255, 255, 252, 0.78);
+  box-shadow: 0 8px 22px rgba(59, 92, 70, 0.04);
 }
 
 .title-input :deep(.el-input__inner) {
-  font-size: 30px;
+  font-size: clamp(24px, 2.5vw, 34px);
   font-weight: 700;
-  color: var(--text-primary);
+  color: #28403a;
   line-height: 1.3;
 }
 
@@ -702,13 +725,33 @@ onUnmounted(() => {
 
 /* 摘要输入 */
 .summary-form-item {
-  margin-bottom: 16px;
+  margin-bottom: 18px;
 }
 
 .summary-input :deep(.el-textarea__inner) {
+  min-height: 78px !important;
+  padding: 13px 16px;
+  border: 1px solid #e0e8df;
+  border-radius: 14px;
+  background: rgba(255, 255, 252, 0.7);
+  box-shadow: none;
   font-size: 14px;
   line-height: 1.6;
-  color: var(--text-secondary);
+  color: #566a62;
+}
+
+.editor-caption {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 0 2px 9px;
+  color: #82928a;
+  font-size: 12px;
+}
+
+.editor-caption span:first-child {
+  color: #4e7765;
+  font-weight: 700;
 }
 
 /* Markdown 编辑器外层包装 */
@@ -717,24 +760,20 @@ onUnmounted(() => {
 }
 
 .editor-wrapper {
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  overflow: hidden;
-  transition: border-color 0.2s var(--ease-out);
+  border-radius: 18px;
 }
 
 .editor-wrapper:focus-within {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.15);
+  box-shadow: 0 0 0 3px rgba(116, 185, 146, 0.15);
 }
 
 /* ========== 右侧设置面板 ========== */
 .settings-panel {
-  width: 280px;
+  width: 292px;
   flex-shrink: 0;
-  background: var(--bg-card);
-  border-left: 1px solid var(--border);
-  padding: 24px;
+  padding: 42px 28px;
+  background: rgba(255, 254, 250, 0.72);
+  border-left: 1px solid #e3eade;
   overflow-y: auto;
 }
 
@@ -744,8 +783,8 @@ onUnmounted(() => {
 
 .panel-title {
   font-size: 12px;
-  font-weight: 600;
-  color: var(--text-secondary);
+  font-weight: 800;
+  color: #577266;
   margin: 0 0 16px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -756,7 +795,7 @@ onUnmounted(() => {
   justify-content: space-between;
   align-items: center;
   padding: 8px 0;
-  border-bottom: 1px solid var(--border-light);
+  border-bottom: 1px solid #e7ede4;
   gap: 12px;
 }
 
@@ -771,12 +810,19 @@ onUnmounted(() => {
 
 .setting-label {
   font-size: 13px;
-  color: var(--text-secondary);
+  color: #70837a;
   white-space: nowrap;
 }
 
 .setting-select {
   width: 180px;
+}
+
+.setting-select :deep(.el-select__wrapper) {
+  min-height: 31px;
+  border-radius: 10px;
+  background: #f7fbf6;
+  box-shadow: 0 0 0 1px #dce7db inset;
 }
 
 .setting-item-block .setting-select {
@@ -789,7 +835,7 @@ onUnmounted(() => {
   justify-content: space-between;
   align-items: center;
   padding: 8px 0;
-  border-bottom: 1px solid var(--border-light);
+  border-bottom: 1px solid #e7ede4;
 }
 
 .info-item:last-child {
@@ -798,12 +844,12 @@ onUnmounted(() => {
 
 .info-label {
   font-size: 13px;
-  color: var(--text-secondary);
+  color: #71837a;
 }
 
 .info-value {
   font-size: 13px;
-  color: var(--text-primary);
+  color: #435850;
   font-weight: 500;
 }
 
@@ -816,7 +862,15 @@ onUnmounted(() => {
 
 .action-buttons .el-button {
   width: 100%;
-  justify-content: flex-start;
+  justify-content: center;
+  min-height: 42px;
+  margin: 0;
+  border-radius: 12px;
+}
+
+.action-buttons .cancel-button {
+  justify-content: center;
+  color: #8b9993;
 }
 
 /* 自动保存状态提示 */
@@ -826,10 +880,10 @@ onUnmounted(() => {
   gap: 6px;
   margin-top: 12px;
   padding: 8px 10px;
-  background: var(--bg-secondary);
-  border-radius: var(--radius-sm);
+  background: #edf6ee;
+  border-radius: 10px;
   font-size: 12px;
-  color: var(--text-tertiary);
+  color: #638070;
   animation: fadeIn 0.3s ease;
 }
 
@@ -838,38 +892,25 @@ onUnmounted(() => {
 }
 
 .auto-save-tip.unsaved {
-  color: #e6a23c;
-  background: rgba(230, 162, 60, 0.1);
-}
-
-/* 媒体上传按钮 */
-.media-buttons {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.media-buttons .el-button {
-  width: 100%;
-  justify-content: flex-start;
-}
-
-.media-tip {
-  margin: 8px 0 0;
-  font-size: 12px;
-  color: var(--text-tertiary);
+  color: #92783a;
+  background: #fff5d9;
 }
 
 /* ========== 响应式 ========== */
 @media (max-width: 1024px) {
   .settings-panel {
-    display: none;
+    width: 244px;
+    padding: 34px 18px;
   }
 }
 
 @media (max-width: 768px) {
   .editor-main {
     padding: 16px;
+  }
+
+  .settings-panel {
+    display: none;
   }
 
   .title-input :deep(.el-input__wrapper),
@@ -879,6 +920,15 @@ onUnmounted(() => {
 
   .article-edit-page {
     margin: -16px;
+  }
+
+  .editor-caption {
+    display: block;
+  }
+
+  .editor-caption span:last-child {
+    display: block;
+    margin-top: 4px;
   }
 }
 </style>

@@ -7,7 +7,7 @@
           <p class="eyebrow"><span></span> GG BOND'S NOTEBOOK</p>
           <h1>{{ siteDisplayName }}</h1><p class="hero-copy">{{ siteDescription }}</p>
           <div class="hero-actions"><button class="primary-action" type="button" @click="scrollToArticles">开始阅读 <el-icon><ArrowDown /></el-icon></button><router-link class="text-action" to="/about">认识作者 <el-icon><ArrowRight /></el-icon></router-link></div>
-          <dl class="site-stats" aria-label="博客概览"><div><dt>{{ total }}</dt><dd>篇记录</dd></div><div><dt>{{ categories.length }}</dt><dd>个主题</dd></div><div><dt>NOW</dt><dd>持续更新</dd></div></dl>
+          <dl class="site-stats" aria-label="博客概览"><div><dt>{{ total }}</dt><dd>篇记录</dd></div><div><dt>{{ categories.length }}</dt><dd>个分类</dd></div><div><dt>NOW</dt><dd>持续更新</dd></div></dl>
         </div>
         <div class="hero-art"><span class="hero-note">认真记录<br />也认真快乐</span><GGBondSticker class="hero-sticker" mood="beeKing" size="xl" caption="蜂王今天负责值班" /><span class="hero-number" aria-hidden="true">01</span></div>
       </div>
@@ -29,7 +29,7 @@
           <div v-if="total > pageSize" class="pagination-wrapper"><el-pagination :current-page="currentPage" :page-size="pageSize" :total="total" layout="prev, pager, next" background @current-change="handlePageChange" /></div>
         </main>
         <aside class="sidebar">
-          <section class="about-card"><span class="side-label">ABOUT THIS SITE</span><p>记录生活、成长，以及那些值得回头看的小事。</p><router-link to="/about">更多关于我 <el-icon><ArrowRight /></el-icon></router-link></section>
+          <router-link class="about-card" to="/about"><img v-if="authorAvatar" :src="authorAvatar" :alt="`${authorName}的头像`" /><span v-else class="author-avatar-fallback">{{ authorName.slice(0, 1) }}</span><div><span class="side-label">ABOUT THE AUTHOR</span><strong>{{ authorName }}</strong><p>{{ authorBio }}</p><span class="about-link">认识我 <el-icon><ArrowRight /></el-icon></span></div></router-link>
           <section class="side-block"><div class="side-heading"><span class="side-label">POPULAR</span><el-icon><TrendCharts /></el-icon></div><ol v-if="hotArticles.length" class="popular-list"><li v-for="(article, index) in hotArticles" :key="article.id" @click="goToArticle(article.id)"><span>{{ String(index + 1).padStart(2, '0') }}</span><div><strong>{{ article.title }}</strong><small>{{ article.view_count || 0 }} 次阅读</small></div></li></ol><p v-else class="side-muted">阅读数据正在积累。</p></section>
           <section class="side-block"><div class="side-heading"><span class="side-label">TOPICS</span><el-icon><FolderOpened /></el-icon></div><div class="topic-list"><router-link v-for="category in categories" :key="category.id" :to="`/category/${category.slug}`">{{ category.name }}</router-link></div></section>
         </aside>
@@ -49,7 +49,7 @@ import { settingsState } from '../../api/settings';
 import ArticleSkeleton from '../../components/front/ArticleSkeleton.vue';
 import GGBondSticker from '../../components/common/GGBondSticker.vue';
 const router = useRouter(); const articles = ref([]); const hotArticles = ref([]); const categories = ref([]); const loading = ref(false); const currentPage = ref(1); const total = ref(0); const pageSize = 9;
-const siteDisplayName = computed(() => settingsState.siteName || '寿冬与秋'); const siteDescription = computed(() => settingsState.siteDescription || '记录生活、成长，以及那些慢慢变好的日子。');
+const siteDisplayName = computed(() => settingsState.siteName || '寿冬与秋'); const siteDescription = computed(() => settingsState.siteDescription || '记录生活、成长，以及那些慢慢变好的日子。'); const authorName = computed(() => settingsState.authorName || '幸之'); const authorBio = computed(() => settingsState.authorBio || '在日常里收集故事，也在时间里慢慢长大。'); const authorAvatar = computed(() => settingsState.authorAvatar || '');
 const featuredArticle = computed(() => articles.value[0] || null); const feedArticles = computed(() => articles.value.slice(1));
 function goToArticle(id) { router.push(`/article/${id}`); } function scrollToArticles() { document.querySelector('#latest')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
 async function loadArticles(page = 1) { loading.value = true; try { const { data } = await getPublicArticles({ page, page_size: pageSize }); articles.value = data?.list || []; total.value = data?.pagination?.total || 0; } catch (error) { console.error('加载文章失败:', error); articles.value = []; } finally { loading.value = false; } }
@@ -88,4 +88,5 @@ onMounted(() => { loadArticles(); loadSidebar(); });
 .about-card .side-label { color: #326b58; }
 .about-card p,.about-card a { color: #29334a; }
 .topic-list a:hover,.rss-card:hover { color: #3267a8; border-color: #4f8fdc; }
+.about-card { display: flex; align-items: flex-start; gap: 14px; text-decoration: none; }.about-card > img,.author-avatar-fallback { width: 52px; height: 52px; flex: 0 0 auto; border-radius: 50%; object-fit: cover; }.author-avatar-fallback { display: grid; place-items: center; color: #fff; background: linear-gradient(135deg,#4f8fdc,#78c8a0); font-size: 20px; font-weight: 800; }.about-card > div { min-width: 0; }.about-card .side-label { display: block; margin-bottom: 5px; }.about-card strong { display: block; color: #29334a; font-size: 18px; }.about-card p { margin: 6px 0 9px; color: #526176; font-size: 13px; font-weight: 500; line-height: 1.65; }.about-link { display: inline-flex; align-items: center; gap: 4px; color: #3267a8; font-size: 12px; font-weight: 800; }
 </style>

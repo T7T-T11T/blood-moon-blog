@@ -358,43 +358,92 @@
 }
 
 .el-button--primary {
-  background: linear-gradient(135deg, #66a9e6, #4f8fdc) !important;
-  border-color: #4f8fdc !important;
+  color: #fff !important;
+  background: #6aaed6 !important;
+  border-color: #6aaed6 !important;
+  box-shadow: 0 4px 10px rgba(106, 174, 214, 0.18) !important;
 }
 
 .el-button--primary:hover {
-  background: linear-gradient(135deg, #82c2f3, #66a9e6) !important;
-  border-color: #66a9e6 !important;
+  background: #559ac5 !important;
+  border-color: #559ac5 !important;
 }
 
 .el-button--success {
-  background: linear-gradient(135deg, #16a34a, #15803d) !important;
-  border-color: #16a34a !important;
+  color: #29463a !important;
+  background: #91cfad !important;
+  border-color: #91cfad !important;
+  box-shadow: 0 4px 10px rgba(120, 200, 160, 0.18) !important;
 }
 
 .el-button--success:hover {
-  background: linear-gradient(135deg, #22c55e, #16a34a) !important;
-  border-color: #22c55e !important;
+  background: #78c8a0 !important;
+  border-color: #78c8a0 !important;
 }
 
 .el-button--warning {
-  background: linear-gradient(135deg, #d97706, #b45309) !important;
-  border-color: #d97706 !important;
+  color: #5c4820 !important;
+  background: #f2d478 !important;
+  border-color: #f2d478 !important;
+  box-shadow: 0 4px 10px rgba(242, 200, 75, 0.18) !important;
 }
 
 .el-button--warning:hover {
-  background: linear-gradient(135deg, #f59e0b, #d97706) !important;
-  border-color: #f59e0b !important;
+  background: #ebc45c !important;
+  border-color: #ebc45c !important;
 }
 
 .el-button--danger {
-  background: linear-gradient(135deg, #f29c9c, #df7777) !important;
-  border-color: #df7777 !important;
+  color: #6d3c43 !important;
+  background: #f2b5b7 !important;
+  border-color: #f2b5b7 !important;
+  box-shadow: 0 4px 10px rgba(241, 167, 189, 0.18) !important;
 }
 
 .el-button--danger:hover {
-  background: linear-gradient(135deg, #f5b0b0, #e98b8b) !important;
-  border-color: #e98b8b !important;
+  background: #eb9da3 !important;
+  border-color: #eb9da3 !important;
+}
+
+/* 后台列表里的轻量操作：统一为文字操作，避免鼠标经过时某一项突然变成胶囊。 */
+.admin-layout .el-button.is-text,
+.admin-layout .el-button.is-link {
+  min-height: 30px;
+  padding: 6px 11px !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.admin-layout .el-button--primary.is-text,
+.admin-layout .el-button--primary.is-link {
+  color: #386e8f !important;
+}
+
+.admin-layout .el-button--danger.is-text,
+.admin-layout .el-button--danger.is-link {
+  color: #92555d !important;
+}
+
+.admin-layout .el-button--success.is-text,
+.admin-layout .el-button--success.is-link {
+  color: #3e7b5b !important;
+}
+
+.admin-layout .el-button--warning.is-text,
+.admin-layout .el-button--warning.is-link {
+  color: #80672a !important;
+}
+
+.admin-layout .el-button.is-text:not(.is-disabled):hover,
+.admin-layout .el-button.is-text:not(.is-disabled):active,
+.admin-layout .el-button.is-link:not(.is-disabled):hover,
+.admin-layout .el-button.is-link:not(.is-disabled):active {
+  background: transparent !important;
+  border-color: transparent !important;
+  filter: brightness(0.8);
+  transform: none;
 }
 
 /* ========== 表单标签与标签样式 ========== */

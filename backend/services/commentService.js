@@ -5,34 +5,12 @@
 const pool = require('../config/db');
 
 /**
- * 获取评论统计数据（按状态分组计数）
- */
-async function getCommentStats() {
-  const [rows] = await pool.execute(
-    "SELECT status, COUNT(*) as count FROM comments GROUP BY status"
-  );
-  const stats = {};
-  rows.forEach((row) => {
-    stats[row.status] = Number(row.count);
-  });
-  return {
-    pending: stats['待审核'] || 0,
-    approved: stats['已通过'] || 0,
-    rejected: stats['已拒绝'] || 0
-  };
-}
-
-/**
  * 获取评论列表（管理端，分页 + 筛选）
  */
-async function getCommentsList({ status, article_id, page = 1, pageSize = 10 }) {
+async function getCommentsList({ article_id, page = 1, pageSize = 10 }) {
   let whereConditions = ['1=1'];
   let params = [];
 
-  if (status) {
-    whereConditions.push('c.status = ?');
-    params.push(status);
-  }
   if (article_id) {
     whereConditions.push('c.article_id = ?');
     params.push(article_id);
@@ -68,14 +46,14 @@ async function getCommentsList({ status, article_id, page = 1, pageSize = 10 }) 
 }
 
 /**
- * 获取文章已通过的评论（树形结构）
+ * 获取文章评论（树形结构）。历史上明确拒绝的评论继续隐藏。
  */
 async function getArticleComments(articleId) {
   const [rows] = await pool.execute(
     `SELECT id, article_id, nickname, email, avatar_url, content,
             parent_id, status, created_at
      FROM comments
-     WHERE article_id = ? AND status = '已通过'
+    WHERE article_id = ? AND (status IS NULL OR status <> '已拒绝')
      ORDER BY created_at ASC`,
     [articleId]
   );
@@ -105,7 +83,7 @@ async function getArticleComments(articleId) {
 async function createComment({ articleId, nickname, content, parent_id, ipAddress, avatar_url, email }) {
   const [result] = await pool.execute(
     `INSERT INTO comments (article_id, nickname, email, avatar_url, content, parent_id, status, ip_address)
-     VALUES (?, ?, ?, ?, ?, ?, '待审核', ?)`,
+     VALUES (?, ?, ?, ?, ?, ?, '已通过', ?)`,
     [
       articleId,
       nickname.trim(),
@@ -120,17 +98,6 @@ async function createComment({ articleId, nickname, content, parent_id, ipAddres
 }
 
 /**
- * 更新评论状态
- */
-async function updateCommentStatus({ id, status }) {
-  const [result] = await pool.execute(
-    'UPDATE comments SET status = ? WHERE id = ?',
-    [status, id]
-  );
-  return result.affectedRows > 0;
-}
-
-/**
  * 删除评论
  */
 async function deleteComment(id) {
@@ -139,10 +106,8 @@ async function deleteComment(id) {
 }
 
 module.exports = {
-  getCommentStats,
   getCommentsList,
   getArticleComments,
   createComment,
-  updateCommentStatus,
   deleteComment
 };

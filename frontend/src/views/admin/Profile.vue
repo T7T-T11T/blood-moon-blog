@@ -21,7 +21,15 @@
           @change="handleAvatarChange"
         />
         <h2 class="username">{{ form.username }}</h2>
-        <p class="user-bio">{{ form.bio || '这个人很懒，什么都没留下~' }}</p>
+        <p class="user-bio">后台账户 · 仅用于登录与安全设置</p>
+        <el-button
+          text
+          size="small"
+          :disabled="!form.avatar_url || syncingAvatar"
+          @click="syncAvatarToHomepage"
+        >
+          {{ syncingAvatar ? '同步中…' : '同步到首页头像' }}
+        </el-button>
       </div>
 
       <!-- 统计摘要 -->
@@ -48,7 +56,7 @@
     <!-- 资料编辑表单 -->
     <div class="form-section">
       <div class="section-card animate-fade-in-up delay-100">
-        <h3 class="section-title">基本信息</h3>
+        <h3 class="section-title">账户信息</h3>
         <el-form
           ref="profileFormRef"
           :model="form"
@@ -57,63 +65,22 @@
           class="profile-form"
         >
           <div class="form-grid">
-            <el-form-item label="昵称" prop="username">
+            <el-form-item label="登录账号" prop="username">
               <el-input v-model="form.username" disabled />
             </el-form-item>
-            <el-form-item label="邮箱" prop="email">
+            <el-form-item label="登录邮箱" prop="email">
               <el-input v-model="form.email" placeholder="your@email.com" />
             </el-form-item>
           </div>
-          <el-form-item label="个人简介">
-            <el-input
-              v-model="form.bio"
-              type="textarea"
-              :rows="3"
-              maxlength="200"
-              show-word-limit
-              placeholder="介绍一下自己吧..."
-            />
-          </el-form-item>
         </el-form>
+        <p class="account-tip">读者可见的名称、简介、头像与联系方式，请到「系统设置 → 公开作者资料」维护。</p>
         <div class="form-actions">
-          <el-button type="primary" :loading="saving" @click="saveProfile">保存修改</el-button>
-        </div>
-      </div>
-
-      <div class="section-card animate-fade-in-up delay-200">
-        <h3 class="section-title">社交链接</h3>
-        <el-form :model="form" label-position="top" class="profile-form">
-          <div class="form-grid">
-            <el-form-item label="GitHub">
-              <el-input v-model="form.github_url" placeholder="https://github.com/yourname">
-                <template #prefix
-                  ><el-icon><Link /></el-icon
-                ></template>
-              </el-input>
-            </el-form-item>
-            <el-form-item label="QQ">
-              <el-input v-model="form.qq_url" placeholder="QQ号码或链接">
-                <template #prefix
-                  ><el-icon><ChatDotRound /></el-icon
-                ></template>
-              </el-input>
-            </el-form-item>
-          </div>
-          <el-form-item label="微信">
-            <el-input v-model="form.wechat" placeholder="微信号">
-              <template #prefix
-                ><el-icon><ChatLineSquare /></el-icon
-              ></template>
-            </el-input>
-          </el-form-item>
-        </el-form>
-        <div class="form-actions">
-          <el-button type="primary" :loading="savingSocial" @click="saveSocial">保存链接</el-button>
+          <el-button type="primary" :loading="saving" @click="saveProfile">保存账户</el-button>
         </div>
       </div>
 
       <!-- 修改密码 -->
-      <div class="section-card animate-fade-in-up delay-300">
+      <div class="section-card animate-fade-in-up delay-200">
         <h3 class="section-title">修改密码</h3>
         <el-form
           ref="passwordFormRef"
@@ -163,16 +130,17 @@
 /**
  * @file Profile.vue
  * @description 个人中心页面（管理端）
- * 作用：展示和修改管理员个人资料，包括头像、简介、社交链接和密码修改。
+ * 作用：管理后台账户资料、登录邮箱、头像和密码。
  *       同时展示博客相关统计摘要（文章数、阅读量等）。
  * 依赖 API：getProfile / updateProfile / changePassword
  */
 import { ref, reactive, onMounted } from 'vue';
-import { User, Camera, Loading, Link, ChatDotRound, ChatLineSquare } from '@element-plus/icons-vue';
+import { User, Camera, Loading } from '@element-plus/icons-vue';
 import { getProfile, updateProfile, changePassword } from '@/api/profile';
 import { getDashboardStatsAPI } from '@/api/dashboard';
 import { uploadImage } from '@/api/upload';
 import { useUserStore } from '@/stores/user';
+import { updateSettings } from '@/api/settings';
 
 const userStore = useUserStore();
 
@@ -180,11 +148,7 @@ const userStore = useUserStore();
 const form = reactive({
   username: '',
   avatar_url: '',
-  bio: '',
-  email: '',
-  github_url: '',
-  qq_url: '',
-  wechat: ''
+  email: ''
 });
 
 /** 密码表单数据 */
@@ -204,8 +168,8 @@ const blogStats = reactive({
 
 /** 加载状态 */
 const saving = ref(false);
-const savingSocial = ref(false);
 const changingPwd = ref(false);
+const syncingAvatar = ref(false);
 
 /** 表单引用 */
 const profileFormRef = ref(null);
@@ -252,11 +216,7 @@ async function loadData() {
       Object.assign(form, {
         username: data.username || '',
         avatar_url: data.avatar_url || '',
-        bio: data.bio || '',
-        email: data.email || '',
-        github_url: data.github_url || '',
-        qq_url: data.qq_url || '',
-        wechat: data.wechat || ''
+        email: data.email || ''
       });
       // 同步头像到全局 store，确保右上角头像与资料一致
       if (data.avatar_url) {
@@ -291,7 +251,6 @@ async function saveProfile() {
   saving.value = true;
   try {
     await updateProfile({
-      bio: form.bio,
       email: form.email
     });
     ElMessage.success('保存成功');
@@ -299,25 +258,6 @@ async function saveProfile() {
     console.error('保存失败:', e);
   } finally {
     saving.value = false;
-  }
-}
-
-/**
- * 保存社交链接
- */
-async function saveSocial() {
-  savingSocial.value = true;
-  try {
-    await updateProfile({
-      github_url: form.github_url,
-      qq_url: form.qq_url,
-      wechat: form.wechat
-    });
-    ElMessage.success('链接已更新');
-  } catch (e) {
-    console.error('保存失败:', e);
-  } finally {
-    savingSocial.value = false;
   }
 }
 
@@ -389,7 +329,8 @@ async function handleAvatarChange(e) {
       userStore.setAvatar(url);
       // 持久化到数据库
       await updateProfile({ avatar_url: url });
-      ElMessage.success('头像更新成功');
+      await syncAvatarToHomepage({ silent: true });
+      ElMessage.success('头像已更新，并同步到首页');
     } else {
       ElMessage.error('上传响应无 URL，保存失败');
     }
@@ -398,6 +339,25 @@ async function handleAvatarChange(e) {
     // 错误信息由 request.js 拦截器统一处理
   } finally {
     uploading.value = false;
+  }
+}
+
+/**
+ * 将后台账户头像同步为读者可见的作者头像。
+ * 账号资料与公开作者资料仍各自独立；这里只联动用户明确修改的头像。
+ */
+async function syncAvatarToHomepage({ silent = false } = {}) {
+  if (!form.avatar_url) return;
+
+  syncingAvatar.value = true;
+  try {
+    await updateSettings({ author_avatar: form.avatar_url });
+    if (!silent) ElMessage.success('首页头像已同步');
+  } catch (error) {
+    console.error('同步首页头像失败:', error);
+    if (silent) throw error;
+  } finally {
+    syncingAvatar.value = false;
   }
 }
 
@@ -499,6 +459,13 @@ onMounted(() => {
   margin: 0;
   max-width: 320px;
   line-height: 1.5;
+}
+
+.account-tip {
+  margin: -4px 0 18px;
+  color: var(--text-tertiary);
+  font-size: 12px;
+  line-height: 1.7;
 }
 
 /* 统计摘要 */

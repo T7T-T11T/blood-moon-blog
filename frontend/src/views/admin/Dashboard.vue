@@ -81,9 +81,6 @@
         >
           <el-icon :size="28" color="var(--primary)"><component :is="action.icon" /></el-icon>
           <span>{{ action.label }}</span>
-          <span v-if="action.label === '评论管理' && pendingComments > 0" class="badge">{{
-            pendingComments
-          }}</span>
         </router-link>
       </div>
     </section>
@@ -106,9 +103,7 @@
             <div class="todo-info">
               <span class="todo-title">评论管理</span>
               <span class="todo-desc">
-                共 {{ totalComments }} 条评论
-                <template v-if="pendingComments > 0">· 待审核 {{ pendingComments }} 条</template>
-                <template v-else>· 暂无待审核</template>
+                共 {{ totalComments }} 条评论 · 可前往查看或删除
               </span>
             </div>
             <router-link to="/admin/comments" class="todo-action">
@@ -186,9 +181,6 @@ const latestArticles = ref([]);
 
 /** 最近活动 */
 const recentLogs = ref([]);
-
-/** 待审核评论数 */
-const pendingComments = ref(0);
 
 /** 总评论数 */
 const totalComments = ref(0);
@@ -270,12 +262,11 @@ function getResourceLabel(type) {
  * 使用 Promise.allSettled 保证单个接口失败不影响其他数据展示
  */
 async function loadDashboard() {
-  const [dashboardRes, hotRes, visitRes, logsRes, commentsRes, totalCommentsRes] = await Promise.allSettled([
+  const [dashboardRes, hotRes, visitRes, logsRes, totalCommentsRes] = await Promise.allSettled([
     getDashboardStatsAPI(),
     getHotArticles(5),
     getVisitStats(),
     getLogs({ page: 1, page_size: 8 }),
-    getCommentList({ status: '待审核', page: 1, page_size: 1 }),
     getCommentList({ page: 1, page_size: 1 })
   ]);
 
@@ -304,12 +295,7 @@ async function loadDashboard() {
     recentLogs.value = logsRes.value.data?.list || [];
   }
 
-  // 待审核评论数 + 总评论数
-  if (commentsRes.status === 'fulfilled' && commentsRes.value.code === 200) {
-    pendingComments.value = commentsRes.value.data?.pagination?.total || 0;
-  }
-
-  // 总评论数（不加状态筛选）
+  // 评论总数
   if (totalCommentsRes.status === 'fulfilled' && totalCommentsRes.value.code === 200) {
     totalComments.value = totalCommentsRes.value.data?.pagination?.total || 0;
   }

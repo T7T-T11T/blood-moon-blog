@@ -1,5 +1,5 @@
 <template>
-  <!-- 全局音乐播放器：底部浮动条，自动循环播放 -->
+  <!-- 全局音乐播放器：底部浮动条，默认不自动播放 -->
   <div v-if="musicList.length > 0" class="music-player" :class="{ collapsed: collapsed }">
     <!-- 展开状态：底部播放条 -->
     <template v-if="!collapsed">
@@ -84,10 +84,10 @@
 <script setup>
 /**
  * 全局音乐播放器组件
- * 作用：前台页面底部浮动播放条，自动循环播放
+ * 作用：前台页面底部浮动播放条，默认静音等待用户点击播放
  *
  * 功能特性：
- *   - 自动播放（用户首次交互后生效，解决浏览器自动播放限制）
+ *   - 默认不自动播放，播放后自动衔接下一首
  *   - 循环播放列表
  *   - 播放/暂停/上一首/下一首控制
  *   - 进度条显示与跳转
@@ -98,7 +98,7 @@
  *   - GET /api/music 返回 { id, title, artist, cover, url, lyric, ... }
  *   - audioUrl 绑定歌曲的 url 字段（音乐文件地址）
  */
-import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue';
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue';
 import {
   VideoPause,
   VideoPlay,
@@ -174,19 +174,16 @@ function formatTime(sec) {
 
 /**
  * 获取音乐列表
- * 从后端拉取已启用的音乐，加载完成后自动播放第一首
+ * 从后端拉取已启用的音乐，加载完成后只选中第一首等待用户播放
  */
 async function fetchMusicList() {
   try {
     const res = await getMusicList();
     if (res.code === 200 && res.data?.length > 0) {
       musicList.value = res.data;
-      // 设置第一首为当前曲目并自动播放
+      // 设置第一首为当前曲目，但不自动播放
       if (currentIndex.value === -1 && musicList.value.length > 0) {
         currentIndex.value = 0;
-        nextTick(() => {
-          playCurrent();
-        });
       }
     }
   } catch (e) {
@@ -323,16 +320,9 @@ function onAudioError() {
 }
 
 /**
- * 监听音频URL变化，自动播放
+ * 切歌由上一首、下一首和播放结束事件主动处理，
+ * 不监听 URL 自动播放，避免首次打开页面就出现声音。
  */
-watch(audioUrl, () => {
-  if (audioRef.value) {
-    nextTick(() => {
-      playCurrent();
-    });
-  }
-});
-
 onMounted(() => {
   fetchMusicList();
 });

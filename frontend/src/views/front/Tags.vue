@@ -2,7 +2,7 @@
 从后端获取所有标签及其文章数量 * - 根据文章数量调整标签字体大小 * - 点击标签跳转到该标签的文章列表 *
 - 支持字母/颜色随机排列 */
 <template>
-  <div ref="rootRef" class="tags-page">
+  <div class="tags-page">
     <!-- ============ Hero 区域 ============ -->
     <section class="hero">
       <div class="hero-inner">
@@ -24,7 +24,7 @@
       </div>
 
       <!-- 标签云 -->
-      <div v-else-if="tags.length > 0" class="tag-cloud reveal">
+      <div v-else-if="tags.length > 0" class="tag-cloud visible">
         <router-link
           v-for="(tag, index) in tags"
           :key="tag.id"
@@ -52,13 +52,10 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, onMounted } from 'vue';
 import { CollectionTag } from '@element-plus/icons-vue';
 import { getTags } from '@/api/tags';
 import GGBondSticker from '../../components/common/GGBondSticker.vue';
-
-/** 根节点引用 */
-const rootRef = ref(null);
 
 /** 标签列表 */
 const tags = ref([]);
@@ -109,41 +106,8 @@ async function loadTags() {
   }
 }
 
-/**
- * 初始化滚动揭示动画
- */
-function initRevealObserver() {
-  if (!rootRef.value) return;
-
-  const observer = new IntersectionObserver(
-    (entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add('visible');
-        }
-      });
-    },
-    { threshold: 0.1 }
-  );
-
-  rootRef.value.querySelectorAll('.reveal').forEach((el) => {
-    observer.observe(el);
-  });
-
-  return observer;
-}
-
-let observer = null;
-
 onMounted(() => {
   loadTags();
-  setTimeout(() => {
-    observer = initRevealObserver();
-  }, 100);
-});
-
-onUnmounted(() => {
-  if (observer) observer.disconnect();
 });
 </script>
 
