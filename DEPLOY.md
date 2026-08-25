@@ -20,7 +20,7 @@
 └─────────────────────────────────────────────┘
 ```
 
-> 本地开发：前端（Vite dev server）→ Vite proxy `/api` → `backend/`（Express + pg，端口 3000）→ Supabase。
+> 本地开发默认：前端（Vite dev server）→ 已部署的 Worker API。生产与本地预览使用同一套 API；需要调试 Worker 时，在 `workers-backend/` 运行 `npm run dev` 并配置开发环境密钥。
 
 ---
 
@@ -44,7 +44,7 @@
 git push origin master
 ```
 
-CI 会自动执行：检出代码 → 安装依赖 → 构建前端 → 部署到 Pages。
+CI 会自动执行：检出代码 → 安装依赖 → 前端 lint 与单元测试 → Worker 类型检查 → 构建前端 → 部署 Worker → 部署 Pages → 线上冒烟测试。
 
 ### 3. 验证
 
@@ -97,7 +97,7 @@ wrangler pages deploy frontend/dist --project-name=blood-moon-blog
 确保 `frontend/.env.production` 中的 API 地址指向 Workers：
 
 ```
-VITE_API_BASE_URL=https://blood-moon-blog-api.2198789717.workers.dev
+VITE_API_BASE_URL=https://blood-moon-blog-api.2198789717.workers.dev/api
 ```
 
 ---
