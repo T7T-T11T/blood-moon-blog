@@ -18,6 +18,11 @@ module.exports = {
     sourceType: 'module'
   },
   plugins: ['vue'],
+  globals: {
+    // Element Plus 的提示组件由 unplugin-auto-import 在构建时注入。
+    ElMessage: 'readonly',
+    ElMessageBox: 'readonly'
+  },
   // 排除不需要扫描的目录
   ignorePatterns: ['dist/', 'node_modules/', '*.config.js'],
   rules: {

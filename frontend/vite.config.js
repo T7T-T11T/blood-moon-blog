@@ -7,6 +7,7 @@
 import { defineConfig } from 'vite';
 import vue from '@vitejs/plugin-vue';
 import path from 'path';
+import { fileURLToPath } from 'node:url';
 import AutoImport from 'unplugin-auto-import/vite';
 import Components from 'unplugin-vue-components/vite';
 
@@ -15,6 +16,7 @@ const BUILD_VERSION = new Date()
   .toISOString()
   .replace(/[-:.TZ]/g, '')
   .slice(0, 14);
+const projectDir = path.dirname(fileURLToPath(import.meta.url));
 
 /**
  * Element Plus 按需解析器
@@ -95,7 +97,7 @@ export default defineConfig({
   plugins: [
     vue(),
     // Element Plus 按需自动引入（首屏体积优化）
-    AutoImport({ resolvers: [elementPlusResolver()], eslintrc: { enabled: true } }),
+    AutoImport({ resolvers: [elementPlusResolver()], eslintrc: { enabled: false } }),
     Components({ resolvers: [elementPlusResolver()], directives: true }),
     // 版本注入插件：将构建版本号写入 index.html 的 meta 标签
     {
@@ -108,7 +110,7 @@ export default defineConfig({
   // 路径别名：@ 指向 src 目录，简化导入路径
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, 'src')
+      '@': path.resolve(projectDir, 'src')
     }
   },
   server: {
