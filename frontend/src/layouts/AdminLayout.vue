@@ -9,7 +9,7 @@
     <aside class="admin-sidebar" :class="{ open: sidebarOpen }">
       <!-- Logo 区域 -->
       <div class="sidebar-header">
-        <img src="@/assets/ggbond/tongue.gif" class="admin-brand-image" alt="猪猪侠开工" />
+        <img src="@/assets/ggbond/tongue.webp" class="admin-brand-image" alt="猪猪侠开工" />
         <span class="logo-text"><small>GG BOND STUDIO</small>博客管理</span>
         <!-- 刷新按钮：点击手动刷新评论统计等数据 -->
         <div

@@ -11,18 +11,18 @@ import late from '@/assets/ggbond/late.jpg';
 import princess from '@/assets/ggbond/princess.jpg';
 import fishing from '@/assets/ggbond/fishing.jpg';
 import grumpy from '@/assets/ggbond/grumpy.jpg';
-import iceWalk from '@/assets/ggbond/ice-walk.gif';
-import tongue from '@/assets/ggbond/tongue.gif';
-import underwater from '@/assets/ggbond/underwater.gif';
-import beeKing from '@/assets/ggbond/bee-king.gif';
-import spinWalk from '@/assets/ggbond/spin-walk.gif';
-import sausage from '@/assets/ggbond/sausage.gif';
-import rainLeaf from '@/assets/ggbond/rain-leaf.gif';
-import intro from '@/assets/ggbond/intro.gif';
-import upsideDown from '@/assets/ggbond/upside-down.gif';
-import sleeping from '@/assets/ggbond/sleeping.gif';
-import happyWave from '@/assets/ggbond/happy-wave.gif';
-import floorRoll from '@/assets/ggbond/floor-roll.gif';
+import iceWalk from '@/assets/ggbond/ice-walk.webp';
+import tongue from '@/assets/ggbond/tongue.webp';
+import underwater from '@/assets/ggbond/underwater.webp';
+import beeKing from '@/assets/ggbond/bee-king.webp';
+import spinWalk from '@/assets/ggbond/spin-walk.webp';
+import sausage from '@/assets/ggbond/sausage.webp';
+import rainLeaf from '@/assets/ggbond/rain-leaf.webp';
+import intro from '@/assets/ggbond/intro.webp';
+import upsideDown from '@/assets/ggbond/upside-down.webp';
+import sleeping from '@/assets/ggbond/sleeping.webp';
+import happyWave from '@/assets/ggbond/happy-wave.webp';
+import floorRoll from '@/assets/ggbond/floor-roll.webp';
 
 /**
  * 猪猪侠不是一张横幅，而是站点的「情绪系统」。

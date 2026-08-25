@@ -84,6 +84,7 @@ import { ref, computed, watch, onMounted } from 'vue';
 import { getComments, postComment } from '../../api/comments';
 import { useUserStore } from '@/stores/user';
 import CommentNode from './CommentNode.vue';
+import { buildCommentTree, countComments, findComment } from '@/utils/commentTree';
 
 const props = defineProps({
   articleId: { type: [String, Number], required: true }
@@ -119,11 +120,7 @@ onMounted(() => {
  * @returns {number}
  */
 const commentCount = computed(() => {
-  const countBranch = (items) => items.reduce(
-    (count, item) => count + 1 + countBranch(item.children || []),
-    0
-  );
-  return countBranch(comments.value);
+  return countComments(comments.value);
 });
 
 /**
@@ -145,27 +142,6 @@ async function loadComments() {
     console.error('加载评论失败:', e);
     comments.value = [];
   }
-}
-
-/** 将接口的扁平评论列表恢复成树，兼容旧、新两套评论接口。 */
-function buildCommentTree(list) {
-  const map = new Map(list.map((comment) => [String(comment.id), { ...comment, children: [] }]));
-  const roots = [];
-  for (const comment of map.values()) {
-    const parent = comment.parent_id ? map.get(String(comment.parent_id)) : null;
-    if (parent) parent.children.push(comment);
-    else roots.push(comment);
-  }
-  return roots;
-}
-
-function findComment(items, id) {
-  for (const item of items) {
-    if (String(item.id) === String(id)) return item;
-    const found = findComment(item.children || [], id);
-    if (found) return found;
-  }
-  return null;
 }
 
 /** 设置回复目标 */

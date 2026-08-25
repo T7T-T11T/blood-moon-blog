@@ -24,42 +24,9 @@
 import { Hono } from 'hono';
 import { getDatabase } from '../db.js';
 import { authMiddleware, adminMiddleware, verifyToken } from '../auth.js';
+import { PUBLIC_CARD_COLUMNS, toPublicCard } from '../lib/articleCard.js';
 
 const articlesRouter = new Hono();
-
-/**
- * Public feeds must never include article.content.  It may contain large media
- * URLs (or legacy data URLs), and returning it on every list page makes the
- * homepage needlessly expensive.
- */
-const PUBLIC_CARD_COLUMNS =
-  'id, title, summary, cover_image, category_id, is_top, view_count, like_count, created_at, updated_at';
-
-function textExcerpt(html, limit = 180) {
-  const text = String(html || '')
-    .replace(/<[^>]*>/g, ' ')
-    .replace(/!\[[^\]]*\]\([^)]*\)/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-  return text.length > limit ? `${text.slice(0, limit).trimEnd()}…` : text;
-}
-
-function toPublicCard(article) {
-  return {
-    id: article.id,
-    title: article.title,
-    summary: article.summary || textExcerpt(article.content),
-    cover_image: article.cover_image || '',
-    category_id: article.category_id || null,
-    category_name: article.category_name || '',
-    category_slug: article.category_slug || '',
-    is_top: article.is_top || 0,
-    view_count: article.view_count || 0,
-    like_count: article.like_count || 0,
-    created_at: article.created_at,
-    updated_at: article.updated_at
-  };
-}
 
 async function enrichCategories(db, articles) {
   const categoryIds = [...new Set(articles.map((article) => article.category_id).filter(Boolean))];

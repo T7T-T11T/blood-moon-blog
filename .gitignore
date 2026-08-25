@@ -41,6 +41,8 @@ backend/scripts/*.js
 workers-backend/scripts/
 workers-backend/fix_schema.sql
 scripts/
+!frontend/scripts/
+!frontend/scripts/optimize-ggbond-assets.mjs
 
 # Test artifacts
 test-screenshots/

@@ -6,6 +6,7 @@
  */
 const API_BASE = process.env.SMOKE_API_BASE || 'https://blood-moon-blog-api.2198789717.workers.dev/api';
 const SITE = process.env.SMOKE_SITE || 'https://blood-moon-blog.pages.dev';
+const REQUEST_TIMEOUT = Number(process.env.SMOKE_TIMEOUT_MS || 12000);
 
 let failed = 0;
 const results = [];
@@ -24,15 +25,32 @@ const expect = (cond, msg) => {
   if (!cond) throw new Error(msg);
 };
 
+async function fetchWithTimeout(url, options = {}) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function fetchJson(url, options) {
+  const response = await fetchWithTimeout(url, options);
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  return response.json();
+}
+
 async function main() {
   await check('健康检查', async () => {
-    const r = await (await fetch(`${API_BASE}/health`)).json();
+    const r = await fetchJson(`${API_BASE}/health`);
     expect(r.status === 'ok' && r.database === 'connected', `health 异常: ${JSON.stringify(r)}`);
   });
 
   await check('文章列表', async () => {
-    const r = await (await fetch(`${API_BASE}/articles/public?page=1&page_size=3`)).json();
+    const r = await fetchJson(`${API_BASE}/articles/public?page=1&page_size=3`);
     expect(r.code === 200 && Array.isArray(r.data?.list), '文章列表格式异常');
+    expect(r.data.list.every((article) => !Object.hasOwn(article, 'content')), '文章列表不应返回正文');
   });
 
   for (const [name, path] of [
@@ -43,25 +61,25 @@ async function main() {
     ['音乐', 'music']
   ]) {
     await check(`${name}接口`, async () => {
-      const r = await (await fetch(`${API_BASE}/${path}`)).json();
+      const r = await fetchJson(`${API_BASE}/${path}`);
       expect(r.code === 200, `${path} 返回异常`);
     });
   }
 
   await check('RSS 订阅源', async () => {
-    const res = await fetch(`${API_BASE}/rss`);
+    const res = await fetchWithTimeout(`${API_BASE}/rss`);
     const text = await res.text();
     expect(res.headers.get('content-type')?.includes('xml') && text.includes('<rss'), 'RSS 不是 XML');
   });
 
   await check('站点地图', async () => {
-    const res = await fetch(`${API_BASE}/sitemap.xml`);
+    const res = await fetchWithTimeout(`${API_BASE}/sitemap.xml`);
     const text = await res.text();
     expect(text.includes('<urlset'), '站点地图异常');
   });
 
   await check('垃圾评论拦截', async () => {
-    const res = await fetch(`${API_BASE}/comments/30`, {
+    const res = await fetchWithTimeout(`${API_BASE}/comments/30`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ nickname: 't', content: '加微信 刷单兼职' })
@@ -70,7 +88,7 @@ async function main() {
   });
 
   await check('前端首页', async () => {
-    const res = await fetch(`${SITE}/`);
+    const res = await fetchWithTimeout(`${SITE}/`);
     const text = await res.text();
     expect(res.status === 200 && text.includes('寿冬与秋'), '首页加载异常');
   });

@@ -48,26 +48,37 @@ jobs:
         working-directory: ./workers-backend
         run: npm ci
 
-      # 5. 构建前端
+      # 5. 部署前质量检查：阻止未通过检查的代码进入生产环境
+      - name: Lint and unit test frontend
+        working-directory: ./frontend
+        run: |
+          npm run lint
+          npm run test:unit
+
+      - name: Typecheck Workers API
+        working-directory: ./workers-backend
+        run: npm run typecheck
+
+      # 6. 构建前端
       - name: Build frontend
         working-directory: ./frontend
         run: npm run build
 
-      # 6. 安装 wrangler CLI
+      # 7. 安装 wrangler CLI
       - name: Install wrangler
         run: npm install -g wrangler
 
-      # 7. 先部署 API，再部署依赖该 API 的前台页面
+      # 8. 先部署 API，再部署依赖该 API 的前台页面
       - name: Deploy Workers API
         working-directory: ./workers-backend
         run: wrangler deploy
 
-      # 8. 部署到 Cloudflare Pages
+      # 9. 部署到 Cloudflare Pages
       - name: Deploy to Cloudflare Pages
         working-directory: .
         run: wrangler pages deploy frontend/dist --project-name=blood-moon-blog
 
-      # 9. 验证线上服务
+      # 10. 验证线上服务
       - name: API 冒烟测试
         run: node tests/smoke-test.mjs
         env:
