@@ -44,12 +44,24 @@ export function getAllMusic(params) {
  * @param {FormData} formData - 包含 file, title, artist, sort_order
  * @returns {Promise} 返回新音乐ID
  */
-export function uploadMusic(formData) {
+export async function uploadMusic(formData) {
+  const uploaded = await request({
+    url: '/upload/audio',
+    method: 'post',
+    data: formData
+  });
+
+  if (uploaded.code !== 200) return uploaded;
+
   return request({
     url: '/music',
     method: 'post',
-    data: formData,
-    headers: { 'Content-Type': 'multipart/form-data' }
+    data: {
+      title: formData.get('title'),
+      artist: formData.get('artist'),
+      sort_order: Number(formData.get('sort_order') || 0),
+      url: uploaded.data.url
+    }
   });
 }
 

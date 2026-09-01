@@ -24,16 +24,18 @@ musicRouter.get('/', async (c) => {
 
   try {
     const music = await db.select('music', {}, {
+      select: 'id,title,artist,cover_url,lyric,sort_order,created_at',
       order: { column: 'sort_order', ascending: true }
     })
+    const origin = new URL(c.req.url).origin
 
     // 统一歌词字段，返回 { list, ... } 结构
     const list = (music || []).map(m => ({
       id: m.id,
       title: m.title,
       artist: m.artist || null,
-      cover: m.cover || null,
-      url: m.url || null,
+      cover: m.cover_url || null,
+      url: `${origin}/api/music/${m.id}/audio`,
       lyric: m.lyric || m.lrc || null,
       sort_order: m.sort_order || 0,
       status: m.status || '已通过',
@@ -71,6 +73,7 @@ musicRouter.get('/all', authMiddleware, adminMiddleware, async (c) => {
     const offset = (page - 1) * pageSize
 
     const list = await db.select('music', {}, {
+      select: 'id,title,artist,cover_url,lyric,sort_order,created_at',
       order: { column: 'sort_order', ascending: true },
       offset,
       limit: pageSize
@@ -93,28 +96,75 @@ musicRouter.get('/all', authMiddleware, adminMiddleware, async (c) => {
   }
 })
 
-/**
- * 将 Uint8Array 高效转为 base64 字符串
- * 使用分块处理避免大文件 O(n²) 性能问题
- * @param {Uint8Array} bytes - 字节数组
- * @returns {string} base64 编码字符串
- */
-function uint8ToBase64(bytes) {
-  const CHUNK_SIZE = 0x8000 // 32KB 分块，防止栈溢出
-  let binary = ''
-  for (let i = 0; i < bytes.length; i += CHUNK_SIZE) {
-    const chunk = bytes.subarray(i, i + CHUNK_SIZE)
-    binary += String.fromCharCode.apply(null, chunk)
+/** 将旧的 data URL 音频按需转换为支持 Range 的媒体响应。 */
+export function createMusicAudioResponse(source, rangeHeader = '') {
+  if (/^https?:\/\//i.test(source)) return Response.redirect(source, 302)
+
+  const match = /^data:([^;,]+);base64,([\s\S]+)$/.exec(source)
+  if (!match) return new Response('音乐地址无效', { status: 404 })
+
+  const binary = atob(match[2])
+  const bytes = new Uint8Array(binary.length)
+  for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i)
+
+  const headers = {
+    'Accept-Ranges': 'bytes',
+    'Cache-Control': 'public, max-age=3600',
+    'Content-Type': match[1]
   }
-  return btoa(binary)
+
+  if (!rangeHeader) {
+    headers['Content-Length'] = String(bytes.byteLength)
+    return new Response(bytes, { headers })
+  }
+
+  const range = /^bytes=(\d*)-(\d*)$/.exec(rangeHeader)
+  if (!range || (!range[1] && !range[2])) {
+    return new Response(null, { status: 416, headers: { 'Content-Range': `bytes */${bytes.byteLength}` } })
+  }
+
+  const requestedLength = Number(range[2])
+  const start = range[1]
+    ? Number(range[1])
+    : Math.max(bytes.byteLength - requestedLength, 0)
+  const end = range[1]
+    ? Math.min(range[2] ? Number(range[2]) : bytes.byteLength - 1, bytes.byteLength - 1)
+    : bytes.byteLength - 1
+
+  if (!Number.isInteger(start) || !Number.isInteger(end) || start < 0 || start > end || start >= bytes.byteLength) {
+    return new Response(null, { status: 416, headers: { 'Content-Range': `bytes */${bytes.byteLength}` } })
+  }
+
+  const chunk = bytes.slice(start, end + 1)
+  headers['Content-Length'] = String(chunk.byteLength)
+  headers['Content-Range'] = `bytes ${start}-${end}/${bytes.byteLength}`
+  return new Response(chunk, { status: 206, headers })
 }
+
+/**
+ * GET /api/music/:id/audio
+ * 旧 Base64 音频按单曲加载；新存储 URL 直接跳转到媒体存储。
+ */
+musicRouter.get('/:id/audio', async (c) => {
+  const db = getDatabase(c.env)
+  const id = Number(c.req.param('id'))
+  if (!Number.isInteger(id) || id <= 0) {
+    return c.json({ code: 400, message: '音乐 ID 无效' }, 400)
+  }
+
+  const [music] = await db.select('music', { id }, {
+    select: 'url',
+    limit: 1
+  })
+
+  if (!music?.url) return c.json({ code: 404, message: '音乐不存在' }, 404)
+  return createMusicAudioResponse(music.url, c.req.header('Range'))
+})
 
 /**
  * POST /api/music
  * 添加音乐
- * 支持两种请求方式：
- *   1. application/json: 直接传 url / cover_url
- *   2. multipart/form-data: 传文件字段，自动转为 base64 data URL
+ * 音频文件先通过 /api/upload/audio 保存，再把公开 URL 写入音乐表。
  */
 musicRouter.post('/', authMiddleware, adminMiddleware, async (c) => {
   const db = getDatabase(c.env)
@@ -134,13 +184,12 @@ musicRouter.post('/', authMiddleware, adminMiddleware, async (c) => {
       lyric = formData.get('lyric')
       sort_order = parseInt(formData.get('sort_order')) || 0
 
-      // 如果有文件字段，内联转 base64（复用 upload 降级方案）
       const file = formData.get('file')
       if (file && (file instanceof File || (file.type && file.arrayBuffer))) {
-        const bytes = await file.arrayBuffer()
-        const fileType = file.type || 'application/octet-stream'
-        const base64 = uint8ToBase64(new Uint8Array(bytes))
-        url = url || `data:${fileType};base64,${base64}`
+        return c.json({
+          code: 400,
+          message: '请先通过 /api/upload/audio 上传文件，再提交音乐 URL'
+        }, 400)
       }
     } else {
       const body = await c.req.json()
@@ -204,7 +253,7 @@ musicRouter.put('/:id', authMiddleware, adminMiddleware, async (c) => {
   try {
     const id = parseInt(c.req.param('id'))
     const body = await c.req.json()
-    const music = await db.findOne('music', { id })
+    const [music] = await db.select('music', { id }, { select: 'id,title', limit: 1 })
 
     if (!music) {
       return c.json({
@@ -256,7 +305,7 @@ musicRouter.delete('/:id', authMiddleware, adminMiddleware, async (c) => {
 
   try {
     const id = parseInt(c.req.param('id'))
-    const music = await db.findOne('music', { id })
+    const [music] = await db.select('music', { id }, { select: 'id,title', limit: 1 })
 
     if (!music) {
       return c.json({

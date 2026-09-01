@@ -110,7 +110,7 @@
               <el-icon><FolderOpened /></el-icon>
               <span>{{ uploadForm.fileName || '选择音频文件' }}</span>
             </el-button>
-            <div class="file-hint">支持 MP3/WAV/OGG/AAC 格式，最大50MB</div>
+            <div class="file-hint">支持 MP3/WAV/OGG/AAC 格式，最大25MB</div>
           </div>
         </el-form-item>
         <el-form-item label="标题">
