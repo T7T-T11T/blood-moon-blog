@@ -11,19 +11,19 @@ getArticleArchives() 返回数组 [{ year, month, articles: [{ id, title, create
     <section class="hero">
       <div class="hero-inner">
         <p class="hero-eyebrow animate-fade-in-down">ARCHIVE</p>
-        <h1 class="hero-title animate-fade-in-up">文章归档</h1>
+        <h1 class="hero-title animate-fade-in-up">{{ t('文章归档') }}</h1>
         <p class="hero-subtitle animate-fade-in-up delay-100">
-          共 {{ totalArticles }} 篇文章 · 按时间倒序
+          {{ t('共') }} {{ totalArticles }} {{ t('篇文章 · 按时间倒序') }}
         </p>
       </div>
-      <GGBondSticker mood="iceWalk" size="lg" floating caption="沿着时间线散步" :style="{ top: '14px', right: 'clamp(22px, 12vw, 190px)' }" />
+      <GGBondSticker mood="iceWalk" size="lg" floating :caption="t('沿着时间线散步')" :style="{ top: '14px', right: 'clamp(22px, 12vw, 190px)' }" />
       <!-- 装饰光斑（纯视觉） -->
       <div class="hero-orb" aria-hidden="true"></div>
     </section>
 
     <!-- ============ 主体：时间线 ============ -->
     <div class="content-wrapper">
-      <main class="content-main">
+      <section class="content-main" :aria-label="t('文章归档')">
         <!-- 加载骨架：首次加载且无数据时展示 -->
         <div v-if="loading && archives.length === 0" class="timeline-skeleton">
           <div v-for="n in 4" :key="n" class="skeleton-group">
@@ -45,7 +45,7 @@ getArticleArchives() 返回数组 [{ year, month, articles: [{ id, title, create
               <span class="node-dot" aria-hidden="true"></span>
               <span class="node-year">{{ group.year }}</span>
               <span class="node-month">{{ monthLabel(group.month) }}</span>
-              <span class="node-count">{{ group.articles.length }} 篇</span>
+              <span class="node-count">{{ group.articles.length }} {{ t('篇') }}</span>
             </div>
 
             <!-- 文章列表 -->
@@ -59,7 +59,7 @@ getArticleArchives() 返回数组 [{ year, month, articles: [{ id, title, create
                 <router-link :to="`/article/${article.id}`" class="article-link">
                   <span class="article-date">{{ formatDate(article.created_at) }}</span>
                   <span class="article-title">{{ article.title }}</span>
-                  <span class="article-summary">{{ article.summary || '暂无摘要' }}</span>
+                  <span class="article-summary">{{ article.summary || t('暂无摘要') }}</span>
                 </router-link>
               </li>
             </ul>
@@ -68,15 +68,16 @@ getArticleArchives() 返回数组 [{ year, month, articles: [{ id, title, create
 
         <!-- 空状态 -->
         <div v-else class="empty-state">
-          <p class="empty-title">暂无文章归档</p>
-          <p class="empty-desc">文章发布后将在此按时间归档展示</p>
+          <p class="empty-title">{{ t('暂无文章归档') }}</p>
+          <p class="empty-desc">{{ t('文章发布后将在此按时间归档展示') }}</p>
         </div>
-      </main>
+      </section>
     </div>
   </div>
 </template>
 
 <script setup>
+import { t } from '@/utils/locale';
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue';
 import { formatDate } from '@/utils/format';
 import { getArticleArchives } from '../../api/articles';
@@ -151,6 +152,10 @@ async function loadArchives() {
 function initObserver() {
   if (observer) observer.disconnect();
   if (!rootRef.value) return;
+  if (!('IntersectionObserver' in window)) {
+    rootRef.value.querySelectorAll('.reveal').forEach(el => el.classList.add('visible'));
+    return;
+  }
   observer = new IntersectionObserver(
     (entries) => {
       entries.forEach((entry) => {

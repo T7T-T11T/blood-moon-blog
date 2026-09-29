@@ -473,7 +473,7 @@ async function handleLogin() {
     font-size: 24px;
   }
 }
-/* 奶油游乐场登录主题 */
+/* 奶油游乐场登录主题（站点当前唯一样式层，覆盖历史暗色底稿） */
 .login-page { background: #fff9ec; color: #29334a; }
 .brand-panel { color: #29334a; background: #c9f0dc; }
 .brand-bg { background: linear-gradient(135deg,#cbeaff 0%,#fff1ad 100%); opacity: 1; }

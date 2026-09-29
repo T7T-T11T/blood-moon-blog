@@ -2,13 +2,15 @@
 时显示返回顶部按钮 * - 点击平滑滚动回页面顶部 * - 带有悬浮动画效果 */
 <template>
   <Transition name="fade">
-    <button v-show="visible" class="back-to-top" title="返回顶部" @click="scrollToTop">
+    <button v-show="visible" class="back-to-top" :title="t('返回顶部')" @click="scrollToTop">
       <el-icon :size="20"><ArrowUp /></el-icon>
     </button>
   </Transition>
 </template>
 
 <script setup>
+import { t } from '@/utils/locale';
+import { scrollBehavior } from '@/utils/motion';
 import { ref, onMounted, onUnmounted } from 'vue';
 import { ArrowUp } from '@element-plus/icons-vue';
 
@@ -31,7 +33,7 @@ function handleScroll() {
 function scrollToTop() {
   window.scrollTo({
     top: 0,
-    behavior: 'smooth'
+    behavior: scrollBehavior()
   });
 }
 

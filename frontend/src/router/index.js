@@ -1,3 +1,4 @@
+import { scrollBehavior } from '../utils/motion';
 /**
  * 路由配置文件
  * 作用：定义前端所有页面路由和路由守卫
@@ -80,6 +81,11 @@ const routes = [
         name: 'Links',
         component: () => import('../views/front/Links.vue'),
         meta: { title: '友情链接' }
+      },
+      {
+        path: 'privacy',
+        component: () => import('../views/front/Privacy.vue'),
+        meta: { title: '隐私与访问统计' }
       },
       {
         path: 'about',
@@ -218,7 +224,7 @@ const router = createRouter({
       return savedPosition;
     }
     if (to.hash) {
-      return { el: to.hash, behavior: 'smooth' };
+      return { el: to.hash, behavior: scrollBehavior() };
     }
     return { top: 0 };
   }
@@ -230,8 +236,8 @@ const router = createRouter({
  * - 检查登录状态
  */
 router.beforeEach((to, from, next) => {
-  // 动态设置页面标题
-  const title = to.meta.title ? `${to.meta.title} - 个人博客` : '个人博客';
+  // 动态设置页面标题（站点名与首页一致）
+  const title = to.meta.title ? `${to.meta.title} - 寿冬与秋` : '寿冬与秋';
   document.title = title;
 
   // 记录页面访问（PV/UV）

@@ -5,6 +5,7 @@
 + 悬浮微动效 + 路由过渡 共三组动效 */
 <template>
   <div class="front-layout">
+    <a class="skip-link" href="#main-content">{{ t('跳到正文') }}</a>
     <!-- ============ 固定背景层（纯黑红，不使用暗月插画） ============ -->
     <div class="fixed-bg" aria-hidden="true"></div>
     <div class="fixed-bg-overlay" aria-hidden="true"></div>
@@ -30,29 +31,37 @@
             class="nav-link"
             :class="{ active: isNavActive(item) }"
           >
-            <span class="nav-text">{{ item.label }}</span>
+            <span class="nav-text">{{ t(item.label) }}</span>
           </router-link>
         </nav>
 
         <!-- 右侧操作：搜索 + 后台 + 汉堡 -->
         <div class="nav-actions">
+          <select class="language-select" :value="locale" aria-label="Language / 语言" @change="setLocale($event.target.value)">
+            <option value="zh-CN">中文</option><option value="en">English</option>
+          </select>
           <div class="search-box">
             <el-icon class="search-icon"><Search /></el-icon>
             <input
               v-model="searchKeyword"
               type="text"
               class="search-input"
-              placeholder="搜索文章…"
+              :placeholder="t('搜索文章…')"
+              :aria-label="t('搜索文章')"
               @keyup.enter="handleSearch"
             />
           </div>
-          <router-link to="/admin" class="admin-entry" title="管理后台">
+          <router-link to="/admin" class="admin-entry" :title="t('管理后台')">
             <el-icon><Setting /></el-icon>
           </router-link>
           <button
+            ref="menuToggle"
             class="menu-toggle"
             :class="{ open: mobileMenuOpen }"
-            aria-label="菜单"
+            :aria-label="t('菜单')"
+            :aria-expanded="mobileMenuOpen"
+            aria-controls="mobile-navigation"
+            @keydown.esc="closeMobileMenu"
             @click="toggleMobileMenu"
           >
             <span class="menu-bar"></span>
@@ -64,7 +73,7 @@
 
       <!-- 移动端下拉菜单 -->
       <transition name="slide-down">
-        <nav v-if="mobileMenuOpen" class="mobile-menu">
+        <nav v-if="mobileMenuOpen" id="mobile-navigation" class="mobile-menu" @keydown.esc="closeMobileMenu">
           <router-link
             v-for="item in visibleNavItems"
             :key="item.path"
@@ -73,7 +82,7 @@
             :class="{ active: isNavActive(item) }"
             @click="closeMobileMenu"
           >
-            {{ item.label }}
+            {{ t(item.label) }}
           </router-link>
           <div class="mobile-search">
             <el-icon class="search-icon"><Search /></el-icon>
@@ -81,19 +90,20 @@
               v-model="searchKeyword"
               type="text"
               class="search-input"
-              placeholder="搜索文章…"
+              :placeholder="t('搜索文章…')"
+              :aria-label="t('搜索文章')"
               @keyup.enter="handleSearch"
             />
           </div>
           <router-link to="/admin" class="mobile-nav-link" @click="closeMobileMenu">
-            管理后台
+            {{ t('管理后台') }}
           </router-link>
         </nav>
       </transition>
     </header>
 
     <!-- 主内容区：路由过渡 -->
-    <main class="main-content">
+    <main id="main-content" class="main-content" tabindex="-1">
       <router-view v-slot="{ Component }">
         <transition name="page" mode="out-in">
           <component :is="Component" />
@@ -108,6 +118,8 @@
     <footer class="footer">
       <div class="footer-inner">
         <GGBondSticker mood="sleeping" size="sm" />
+        <router-link to="/privacy">{{ t('隐私与访问统计') }}</router-link>
+        <a class="footer-rss" href="/api/rss" target="_blank" rel="noopener">RSS</a>
         <span class="footer-brand">{{ siteName }}</span>
         <span class="footer-divider">·</span>
         <span class="footer-copy">© {{ currentYear }}</span>
@@ -115,6 +127,8 @@
         <span v-if="siteDescription" class="footer-desc">{{ siteDescription }}</span>
         <span v-if="footerText" class="footer-divider">·</span>
         <span v-if="footerText" class="footer-text">{{ footerText }}</span>
+        <span v-if="siteIcp" class="footer-divider">·</span>
+        <span v-if="siteIcp" class="footer-icp">{{ siteIcp }}</span>
       </div>
     </footer>
 
@@ -124,12 +138,14 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { t, locale, setLocale } from '@/utils/locale';
+import { ref, computed, onMounted, onUnmounted, defineAsyncComponent } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { Search, Setting } from '@element-plus/icons-vue';
 import { getSettings, settingsState } from '../api/settings';
-import MusicPlayer from '../components/MusicPlayer.vue';
-import BackToTop from '../components/common/BackToTop.vue';
+// 非首屏组件异步加载：减小主包体积、加快首屏
+const MusicPlayer = defineAsyncComponent(() => import('../components/MusicPlayer.vue'));
+const BackToTop = defineAsyncComponent(() => import('../components/common/BackToTop.vue'));
 import GGBondSticker from '../components/common/GGBondSticker.vue';
 import { useUserStore } from '../stores/user';
 
@@ -143,6 +159,7 @@ const siteName = computed(() => settingsState.siteName || '寿冬与秋');
 /** 站点描述（使用模块级共享状态） */
 const siteDescription = computed(() => settingsState.siteDescription || '');
 const footerText = computed(() => settingsState.footerText || '');
+const siteIcp = computed(() => settingsState.siteIcp || '');
 
 /** 当前年份 */
 const currentYear = new Date().getFullYear();
@@ -159,6 +176,7 @@ const visibleNavItems = computed(() => {
 
 /** 移动菜单展开状态 */
 const mobileMenuOpen = ref(false);
+const menuToggle = ref(null);
 
 /** 页面是否已滚动（用于导航栏背景加深） */
 const isScrolled = ref(false);
@@ -205,8 +223,9 @@ function toggleMobileMenu() {
 }
 
 /** 关闭移动端菜单 */
-function closeMobileMenu() {
+function closeMobileMenu(event) {
   mobileMenuOpen.value = false;
+  if (event?.key === 'Escape') menuToggle.value?.focus();
 }
 
 /**
@@ -241,6 +260,7 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+.language-select { max-width: 92px; padding: 7px 4px; color: var(--text-primary); background: var(--bg-body); border: 1px solid var(--border); border-radius: 8px; }
 /* ========== 固定背景层（全局共享，不随滚动） ========== */
 .fixed-bg {
   position: fixed;
@@ -517,32 +537,6 @@ onUnmounted(() => {
   transform: rotate(45deg);
 }
 
-/* 主题切换按钮 */
-.theme-toggle {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  padding: 0;
-  color: var(--text-secondary);
-  background: rgba(255, 255, 255, 0.82);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  font-size: 18px;
-  cursor: pointer;
-  transition:
-    color 0.25s var(--ease-out),
-    border-color 0.25s var(--ease-out),
-    background 0.25s var(--ease-out);
-}
-
-.theme-toggle:hover {
-  color: #f59e0b;
-  border-color: #f59e0b;
-  background: rgba(245, 158, 11, 0.1);
-}
-
 /* 汉堡按钮（移动端） */
 .menu-toggle {
   display: none;
@@ -663,6 +657,10 @@ onUnmounted(() => {
   color: var(--text-tertiary);
 }
 
+.footer-icp {
+  color: var(--text-tertiary);
+}
+
 .footer-rss {
   display: inline-flex;
   align-items: center;
@@ -674,7 +672,7 @@ onUnmounted(() => {
 }
 
 .footer-rss:hover {
-  color: #f59e0b;
+  color: var(--primary);
 }
 
 /* ========== 路由过渡动画 ========== */
@@ -710,7 +708,7 @@ onUnmounted(() => {
 }
 
 /* ========== 响应式 ========== */
-@media (max-width: 960px) {
+@media (max-width: 1100px) {
   .nav-menu {
     display: none;
   }

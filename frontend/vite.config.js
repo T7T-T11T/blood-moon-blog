@@ -145,9 +145,6 @@ export default defineConfig({
             if (id.includes('@element-plus/icons-vue')) {
               return 'vendor-icons';
             }
-            if (id.includes('element-plus')) {
-              return 'vendor-element';
-            }
             if (id.includes('vue-router') || id.includes('pinia') || id.includes('@vue/') || id.includes('node_modules/vue/')) {
               return 'vendor-vue';
             }

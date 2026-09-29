@@ -13,22 +13,22 @@
     <div class="back-bar">
       <button class="back-btn" @click="goBack">
         <el-icon><ArrowLeft /></el-icon>
-        <span>返回</span>
+        <span>{{ t('返回') }}</span>
       </button>
       <div class="back-bar-spacer"></div>
       <!-- 阅读字号调节 -->
-      <div class="reading-tools" aria-label="阅读字号调节">
-        <span class="reading-label">字号</span>
-        <button class="font-btn" :disabled="fontIndex <= 0" aria-label="减小字号" @click="changeFontSize(-1)">−</button>
+      <div class="reading-tools" :aria-label="t('阅读字号调节')">
+        <span class="reading-label">{{ t('字号') }}</span>
+        <button class="font-btn" :disabled="fontIndex <= 0" :aria-label="t('减小字号')" @click="changeFontSize(-1)">−</button>
         <span class="font-size-label">{{ articleFontSize }}</span>
-        <button class="font-btn" :disabled="fontIndex >= FONT_SIZES.length - 1" aria-label="增大字号" @click="changeFontSize(1)">+</button>
-        <button v-if="fontIndex !== DEFAULT_FONT_INDEX" class="font-reset" @click="resetFontSize">重置</button>
+        <button class="font-btn" :disabled="fontIndex >= FONT_SIZES.length - 1" :aria-label="t('增大字号')" @click="changeFontSize(1)">+</button>
+        <button v-if="fontIndex !== DEFAULT_FONT_INDEX" class="font-reset" @click="resetFontSize">{{ t('重置') }}</button>
       </div>
     </div>
 
     <!-- 面包屑导航 -->
     <nav v-if="article" class="breadcrumb">
-      <router-link to="/" class="breadcrumb-item">首页</router-link>
+      <router-link to="/" class="breadcrumb-item">{{ t('首页') }}</router-link>
       <span class="breadcrumb-separator">/</span>
       <router-link
         v-if="article.category_slug"
@@ -43,13 +43,13 @@
 
     <!-- 移动端 TOC 下拉 -->
     <div v-if="tocItems.length > 0" class="toc-mobile">
-      <button class="toc-mobile-toggle" @click="tocMobileOpen = !tocMobileOpen">
+      <button :aria-expanded="tocMobileOpen" aria-controls="article-toc-mobile" class="toc-mobile-toggle" @click="tocMobileOpen = !tocMobileOpen">
         <el-icon><List /></el-icon>
-        <span>目录</span>
+        <span>{{ t('目录') }}</span>
         <el-icon class="toc-chevron" :class="{ open: tocMobileOpen }"><ArrowDown /></el-icon>
       </button>
       <transition name="toc-slide">
-        <nav v-if="tocMobileOpen" class="toc-mobile-dropdown">
+        <nav v-if="tocMobileOpen" id="article-toc-mobile" class="toc-mobile-dropdown">
           <a
             v-for="item in tocItems"
             :key="item.id"
@@ -91,14 +91,14 @@
           </span>
           <span class="meta-item">
             <el-icon><View /></el-icon>
-            {{ article.view_count }} 阅读
+            {{ article.view_count }} {{ t('阅读') }}
           </span>
           <span class="meta-item reading-time">
             <el-icon><Timer /></el-icon>
-            约 {{ readingTime }} 分钟
+            {{ t('约') }} {{ readingTime }} {{ t('分钟') }}
           </span>
         </div>
-        <h1 class="article-title">{{ article.title }}</h1>
+        <h1 class="article-title" lang="zh-CN">{{ article.title }}</h1>
         <p v-if="article.summary" class="article-summary">{{ article.summary }}</p>
       </header>
 
@@ -115,7 +115,7 @@
 
       <!-- Markdown 正文（含 id 锚点的标题） -->
       <!-- eslint-disable-next-line vue/no-v-html -->
-      <div ref="articleBodyRef" class="article-body reveal" :style="{ fontSize: articleFontSize + 'px' }" v-html="renderedContent"></div>
+      <div ref="articleBodyRef" class="article-body reveal" lang="zh-CN" :style="{ fontSize: articleFontSize + 'px' }" v-html="renderedContent"></div>
 
       <section v-if="article.tags && article.tags.length > 0" class="article-tags reveal">
         <router-link
@@ -129,33 +129,33 @@
       </section>
 
       <section class="share-bar reveal">
-        <span class="share-label">分享到</span>
+        <span class="share-label">{{ t('分享到') }}</span>
         <button class="share-btn wechat" @click="shareWechat">
           <el-icon><ChatDotRound /></el-icon>
-          <span>微信</span>
+          <span>{{ t('微信') }}</span>
         </button>
         <button class="share-btn weibo" @click="shareWeibo">
           <el-icon><Share /></el-icon>
-          <span>微博</span>
+          <span>{{ t('微博') }}</span>
         </button>
         <button class="share-btn copy" @click="copyLink">
           <el-icon><Link /></el-icon>
-          <span>复制链接</span>
+          <span>{{ t('复制链接') }}</span>
         </button>
         <button class="share-btn md" @click="copyMarkdown">
           <el-icon><Document /></el-icon>
-          <span>复制 MD</span>
+          <span>{{ t('复制 MD') }}</span>
         </button>
         <button class="share-btn print" @click="printArticle">
           <el-icon><Printer /></el-icon>
-          <span>打印/PDF</span>
+          <span>{{ t('打印/PDF') }}</span>
         </button>
       </section>
 
       <section class="interaction-bar reveal">
-        <button class="interact-btn like-btn" :class="{ active: liked }" @click="handleToggleLike">
+        <button class="interact-btn like-btn" :aria-pressed="liked" :class="{ active: liked }" @click="handleToggleLike">
           <el-icon><StarFilled v-if="liked" /><Star v-else /></el-icon>
-          <span>{{ liked ? '已点赞' : '点赞' }}</span>
+          <span>{{ liked ? t('已点赞') : t('点赞') }}</span>
           <span v-if="likeCount > 0" class="interact-count">{{ likeCount }}</span>
         </button>
       </section>
@@ -167,7 +167,7 @@
           class="nav-card prev"
         >
           <span class="nav-direction"
-            ><el-icon><ArrowLeft /></el-icon>上一篇</span
+            ><el-icon><ArrowLeft /></el-icon>{{ t('上一篇') }}</span
           >
           <span class="nav-title">{{ article.prev_article.title }}</span>
         </router-link>
@@ -179,7 +179,7 @@
           class="nav-card next"
         >
           <span class="nav-direction"
-            >下一篇<el-icon><ArrowRight /></el-icon
+            >{{ t('下一篇') }}<el-icon><ArrowRight /></el-icon
           ></span>
           <span class="nav-title">{{ article.next_article.title }}</span>
         </router-link>
@@ -190,7 +190,7 @@
     <!-- 桌面端 TOC 侧边栏 -->
     <aside v-if="tocItems.length > 0" class="toc-sidebar">
       <div class="toc-sidebar-inner">
-        <h4 class="toc-title">目录</h4>
+        <h4 class="toc-title">{{ t('目录') }}</h4>
         <nav class="toc-nav">
           <a
             v-for="item in tocItems"
@@ -212,7 +212,7 @@
 
     <!-- 相关文章推荐 -->
     <section v-if="relatedArticles.length > 0" class="related-section reveal">
-      <h3 class="related-title">相关推荐</h3>
+      <h3 class="related-title">{{ t('相关推荐') }}</h3>
       <div class="related-grid">
         <router-link
           v-for="related in relatedArticles"
@@ -233,10 +233,10 @@
           </div>
           <div class="related-content">
             <h4 class="related-card-title">{{ related.title }}</h4>
-            <p class="related-excerpt">{{ related.summary || '暂无摘要' }}</p>
+            <p class="related-excerpt">{{ related.summary || t('暂无摘要') }}</p>
             <span class="related-meta">
               <el-icon><View /></el-icon>
-              {{ related.view_count || 0 }} 阅读
+              {{ related.view_count || 0 }} {{ t('阅读') }}
             </span>
           </div>
         </router-link>
@@ -249,23 +249,22 @@
     <!-- 错误状态 -->
     <div v-if="!loading && !article" class="error-state">
       <GGBondSticker mood="leaving" size="lg" caption="这篇好像先走了" />
-      <p class="error-text">文章不存在或已被删除</p>
-      <button class="back-home-btn" @click="goHome">返回首页</button>
+      <p class="error-text">{{ t('文章不存在或已被删除') }}</p>
+      <button class="back-home-btn" @click="goHome">{{ t('返回首页') }}</button>
     </div>
 
-    <!-- 图片灯箱预览 -->
     <Teleport to="body">
-      <transition name="fade">
-        <div v-if="showPreview" class="image-lightbox" @click="closePreview">
-          <img :src="previewImage" alt="预览" class="lightbox-img" @click.stop />
-          <button class="lightbox-close" @click="closePreview">✕</button>
-        </div>
-      </transition>
+      <dialog ref="previewDialog" class="image-lightbox" :aria-label="t('图片预览')" @click.self="closePreview" @close="restoreImageFocus">
+        <img v-if="previewImage" :src="previewImage" :alt="previewAlt" class="lightbox-img" />
+        <button class="lightbox-close" :aria-label="t('关闭图片预览')" autofocus @click="closePreview">✕</button>
+      </dialog>
     </Teleport>
   </div>
 </template>
 
 <script setup>
+import { t } from '@/utils/locale';
+import { scrollBehavior } from '@/utils/motion';
 import { ref, shallowRef, computed, onMounted, onUnmounted, watch, nextTick } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { formatDate } from '@/utils/format';
@@ -308,21 +307,33 @@ const articleMood = computed(() => getGGBondMood(Number(article.value?.id) || 0)
 
 // ---- 图片灯箱 ----
 const previewImage = ref('');
-const showPreview = ref(false);
+const previewDialog = ref(null);
+const previewAlt = ref('');
+let previewTrigger = null;
 
 /**
  * 初始化图片点击事件
  * 为文章内容中的所有图片添加点击放大功能
  */
 function initImageLightbox() {
-  const imgs = articleBodyRef.value?.querySelectorAll('img');
-  if (!imgs || imgs.length === 0) return;
-
-  imgs.forEach((img) => {
+  if (typeof previewDialog.value?.showModal !== 'function') return;
+  articleBodyRef.value?.querySelectorAll('img').forEach((img) => {
+    // Keep linked images as links; only enhance standalone images.
+    if (img.closest('a, button')) return;
     img.style.cursor = 'zoom-in';
-    img.addEventListener('click', () => {
+    img.tabIndex = 0;
+    img.setAttribute('role', 'button');
+    img.setAttribute('aria-label', `${t('放大图片：')}${img.alt || '文章插图'}`);
+    const open = async () => {
+      previewTrigger = img;
       previewImage.value = img.src;
-      showPreview.value = true;
+      previewAlt.value = img.alt || '文章插图';
+      await nextTick();
+      previewDialog.value?.showModal();
+    };
+    img.addEventListener('click', open);
+    img.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); open(); }
     });
   });
 }
@@ -399,19 +410,11 @@ function initCodeBlocks() {
 /**
  * 关闭图片预览
  */
-function closePreview() {
-  showPreview.value = false;
+function closePreview() { previewDialog.value?.close(); }
+function restoreImageFocus() {
   previewImage.value = '';
-}
-
-/**
- * 键盘事件处理
- * ESC 键关闭预览
- */
-function handleKeydown(e) {
-  if (e.key === 'Escape' && showPreview.value) {
-    closePreview();
-  }
+  previewTrigger?.focus();
+  previewTrigger = null;
 }
 
 // ---- 点赞 ----
@@ -681,6 +684,10 @@ async function loadArticle() {
 
 function initRevealObserver() {
   if (revealObserver) revealObserver.disconnect();
+  if (!('IntersectionObserver' in window)) {
+    document.querySelectorAll('.article-detail .reveal').forEach(el => el.classList.add('visible'));
+    return;
+  }
   revealObserver = new IntersectionObserver(
     (entries) => {
       entries.forEach((entry) => {
@@ -714,7 +721,7 @@ function updateActiveToc() {
 function scrollToHeading(id) {
   const el = document.getElementById(id);
   if (el) {
-    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    el.scrollIntoView({ behavior: scrollBehavior(), block: 'start' });
     tocMobileOpen.value = false;
   }
 }
@@ -778,7 +785,7 @@ watch(
   (newId, oldId) => {
     if (newId && newId !== oldId) {
       loadArticle();
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      window.scrollTo({ top: 0, behavior: scrollBehavior() });
     }
   }
 );
@@ -786,13 +793,11 @@ watch(
 onMounted(() => {
   loadArticle();
   window.addEventListener('scroll', handleScroll, { passive: true });
-  window.addEventListener('keydown', handleKeydown);
 });
 
 onUnmounted(() => {
   if (revealObserver) revealObserver.disconnect();
   window.removeEventListener('scroll', handleScroll);
-  window.removeEventListener('keydown', handleKeydown);
 });
 </script>
 
@@ -959,13 +964,13 @@ onUnmounted(() => {
 
 .toc-link:hover {
   color: var(--primary);
-  background: rgba(220, 38, 38, 0.05);
+  background: rgba(79, 143, 220, 0.08);
 }
 
 .toc-link.active {
   color: var(--primary);
   border-left-color: var(--primary);
-  background: rgba(220, 38, 38, 0.08);
+  background: rgba(79, 143, 220, 0.1);
   font-weight: 600;
 }
 
@@ -1003,7 +1008,7 @@ onUnmounted(() => {
   transition: background 0.25s;
 }
 .meta-category:hover {
-  background: rgba(220, 38, 38, 0.18);
+  background: rgba(79, 143, 220, 0.2);
 }
 
 .meta-item {
@@ -1106,7 +1111,7 @@ onUnmounted(() => {
   margin: 24px 0;
   border-radius: 12px;
   overflow: hidden;
-  background: #1e293b;
+  background: var(--code-bg);
 }
 
 .article-body :deep(.code-block-header) {
@@ -1114,14 +1119,14 @@ onUnmounted(() => {
   align-items: center;
   justify-content: space-between;
   padding: 10px 16px;
-  background: rgba(0, 0, 0, 0.3);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(79, 143, 220, 0.08);
+  border-bottom: 1px solid rgba(79, 143, 220, 0.12);
 }
 
 .article-body :deep(.code-block-lang) {
   font-size: 12px;
   font-weight: 600;
-  color: #94a3b8;
+  color: var(--text-tertiary);
   letter-spacing: 1px;
   text-transform: uppercase;
 }
@@ -1129,17 +1134,17 @@ onUnmounted(() => {
 .article-body :deep(.code-copy-btn) {
   padding: 4px 12px;
   font-size: 12px;
-  color: #94a3b8;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-secondary);
+  background: var(--primary-bg);
+  border: 1px solid var(--border);
   border-radius: 4px;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .article-body :deep(.code-copy-btn:hover) {
-  color: #e2e8f0;
-  background: rgba(255, 255, 255, 0.12);
+  color: var(--primary);
+  background: rgba(79, 143, 220, 0.15);
 }
 
 .article-body :deep(.code-copy-btn.copied) {
@@ -1150,8 +1155,8 @@ onUnmounted(() => {
 
 .article-body :deep(pre) {
   padding: 20px;
-  background: #1e293b;
-  color: #e2e8f0;
+  background: var(--code-bg);
+  color: var(--text-primary);
   overflow-x: auto;
   margin: 0;
   font-size: 14px;
@@ -1167,7 +1172,7 @@ onUnmounted(() => {
 .article-body :deep(blockquote) {
   margin: 24px 0;
   padding: 16px 24px;
-  background: rgba(220, 38, 38, 0.05);
+  background: rgba(79, 143, 220, 0.07);
   border-left: 4px solid var(--primary);
   border-radius: 0 8px 8px 0;
   color: var(--text-secondary);
@@ -1574,18 +1579,18 @@ onUnmounted(() => {
   max-width: 900px;
   margin: 48px auto;
   padding: 32px;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
   border-radius: 12px;
 }
 
 .related-title {
   font-size: 20px;
   font-weight: 600;
-  color: #fff;
+  color: var(--text-primary);
   margin: 0 0 24px;
   padding-bottom: 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid var(--border-light);
 }
 
 .related-grid {
@@ -1597,8 +1602,8 @@ onUnmounted(() => {
 .related-card {
   display: flex;
   flex-direction: column;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
   border-radius: 8px;
   overflow: hidden;
   text-decoration: none;
@@ -1611,8 +1616,8 @@ onUnmounted(() => {
 
 .related-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 8px 32px rgba(198, 40, 40, 0.1);
-  border-color: rgba(198, 40, 40, 0.2);
+  box-shadow: 0 8px 32px rgba(79, 143, 220, 0.12);
+  border-color: rgba(79, 143, 220, 0.25);
 }
 
 .related-cover {
@@ -1649,7 +1654,7 @@ onUnmounted(() => {
 .related-card-title {
   font-size: 14px;
   font-weight: 600;
-  color: #fff;
+  color: var(--text-primary);
   margin: 0 0 8px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1658,7 +1663,7 @@ onUnmounted(() => {
 
 .related-excerpt {
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--text-secondary);
   line-height: 1.5;
   margin: 0 0 8px;
   display: -webkit-box;
@@ -1669,7 +1674,7 @@ onUnmounted(() => {
 
 .related-meta {
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.4);
+  color: var(--text-tertiary);
   display: flex;
   align-items: center;
   gap: 4px;
@@ -1698,21 +1703,21 @@ onUnmounted(() => {
 }
 
 .breadcrumb-item {
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--text-secondary);
   text-decoration: none;
   transition: color 0.2s ease;
 }
 
 .breadcrumb-item:hover {
-  color: #c62828;
+  color: var(--primary);
 }
 
 .breadcrumb-separator {
-  color: rgba(255, 255, 255, 0.3);
+  color: var(--text-tertiary);
 }
 
 .breadcrumb-current {
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--text-primary);
   max-width: 200px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1730,7 +1735,15 @@ onUnmounted(() => {
 }
 
 /* ========== 图片灯箱 ========== */
+.image-lightbox:not([open]) { display: none; }
 .image-lightbox {
+  width: 100vw;
+  height: 100vh;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.9);

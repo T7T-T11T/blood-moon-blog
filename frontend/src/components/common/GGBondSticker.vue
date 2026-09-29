@@ -6,7 +6,7 @@
   >
     <span class="sticker-tape tape-a" aria-hidden="true"></span>
     <span class="sticker-tape tape-b" aria-hidden="true"></span>
-    <img :src="currentMood.src" :alt="currentMood.label" loading="lazy" decoding="async" />
+    <picture><source media="(prefers-reduced-motion: reduce)" :srcset="ggbondMoods.cool.src" /><img :src="currentMood.src" :alt="currentMood.label" :loading="eager ? 'eager' : 'lazy'" decoding="async" /></picture>
     <figcaption v-if="caption">{{ caption === true ? currentMood.label : caption }}</figcaption>
   </figure>
 </template>
@@ -16,6 +16,7 @@ import { computed } from 'vue';
 import { ggbondMoods } from '@/utils/ggbond';
 
 const props = defineProps({
+  eager: { type: Boolean, default: false },
   mood: { type: String, default: 'cool' },
   size: { type: String, default: 'md' },
   caption: { type: [String, Boolean], default: false },

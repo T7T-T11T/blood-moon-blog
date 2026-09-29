@@ -111,12 +111,10 @@
         </div>
       </header>
 
-      <!-- 主内容区（带路由过渡动画） -->
+      <!-- 主内容区（路由切换直接替换内容，避免 out-in 淡入淡出造成"整页切换"的割裂感） -->
       <main class="admin-content">
         <router-view v-slot="{ Component }">
-          <transition name="route-fade" mode="out-in">
-            <component :is="Component" />
-          </transition>
+          <component :is="Component" />
         </router-view>
       </main>
     </div>
@@ -519,26 +517,6 @@ async function handleCommand(command) {
 .admin-content {
   flex: 1;
   padding: 24px 32px;
-}
-
-/* ========== 路由切换过渡动画 ========== */
-.route-fade-enter-active {
-  transition:
-    opacity 0.25s var(--ease-out),
-    transform 0.25s var(--ease-out);
-}
-
-.route-fade-leave-active {
-  transition: opacity 0.15s var(--ease-out);
-}
-
-.route-fade-enter-from {
-  opacity: 0;
-  transform: translateY(8px);
-}
-
-.route-fade-leave-to {
-  opacity: 0;
 }
 
 /* ========== 遮罩淡入淡出 ========== */

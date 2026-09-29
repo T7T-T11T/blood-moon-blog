@@ -1,3 +1,4 @@
+import { locale } from './locale.js';
 /**
  * 日期时间格式化工具
  * 作用：统一项目中重复的日期/时间格式化函数，消除各组件内多次重复定义
@@ -25,7 +26,7 @@ export function formatDate(dateStr) {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, '0');
   const d = String(date.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
+  return locale.value === 'en' ? new Intl.DateTimeFormat('en', { year: 'numeric', month: 'short', day: 'numeric' }).format(date) : `${y}-${m}-${d}`;
 }
 
 /**

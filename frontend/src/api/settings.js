@@ -20,7 +20,7 @@ import { defaultCache } from './cache';
  * @type {import('vue').Reactive<{siteName: string, siteDescription: string, [key: string]: any}>}
  */
 export const settingsState = reactive({
-  siteName: '个人博客',
+  siteName: '寿冬与秋',
   siteDescription: '记录生活、成长与每一个值得珍藏的瞬间'
 });
 

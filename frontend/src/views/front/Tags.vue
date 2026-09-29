@@ -7,12 +7,12 @@
     <section class="hero">
       <div class="hero-inner">
         <p class="hero-eyebrow animate-fade-in-down">TAGS</p>
-        <h1 class="hero-title animate-fade-in-up">标签云</h1>
+        <h1 class="hero-title animate-fade-in-up">{{ t('标签云') }}</h1>
         <p class="hero-subtitle animate-fade-in-up delay-100">
-          共 {{ tags.length }} 个已使用标签
+          {{ t('共') }} {{ tags.length }} {{ t('个已使用标签') }}
         </p>
       </div>
-      <GGBondSticker mood="underwater" size="lg" floating caption="潜入话题海洋" :style="{ top: '14px', right: 'clamp(22px, 12vw, 190px)' }" />
+      <GGBondSticker mood="underwater" size="lg" floating :caption="t('潜入话题海洋')" :style="{ top: '14px', right: 'clamp(22px, 12vw, 190px)' }" />
       <div class="hero-orb" aria-hidden="true"></div>
     </section>
 
@@ -44,14 +44,15 @@
       <!-- 空状态 -->
       <div v-else class="empty-state">
         <el-icon :size="64" class="empty-icon"><CollectionTag /></el-icon>
-        <p class="empty-title">暂无标签</p>
-        <p class="empty-desc">发布文章时可添加标签</p>
+        <p class="empty-title">{{ t('暂无标签') }}</p>
+        <p class="empty-desc">{{ t('发布文章时可添加标签') }}</p>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
+import { t } from '@/utils/locale';
 import { ref, onMounted } from 'vue';
 import { CollectionTag } from '@element-plus/icons-vue';
 import { getTags } from '@/api/tags';

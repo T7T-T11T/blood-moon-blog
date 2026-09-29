@@ -71,22 +71,11 @@ function hexToBytes(hex) {
   return bytes
 }
 
-/**
- * JWT/HMAC 密钥缺失时的兜底密钥
- * 当用户未配置 JWT_SECRET Secret 时使用
- * 生产环境建议通过 wrangler secret put JWT_SECRET 配置
- */
-const FALLBACK_JWT_SECRET = 'blood-moon-blog-default-jwt-secret-change-me-2026'
-
-/**
- * 从环境变量获取 JWT 密钥，缺失时返回兜底值
- * @param {Object} env - Hono Context 环境变量对象
- * @returns {string} JWT 密钥字符串
- */
+/** 缺少独立密钥时拒绝签发和验证，禁止共享默认密钥。 */
 function getJwtSecret(env) {
   const secret = env?.JWT_SECRET
-  if (secret && typeof secret === 'string' && secret.length >= 8) return secret
-  return FALLBACK_JWT_SECRET
+  if (typeof secret !== 'string' || secret.length < 32) throw new Error('JWT_SECRET must contain at least 32 characters')
+  return secret
 }
 
 /**
@@ -184,14 +173,12 @@ export async function verifyPassword(password, storedHash) {
 /**
  * 生成 JWT Token
  * @param {Object} payload - Token 载荷（包含 userId, username, role）
- * @param {string} secret - JWT 签名密钥（若未配置则取兜底）
+ * @param {string} secret - JWT 签名密钥（至少 32 个字符）
  * @param {Object} env - Hono 环境变量（用于取 JWT_SECRET）
  * @returns {Promise<string>} JWT Token
  */
 export async function generateToken(payload, secret, env) {
-  // 兼容直接传入 env 的旧用法
-  const jwtSecret = env ? getJwtSecret({ JWT_SECRET: secret, ...env }) : (secret || getJwtSecret())
-  const finalSecret = typeof secret === 'string' && secret.length > 4 ? secret : getJwtSecret(env)
+  const finalSecret = getJwtSecret({ JWT_SECRET: secret ?? env?.JWT_SECRET })
 
   const header = { alg: 'HS256', typ: 'JWT' }
   const now = Math.floor(Date.now() / 1000)
@@ -211,12 +198,12 @@ export async function generateToken(payload, secret, env) {
 /**
  * 验证 JWT Token
  * @param {string} token - JWT Token
- * @param {string} secret - JWT 密钥（可以传 c.env.JWT_SECRET，会自动兜底）
+ * @param {string} secret - JWT 密钥（可以传 c.env.JWT_SECRET，缺失则拒绝验证）
  * @returns {Promise<Object|null>} 解码后的载荷，失败返回 null
  */
 export async function verifyToken(token, secret) {
-  const finalSecret = (typeof secret === 'string' && secret.length > 4) ? secret : FALLBACK_JWT_SECRET
   try {
+    const finalSecret = getJwtSecret({ JWT_SECRET: secret })
     const parts = token.split('.')
     if (parts.length !== 3) return null
 
@@ -234,7 +221,7 @@ export async function verifyToken(token, secret) {
 
     // 检查过期时间
     const now = Math.floor(Date.now() / 1000)
-    if (payload.exp && payload.exp < now) return null
+    if (!Number.isFinite(payload.exp) || payload.exp <= now) return null
 
     return payload
   } catch {
@@ -258,7 +245,7 @@ export async function authMiddleware(c, next) {
   }
 
   const token = authHeader.split(' ')[1]
-  const secret = getJwtSecret(c.env)
+  const secret = c.env.JWT_SECRET
 
   const payload = await verifyToken(token, secret)
   if (!payload) {
@@ -300,8 +287,7 @@ export async function adminMiddleware(c, next) {
 export async function verifyTokenSilently(authHeader, secret) {
   if (!authHeader || !authHeader.startsWith('Bearer ')) return null
   const token = authHeader.split(' ')[1]
-  const finalSecret = (typeof secret === 'string' && secret.length > 4) ? secret : FALLBACK_JWT_SECRET
-  return verifyToken(token, finalSecret)
+  return verifyToken(token, secret)
 }
 
 /**

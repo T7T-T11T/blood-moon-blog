@@ -6,6 +6,7 @@
  * - GET /api/visits/stats - 获取访问统计（需管理员）
  */
 
+import { visitorId } from '../lib/visitorId.js'
 import { Hono } from 'hono'
 import { getDatabase } from '../db.js'
 import { authMiddleware, adminMiddleware, getClientIp } from '../auth.js'
@@ -22,8 +23,10 @@ visitsRouter.post('/', async (c) => {
   
   try {
     const body = await c.req.json()
-    const pagePath = body.page_path || c.req.query('page') || '/'
-    const visitorIp = getClientIp(c)
+    if (body.consent !== true || c.req.header('DNT') === '1' || c.req.header('Sec-GPC') === '1') return c.json({ code: 200 })
+    const pagePath = body.page_path
+    if (typeof pagePath !== 'string' || pagePath.length > 500 || !pagePath.startsWith('/') || /[?#]/.test(pagePath)) return c.json({ code: 400, message: '无效的页面路径' }, 400)
+    const visitorIp = await visitorId(getClientIp(c), c.env.JWT_SECRET)
 
     await db.insert('site_visits', {
       page_path: pagePath,

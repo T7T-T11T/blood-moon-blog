@@ -49,14 +49,10 @@ const app = new Hono()
 app.use('/*', cors({
   origin: (origin, c) => {
     // 允许 Cloudflare Pages 域名和本地开发
-    if (origin.includes('.pages.dev') || 
-        origin.includes('.workers.dev') ||
-        origin.includes('localhost') ||
-        origin.includes('127.0.0.1') ||
-        origin === c.env.CORS_ORIGIN) {
+    if (origin === c.env.CORS_ORIGIN || /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
       return origin
     }
-    return c.env.CORS_ORIGIN || '*'
+    return c.env.CORS_ORIGIN || 'https://blood-moon-blog.pages.dev'
   },
   allowHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -149,6 +145,12 @@ app.onError((err, c) => {
  * cron 表达式（UTC）：0 23 14 * *  = 北京时间每月 15 日 07:00
  */
 async function scheduled(event, env, ctx) {
+  if (event.cron === '0 0 * * *') {
+    const cutoff = new Date(Date.now() - 30 * 86400000).toISOString()
+    const { error } = await getDatabase(env).supabase.from('site_visits').delete().lt('visit_time', cutoff)
+    if (error) throw error
+    return
+  }
   const result = await runLogBackup(env)
   console.log(`[Scheduled] ${result.message}`)
 }

@@ -25,7 +25,7 @@
   /* 中性色 - 暗色主题 */
   --text-primary: #29334a;
   --text-secondary: #626b7c;
-  --text-tertiary: #9298a3;
+  --text-tertiary: #687184;
   --text-placeholder: #aeb4bc;
   --text-body: #434d61;
   --code-bg: #eef5fb;
@@ -81,7 +81,7 @@
 [data-theme='light'] {
   --text-primary: #29334a;
   --text-secondary: #626b7c;
-  --text-tertiary: #9298a3;
+  --text-tertiary: #687184;
   --text-placeholder: #aeb4bc;
   --text-body: #434d61;
   --code-bg: #eef5fb;
@@ -1374,23 +1374,23 @@ body {
 }
 
 /* ========== 前台奶油游乐场主题（覆盖历史暗色硬编码） ========== */
-.front-layout :is(.search-page, .archive-page, .about-page, .tags-page, .links-page, .category-page, .tag-page, .article-detail) {
+.front-layout :is(.search-page, .archive-page, .tags-page, .category-page, .tag-page, .article-detail) {
   background: transparent !important;
   color: var(--text-primary) !important;
 }
 
-.front-layout :is(.search-page, .archive-page, .about-page, .tags-page, .links-page) .hero,
+.front-layout :is(.search-page, .archive-page, .tags-page) .hero,
 .front-layout :is(.category-page, .tag-page) .page-header {
   color: #29334a !important;
   background: linear-gradient(135deg, rgba(203, 234, 255, .88), rgba(255, 244, 190, .88)) !important;
   border-bottom: 1px solid #cbd9df !important;
 }
 
-.front-layout :is(.search-page, .archive-page, .about-page, .tags-page, .links-page) .hero::before {
+.front-layout :is(.search-page, .archive-page, .tags-page) .hero::before {
   background: radial-gradient(circle, rgba(120, 200, 160, .28), transparent 70%) !important;
 }
 
-.front-layout :is(.search-page, .archive-page, .about-page, .tags-page, .links-page) :is(.hero-title, .hero-eyebrow, .hero-subtitle, .hero-tagline),
+.front-layout :is(.search-page, .archive-page, .tags-page) :is(.hero-title, .hero-eyebrow, .hero-subtitle, .hero-tagline),
 .front-layout :is(.category-page, .tag-page) :is(.page-title, .eyebrow, .page-subtitle) {
   color: #29334a !important;
   background: none !important;
@@ -1398,23 +1398,20 @@ body {
   text-shadow: none !important;
 }
 
-.front-layout :is(.search-page, .archive-page, .about-page, .tags-page, .links-page) .hero-eyebrow,
+.front-layout :is(.search-page, .archive-page, .tags-page) .hero-eyebrow,
 .front-layout :is(.category-page, .tag-page) .eyebrow {
   color: #3979ba !important;
 }
 
-.front-layout :is(.search-page, .archive-page, .about-page, .tags-page, .links-page) .hero-orb {
+.front-layout :is(.search-page, .archive-page, .tags-page) .hero-orb {
   background: radial-gradient(circle, rgba(241, 167, 189, .28), transparent 70%) !important;
 }
 
-.front-layout :is(.search-page, .archive-page, .about-page, .tags-page, .links-page, .category-page, .tag-page) :is(.content-wrapper, .content-main, .block, .link-apply, .link-card-inner, .search-form) {
+.front-layout :is(.search-page, .archive-page, .tags-page, .category-page, .tag-page) :is(.content-wrapper, .content-main, .search-form) {
   color: var(--text-primary) !important;
 }
 
-.front-layout .search-form,
-.front-layout .link-apply,
-.front-layout .link-card-inner,
-.front-layout .about-page .block {
+.front-layout .search-form {
   background: rgba(255, 253, 247, .92) !important;
   border-color: #d9d2c2 !important;
   box-shadow: 0 12px 34px rgba(79, 143, 220, .09) !important;
@@ -1439,7 +1436,7 @@ body {
   background: #eaf6ff !important;
 }
 
-.front-layout :is(.archive-page, .about-page, .links-page) :is(.timeline-skeleton, .skeleton-line, .skeleton-label) {
+.front-layout :is(.archive-page) :is(.timeline-skeleton, .skeleton-line, .skeleton-label) {
   background: #e6eef3 !important;
 }
 
@@ -1450,22 +1447,8 @@ body {
 }
 
 /* 前台内容不使用硬直线框，改为柔和的留白与圆角层次。 */
-.front-layout .about-page .content-wrapper,
 .front-layout .archive-page .content-wrapper {
   background: transparent !important;
-}
-
-.front-layout .about-page .block {
-  padding: 34px !important;
-  margin-bottom: 30px !important;
-  background: rgba(255, 253, 247, 0.76) !important;
-  border: 0 !important;
-  border-radius: 24px !important;
-  box-shadow: 0 14px 36px rgba(67, 93, 118, 0.08) !important;
-}
-
-.front-layout .about-page :is(.contact-item, .contact-link) {
-  border: 0 !important;
 }
 
 .front-layout .article-detail .article-content {
@@ -1504,3 +1487,23 @@ body {
 }
 
 .shimmer { background: #e7eef3; }
+
+/* Keyboard navigation and long translated text. */
+:focus-visible { outline: 3px solid #3267a8; outline-offset: 3px; }
+.skip-link { position: fixed; inset-inline-start: 16px; top: -100px; z-index: 10000; padding: 12px; background: #fffdf7; color: #29334a; }
+.skip-link:focus { top: 8px; }
+.front-layout { overflow-wrap: anywhere; }
+.front-layout img, .front-layout video { max-width: 100%; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+  .reveal { opacity: 1 !important; transform: none !important; }
+}
+
+.front-layout .article-row { position: relative; }
+.front-layout .article-link { color: inherit; text-decoration: none; }
+.front-layout .article-link::after { content: ''; position: absolute; inset: 0; border-radius: inherit; }
+.front-layout .article-link:focus-visible::after { outline: 3px solid #3267a8; outline-offset: 3px; }
+.front-layout .reveal:focus-within { opacity: 1; transform: none; }
+.front-layout :is(input, textarea):focus-visible { outline: 3px solid #3267a8; outline-offset: 3px; }
+
+@media (max-width: 480px) { .front-layout .footer { padding-bottom: 120px; } .front-layout .back-to-top { bottom: 120px; } }

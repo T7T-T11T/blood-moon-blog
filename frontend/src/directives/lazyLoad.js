@@ -85,13 +85,13 @@ export default {
       }
     };
 
+    if (!('IntersectionObserver' in window)) { handlers.load(); return; }
     observerMap.set(el, handlers);
     getObserver().observe(el);
   },
 
   unmounted(el) {
-    const observer = getObserver();
-    observer.unobserve(el);
+    globalObserver?.unobserve(el);
     observerMap.delete(el);
   }
 };

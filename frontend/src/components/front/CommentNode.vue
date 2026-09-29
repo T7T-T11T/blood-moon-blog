@@ -14,11 +14,11 @@
       </div>
       <div class="comment-body">
         <div class="comment-header">
-          <span class="comment-nickname">{{ comment.nickname || '访客' }}</span>
+          <span class="comment-nickname" dir="auto">{{ comment.nickname || t('访客') }}</span>
           <span class="comment-time">{{ formatDate(comment.created_at) }}</span>
         </div>
-        <div class="comment-content">{{ comment.content }}</div>
-        <button class="reply-btn" @click="$emit('reply', comment)">回复</button>
+        <div class="comment-content" dir="auto">{{ comment.content }}</div>
+        <button class="reply-btn" @click="$emit('reply', comment)">{{ t('回复') }}</button>
       </div>
     </div>
 
@@ -35,6 +35,7 @@
 </template>
 
 <script setup>
+import { t } from '@/utils/locale';
 import { formatDate } from '@/utils/format';
 
 defineProps({
@@ -59,7 +60,13 @@ defineEmits(['reply']);
 .comment-content { margin-bottom: 8px; color: var(--text-secondary); font-size: 14px; line-height: 1.7; overflow-wrap: anywhere; }
 .reply-btn { padding: 0; border: 0; background: transparent; color: var(--text-tertiary); cursor: pointer; font-size: 13px; }
 .reply-btn:hover { color: var(--primary); }
-.comment-children { display: flex; flex-direction: column; gap: 16px; margin: 16px 0 0 26px; padding-left: 20px; border-left: 2px solid var(--border); }
+.comment-children { display: flex; flex-direction: column; gap: 16px; margin-block-start: 16px; margin-inline-start: 26px; padding-inline-start: 20px; border-inline-start: 2px solid var(--border); }
 .is-reply .comment-avatar { width: 32px; height: 32px; }
-@media (max-width: 768px) { .comment-children { margin-left: 12px; padding-left: 12px; } }
+@media (max-width: 768px) { .comment-children { margin-inline-start: 12px; padding-inline-start: 12px; } }
+</style>
+
+<style scoped>
+.comment-header { flex-wrap: wrap; }
+/* Deeper replies keep their hierarchy without consuming the whole narrow screen. */
+.comment-children .comment-children { margin-inline-start: 0; padding-inline-start: 0; border-inline-start: 0; }
 </style>

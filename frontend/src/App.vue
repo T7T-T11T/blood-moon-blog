@@ -3,19 +3,20 @@
   <component :is="'script'" type="application/ld+json">
     {{ jsonLd }}
   </component>
-  <router-view />
+  <el-config-provider :locale="locale === 'en' ? en : zhCn"><router-view /></el-config-provider>
 
   <!-- 版本更新提示：检测到新版本时显示 -->
   <Teleport to="body">
     <div v-if="showUpdateTip" class="version-update-tip">
-      <span>🔔 检测到新版本，点击刷新</span>
-      <button @click="refreshPage">刷新</button>
+      <span>{{ t('🔔 检测到新版本，点击刷新') }}</span>
+      <button @click="refreshPage">{{ t('刷新') }}</button>
       <button class="close-btn" @click="dismissUpdate">×</button>
     </div>
   </Teleport>
 </template>
 
 <script setup>
+import { t, locale } from '@/utils/locale';
 /**
  * 应用根组件
  * 作用：仅作为路由出口，不包含布局逻辑
@@ -32,9 +33,20 @@
  * 版本更新：
  * - 自动检测新版本并提示用户刷新
  */
-import { computed, ref, onMounted, onBeforeUnmount } from 'vue';
+import en from 'element-plus/es/locale/lang/en';
+import { useRoute } from 'vue-router';
+import zhCn from 'element-plus/es/locale/lang/zh-cn';
+import { computed, ref, onMounted, onBeforeUnmount, watchEffect } from 'vue';
 import { settingsState, getSettings } from '@/api/settings';
 import { startVersionCheck } from '@/utils/version';
+
+const route = useRoute();
+watchEffect(() => {
+  document.documentElement.lang = locale.value;
+  // 标题使用站点设置里的名称（设置加载后会自动重算）
+  const siteName = settingsState.siteName || '寿冬与秋';
+  if (route.name !== 'ArticleDetail') document.title = `${t(route.meta.title || siteName)} - ${siteName}`;
+});
 
 /** @type {import('vue').Ref<boolean>} 是否显示版本更新提示 */
 const showUpdateTip = ref(false);

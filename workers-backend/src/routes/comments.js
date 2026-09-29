@@ -123,7 +123,7 @@ commentsRouter.get('/:articleId', async (c) => {
     // 新评论直接展示；保留历史明确拒绝的隐藏记录，避免误恢复已处理的垃圾评论。
     const { data: comments, count: total, error } = await db.supabase
       .from('comments')
-      .select('id, article_id, nickname, email, avatar_url, content, parent_id, created_at', { count: 'exact' })
+      .select('id, article_id, nickname, avatar_url, content, parent_id, created_at', { count: 'exact' })
       .eq('article_id', articleId)
       .or('status.is.null,status.neq.已拒绝')
       .order('created_at', { ascending: true })
@@ -230,15 +230,14 @@ commentsRouter.post('/:articleId', async (c) => {
 
     return c.json({
       code: 200,
-      data: comment,
+      data: { id: comment.id, article_id: comment.article_id, nickname: comment.nickname, avatar_url: comment.avatar_url, content: comment.content, parent_id: comment.parent_id, created_at: comment.created_at },
       message: '评论成功'
     })
   } catch (error) {
     console.error('Create comment error:', error)
     return c.json({
       code: 500,
-      message: '服务器错误: ' + error.message,
-      detail: error.details || error.stack || String(error)
+      message: '服务器错误'
     }, 500)
   }
 })

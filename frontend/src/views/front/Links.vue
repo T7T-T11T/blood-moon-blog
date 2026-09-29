@@ -4,8 +4,8 @@
     <section class="hero">
       <div class="hero-inner">
         <p class="hero-eyebrow animate-fade-in-down">FRIENDS</p>
-        <h1 class="hero-title animate-fade-in-up">友情链接</h1>
-        <p class="hero-tagline animate-fade-in-up delay-100">交换链接，共同成长</p>
+        <h1 class="hero-title animate-fade-in-up">{{ t('友情链接') }}</h1>
+        <p class="hero-tagline animate-fade-in-up delay-100">{{ t('交换链接，共同成长') }}</p>
       </div>
       <GGBondSticker mood="happyWave" size="lg" floating caption="交个朋友吧" :style="{ top: '14px', right: 'clamp(22px, 12vw, 190px)' }" />
     </section>
@@ -15,9 +15,9 @@
       :loading="loading"
       :error="error"
       :empty="links.length === 0 && !loading && !error"
-      error-message="加载友链失败，请稍后重试"
-      empty-message="暂无友链"
-      retry-text="重试"
+      :error-message="t('加载友链失败，请稍后重试')"
+      :empty-message="t('暂无友链')"
+      :retry-text="t('重试')"
       @retry="loadLinks"
     >
       <div class="link-grid">
@@ -31,7 +31,7 @@
               loading="lazy"
             />
             <div class="link-info">
-              <h3 class="link-name">{{ link.name }}</h3>
+              <h3 class="link-name">{{ link.name }}<span v-if="link.category && link.category !== '友情链接'" class="link-cat">{{ link.category }}</span></h3>
               <p class="link-desc">{{ link.description }}</p>
             </div>
             <span class="link-arrow" aria-hidden="true">→</span>
@@ -42,29 +42,32 @@
 
     <!-- ============ 申请友链 ============ -->
     <section class="link-apply reveal">
-      <h2 class="apply-title">申请友链</h2>
-      <p class="apply-tip">交换链接，共同成长。提交后经管理员审核通过即可展示。</p>
+      <h2 class="apply-title">{{ t('申请友链') }}</h2>
+      <p class="apply-tip">{{ t('交换链接，共同成长。提交后经管理员审核通过即可展示。') }}</p>
       <form class="apply-form" @submit.prevent="submitApply">
         <div class="apply-row">
           <input
             v-model="applyForm.name"
+          :aria-label="t('网站名称（必填）')" required
             type="text"
             class="apply-input"
-            placeholder="网站名称 *"
+            :placeholder="t('网站名称 *')"
             maxlength="100"
           />
           <input
             v-model="applyForm.url"
+          :aria-label="t('网站地址（必填）')" required
             type="url"
             class="apply-input"
-            placeholder="网站地址 https://... *"
+            :placeholder="t('网站地址 https://... *')"
             maxlength="500"
           />
         </div>
         <textarea
           v-model="applyForm.description"
+          :aria-label="t('网站简介（可选）')"
           class="apply-textarea"
-          placeholder="一句话简介（可选）"
+          :placeholder="t('一句话简介（可选）')"
           rows="3"
           maxlength="200"
         ></textarea>
@@ -78,9 +81,9 @@
           aria-hidden="true"
         />
         <div class="apply-actions">
-          <span class="apply-status">{{ applyStatus }}</span>
+          <span class="apply-status" role="status">{{ applyStatus }}</span>
           <button type="submit" class="apply-btn" :disabled="applying">
-            {{ applying ? '提交中…' : '提交申请' }}
+            {{ applying ? t('提交中…') : t('提交申请') }}
           </button>
         </div>
       </form>
@@ -89,6 +92,7 @@
 </template>
 
 <script setup>
+import { t } from '@/utils/locale';
 import { ref, onMounted, onUnmounted, nextTick } from 'vue';
 import { getLinks, applyLink } from '../../api/links';
 import AsyncData from '../../components/common/AsyncData.vue';
@@ -145,6 +149,10 @@ async function loadLinks() {
 function initObserver() {
   if (observer) observer.disconnect();
   if (!rootRef.value) return;
+  if (!('IntersectionObserver' in window)) {
+    rootRef.value.querySelectorAll('.reveal').forEach(el => el.classList.add('visible'));
+    return;
+  }
   observer = new IntersectionObserver(
     (entries) => {
       entries.forEach((entry) => {
@@ -210,36 +218,25 @@ async function submitApply() {
 }</script>
 
 <style scoped>
-/* ========== Hero 区域 ========== */
+/* ========== Hero 区域（奶油浅色） ========== */
 .hero {
   position: relative;
-  padding: 120px 32px 80px;
-  background: linear-gradient(
-    180deg,
-    rgba(6, 9, 18, 0.55) 0%,
-    rgba(10, 14, 26, 0.45) 50%,
-    rgba(18, 24, 40, 0.65) 100%
-  );
+  padding: 110px 32px 76px;
+  background: linear-gradient(135deg, rgba(203, 234, 255, .9), rgba(255, 244, 190, .9));
   overflow: hidden;
-  color: #fff;
+  color: #29334a;
+  border-bottom: 1px solid #d9d2c2;
   isolation: isolate;
-  border-bottom: 1px solid var(--border);
 }
 
 .hero::before {
   content: '';
   position: absolute;
-  top: 5%;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 480px;
-  height: 480px;
-  background: radial-gradient(
-    circle,
-    rgba(220, 38, 38, 0.1) 0%,
-    rgba(153, 27, 27, 0.04) 40%,
-    transparent 70%
-  );
+  top: -30%;
+  right: -12%;
+  width: 420px;
+  height: 420px;
+  background: radial-gradient(circle, rgba(120, 200, 160, .22), transparent 70%);
   border-radius: 50%;
   z-index: 0;
   pointer-events: none;
@@ -254,95 +251,83 @@ async function submitApply() {
 }
 
 .hero-eyebrow {
-  margin: 0 0 20px;
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 6px;
-  color: rgba(248, 113, 113, 0.8);
+  margin: 0 0 18px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .18em;
+  color: #3979ba;
 }
 
 .hero-title {
-  margin: 0 0 24px;
-  font-size: clamp(48px, 8vw, 80px);
-  font-weight: 800;
-  letter-spacing: -2px;
-  background: linear-gradient(180deg, #ffffff 0%, #fca5a5 60%, #dc2626 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
+  margin: 0 0 20px;
+  font-family: Impact, Haettenschweiler, 'Arial Narrow Bold', 'Microsoft YaHei', sans-serif;
+  font-size: clamp(46px, 7vw, 76px);
+  font-weight: 400;
+  letter-spacing: -.02em;
+  line-height: 1;
+  color: #29334a;
 }
 
 .hero-tagline {
   margin: 0 auto;
   max-width: 560px;
-  font-size: clamp(16px, 2vw, 18px);
-  font-weight: 400;
-  color: rgba(241, 245, 249, 0.6);
-  letter-spacing: 1px;
+  font-size: clamp(15px, 2vw, 17px);
+  font-weight: 500;
+  color: #5c6d82;
 }
 
 /* ========== 友链网格 ========== */
 .link-grid {
   max-width: 960px;
   margin: 0 auto;
-  padding: 64px 32px 96px;
+  padding: 56px 32px 40px;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 24px;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
 }
 
 .link-card {
-  background: rgba(10, 14, 26, 0.4);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  backdrop-filter: blur(4px);
-  transition:
-    border-color 0.3s var(--ease-out),
-    transform 0.3s var(--ease-spring),
-    box-shadow 0.3s var(--ease-out);
+  background: rgba(255, 253, 247, .94);
+  border: 1px solid #d9d2c2;
+  border-radius: 20px;
+  box-shadow: 0 12px 30px rgba(79, 113, 143, .08);
   opacity: 0;
   transform: translateY(24px);
   transition:
-    opacity 0.6s var(--ease-out),
-    transform 0.6s var(--ease-out),
-    border-color 0.3s var(--ease-out),
-    box-shadow 0.3s var(--ease-out);
+    opacity .5s var(--ease-out),
+    transform .5s var(--ease-out),
+    border-color .25s var(--ease-out),
+    box-shadow .25s var(--ease-out);
 }
 
 .link-card.visible {
   opacity: 1;
   transform: translateY(0);
 }
+
 .link-card:hover {
-  border-color: var(--primary);
-  box-shadow: 0 12px 48px rgba(220, 38, 38, 0.15);
-  transform: translateY(-4px);
-}
-.link-card.visible:hover {
+  border-color: #4f8fdc;
+  box-shadow: 0 16px 40px rgba(79, 143, 220, .16);
   transform: translateY(-4px);
 }
 
 .link-card-inner {
   display: flex;
   align-items: center;
-  gap: 18px;
-  padding: 24px;
+  gap: 16px;
+  padding: 22px;
   text-decoration: none;
   color: inherit;
 }
 
 .link-avatar {
   flex-shrink: 0;
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
+  width: 54px;
+  height: 54px;
+  border-radius: 16px;
   object-fit: cover;
-  border: 2px solid var(--border);
-  transition: border-color 0.3s var(--ease-out);
-}
-
-.link-card:hover .link-avatar {
-  border-color: var(--primary);
+  border: 2px solid #ffffff;
+  box-shadow: 0 3px 10px rgba(79, 113, 143, .18);
 }
 
 .link-info {
@@ -352,21 +337,33 @@ async function submitApply() {
 
 .link-name {
   margin: 0 0 6px;
-  font-size: 17px;
-  font-weight: 700;
-  color: var(--text-primary);
-  transition: color 0.25s var(--ease-out);
+  font-size: 16px;
+  font-weight: 800;
+  color: #29334a;
+  transition: color .2s var(--ease-out);
 }
 
 .link-card:hover .link-name {
-  color: var(--primary);
+  color: #3267a8;
+}
+
+.link-cat {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 9px;
+  vertical-align: 2px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #3979ba;
+  background: rgba(79, 143, 220, .12);
+  border-radius: 999px;
 }
 
 .link-desc {
   margin: 0;
   font-size: 13px;
-  line-height: 1.5;
-  color: var(--text-tertiary);
+  line-height: 1.55;
+  color: #687184;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -377,47 +374,37 @@ async function submitApply() {
   flex-shrink: 0;
   font-size: 18px;
   font-weight: 600;
-  color: var(--text-tertiary);
+  color: #9298a3;
   transition:
-    transform 0.3s var(--ease-spring),
-    color 0.25s var(--ease-out);
+    transform .25s var(--ease-spring),
+    color .2s var(--ease-out);
 }
 
 .link-card:hover .link-arrow {
-  color: var(--primary);
+  color: #4f8fdc;
   transform: translateX(4px);
-}
-
-/* ========== 响应式 ========== */
-@media (max-width: 768px) {
-  .hero {
-    padding: 80px 20px 56px;
-  }
-  .link-grid {
-    padding: 40px 20px 64px;
-    grid-template-columns: 1fr;
-  }
 }
 
 /* ========== 申请友链 ========== */
 .link-apply {
   max-width: 760px;
-  margin: 56px auto 0;
-  padding: 28px;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  margin: 48px auto 0;
+  padding: 30px;
+  background: rgba(255, 253, 247, .94);
+  border: 1px solid #d9d2c2;
+  border-radius: 24px;
+  box-shadow: 0 14px 36px rgba(67, 93, 118, .08);
 }
 
 .apply-title {
   font-size: 20px;
-  color: var(--text-primary);
+  color: #29334a;
   margin-bottom: 8px;
 }
 
 .apply-tip {
   font-size: 13px;
-  color: var(--text-secondary);
+  color: #626b7c;
   margin-bottom: 20px;
 }
 
@@ -430,20 +417,20 @@ async function submitApply() {
 .apply-input,
 .apply-textarea {
   width: 100%;
-  padding: 10px 14px;
+  padding: 11px 15px;
   font-size: 14px;
-  color: var(--text-primary);
-  background: var(--bg-body);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  color: #29334a;
+  background: #f4efe2;
+  border: 1px solid #d9d2c2;
+  border-radius: 12px;
   outline: none;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition: border-color .2s, box-shadow .2s;
 }
 
 .apply-input:focus,
 .apply-textarea:focus {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.12);
+  border-color: #4f8fdc;
+  box-shadow: 0 0 0 3px rgba(79, 143, 220, .16);
 }
 
 .apply-textarea {
@@ -477,27 +464,40 @@ async function submitApply() {
   font-size: 14px;
   font-weight: 600;
   color: #fff;
-  background: var(--primary);
+  background: #4f8fdc;
   border: none;
   border-radius: 20px;
   cursor: pointer;
   transition:
-    background 0.2s,
-    transform 0.2s;
+    background .2s,
+    transform .2s;
 }
 
 .apply-btn:hover:not(:disabled) {
-  background: var(--primary-light);
+  background: #78b8ef;
   transform: translateY(-2px);
 }
 
 .apply-btn:disabled {
-  opacity: 0.6;
+  opacity: .6;
   cursor: not-allowed;
+}
+
+/* ========== 响应式 ========== */
+@media (max-width: 768px) {
+  .hero {
+    padding: 80px 20px 56px;
+  }
+
+  .link-grid {
+    padding: 36px 20px 32px;
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 640px) {
   .apply-row {
     flex-direction: column;
   }
-}</style>
+}
+</style>

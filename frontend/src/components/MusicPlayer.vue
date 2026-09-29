@@ -5,13 +5,13 @@
     <template v-if="!collapsed">
       <!-- 播放控制按钮组 -->
       <div class="player-controls">
-        <button class="ctrl-btn" :disabled="!musicList.length" title="上一首" @click="prevTrack">
+        <button class="ctrl-btn" :disabled="!musicList.length" :title="t('上一首')" @click="prevTrack">
           <el-icon :size="14"><RefreshLeft /></el-icon>
         </button>
         <button
           class="ctrl-btn play-btn"
           :disabled="!musicList.length"
-          :title="isPlaying ? '暂停' : '播放'"
+          :title="isPlaying ? t('暂停') : t('播放')"
           @click="togglePlay"
         >
           <el-icon :size="16">
@@ -19,7 +19,7 @@
             <VideoPlay v-else />
           </el-icon>
         </button>
-        <button class="ctrl-btn" :disabled="!musicList.length" title="下一首" @click="nextTrack">
+        <button class="ctrl-btn" :disabled="!musicList.length" :title="t('下一首')" @click="nextTrack">
           <el-icon :size="14"><RefreshRight /></el-icon>
         </button>
       </div>
@@ -29,7 +29,7 @@
         <div v-if="isPlaying" class="audio-bars"><span></span><span></span><span></span></div>
         <div class="info-text">
           <span class="player-title" :title="currentMusic?.title">
-            {{ currentMusic?.title || '暂无音乐' }}
+            {{ currentMusic?.title || t('暂无音乐') }}
           </span>
           <span v-if="currentMusic?.artist" class="player-artist">— {{ currentMusic.artist }}</span>
         </div>
@@ -38,14 +38,15 @@
       <!-- 进度条 + 时间 -->
       <div class="player-progress">
         <span class="progress-time">{{ formatTime(currentTime) }}</span>
-        <div class="progress-bar" @click="seek">
-          <div class="progress-fill" :style="{ width: progressPercent + '%' }"></div>
-        </div>
+        <input
+          class="progress-bar" type="range" min="0" :max="duration || 0" step="1"
+          :value="currentTime" :disabled="!Number.isFinite(duration) || duration <= 0"
+          :aria-label="t('播放进度')" :aria-valuetext="`${formatTime(currentTime)} / ${formatTime(duration)}`" @input="seek" />
         <span class="progress-time">{{ formatTime(duration) }}</span>
       </div>
 
       <!-- 收起按钮 -->
-      <button class="ctrl-btn collapse-btn" title="收起" @click="collapsed = true">
+      <button class="ctrl-btn collapse-btn" :title="t('收起')" @click="collapsed = true">
         <el-icon :size="12"><ArrowDown /></el-icon>
       </button>
     </template>
@@ -54,7 +55,7 @@
     <template v-else>
       <button
         class="ctrl-btn play-btn mini-play"
-        :title="isPlaying ? '暂停' : '展开播放器'"
+        :title="isPlaying ? t('暂停') : t('展开播放器')"
         @click="collapsed = false"
       >
         <el-icon :size="16">
@@ -82,6 +83,7 @@
 </template>
 
 <script setup>
+import { t } from '@/utils/locale';
 /**
  * 全局音乐播放器组件
  * 作用：前台页面底部浮动播放条，默认静音等待用户点击播放
@@ -145,14 +147,6 @@ const currentTime = ref(0);
 
 /** 音频总时长（秒） */
 const duration = ref(0);
-
-/** 进度百分比 */
-const progressPercent = computed(() => {
-  if (duration.value > 0) {
-    return (currentTime.value / duration.value) * 100;
-  }
-  return 0;
-});
 
 /** 是否收起为迷你模式 */
 const collapsed = ref(false);
@@ -222,7 +216,7 @@ async function playCurrent() {
 function togglePlay() {
   if (!audioRef.value) return;
   if (audioRef.value.paused) {
-    audioRef.value.play();
+    playCurrent();
   } else {
     audioRef.value.pause();
   }
@@ -258,9 +252,8 @@ function nextTrack() {
  */
 function seek(e) {
   if (!audioRef.value || !duration.value) return;
-  const rect = e.currentTarget.getBoundingClientRect();
-  const percent = (e.clientX - rect.left) / rect.width;
-  const time = percent * duration.value;
+  const time = Number(e.target.value);
+  if (!Number.isFinite(time) || time < 0 || time > duration.value) return;
   audioRef.value.currentTime = time;
   currentTime.value = time;
 }
@@ -337,6 +330,7 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+input.progress-bar { accent-color: #3267a8; padding: 0; margin: 0; }
 /* ========== 播放器容器 ========== */
 .music-player {
   position: fixed;
@@ -465,7 +459,7 @@ onUnmounted(() => {
 
 .player-artist {
   font-size: 11px;
-  color: #7a8799;
+  color: #58667b;
   flex-shrink: 0;
 }
 
@@ -538,7 +532,7 @@ onUnmounted(() => {
 
 .progress-time {
   font-size: 11px;
-  color: #7a8799;
+  color: #58667b;
   min-width: 36px;
   text-align: center;
   flex-shrink: 0;
@@ -571,9 +565,8 @@ onUnmounted(() => {
 }
 
 @media (max-width: 480px) {
-  .player-progress {
-    display: none;
-  }
+  .music-player:not(.collapsed) { width: calc(100% - 24px); box-sizing: border-box; flex-wrap: wrap; bottom: 16px; }
+  .player-progress { display: flex; flex: 1 0 100%; max-width: none; order: 3; }
 
   .player-info {
     flex: 1;

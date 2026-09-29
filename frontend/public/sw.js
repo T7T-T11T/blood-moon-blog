@@ -6,8 +6,8 @@
  * - 其他同源静态资源：stale-while-revalidate
  */
 const CACHE_PREFIX = 'blood-moon-blog';
-const SHELL_CACHE = CACHE_PREFIX + '-shell-v1';
-const ASSET_CACHE = CACHE_PREFIX + '-assets-v1';
+const SHELL_CACHE = CACHE_PREFIX + '-shell-v2';
+const ASSET_CACHE = CACHE_PREFIX + '-assets-v2';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
@@ -65,6 +65,28 @@ self.addEventListener('fetch', (event) => {
           return response;
         })
         .catch(() => caches.match('/'))
+    );
+    return;
+  }
+
+  // 文章封面/配图/上传图片：缓存优先（图片不常变，重复访问秒开）
+  if (
+    url.pathname.startsWith('/article-covers/') ||
+    url.pathname.startsWith('/article-assets/') ||
+    url.pathname.startsWith('/uploads/') ||
+    request.destination === 'image'
+  ) {
+    event.respondWith(
+      caches.match(request).then((cached) => {
+        if (cached) return cached;
+        return fetch(request).then((response) => {
+          if (response && response.ok) {
+            const clone = response.clone();
+            caches.open(ASSET_CACHE).then((cache) => cache.put(request, clone));
+          }
+          return response;
+        });
+      })
     );
     return;
   }

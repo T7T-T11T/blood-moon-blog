@@ -7,7 +7,7 @@
   <section class="comment-section">
     <div class="comment-header-row">
       <h2 class="section-title">
-        评论
+        {{ t('评论') }}
         <span class="comment-count">{{ commentCount }}</span>
       </h2>
       <div class="comment-sort">
@@ -18,7 +18,7 @@
           :class="{ active: commentSort === opt.value }"
           @click="commentSort = opt.value"
         >
-          {{ opt.label }}
+          {{ t(opt.label) }}
         </button>
       </div>
     </div>
@@ -26,8 +26,8 @@
     <!-- 评论表单 -->
     <div class="comment-form-wrapper">
       <div v-if="replyTo" class="reply-tip">
-        <span>回复 @{{ replyTo.nickname }}</span>
-        <button class="cancel-btn" @click="cancelReply">取消</button>
+        <span>{{ t('回复 @') }}{{ replyTo.nickname }}</span>
+        <button class="cancel-btn" @click="cancelReply">{{ t('取消') }}</button>
       </div>
       <div class="comment-form">
         <!-- 蜜罐字段：人类不可见，机器人会自动填写（用于反垃圾） -->
@@ -41,22 +41,24 @@
         />
         <input
           v-model="commentForm.nickname"
+          :aria-label="t('昵称（可选）')"
           type="text"
           class="form-input"
-          :placeholder="userStore.isLoggedIn ? `昵称（当前：${userStore.username}）` : '昵称（可选，留空显示访客）'"
+          :placeholder="userStore.isLoggedIn ? `昵称（当前：${userStore.username}）` : t('昵称（可选，留空显示访客）')"
           maxlength="30"
         />
         <textarea
           v-model="commentForm.content"
+          :aria-label="t('评论内容')"
           class="form-textarea"
-          placeholder="写下你的评论..."
+          :placeholder="t('写下你的评论...')"
           rows="4"
           maxlength="2000"
         ></textarea>
         <div class="form-actions">
           <span class="char-count">{{ commentForm.content.length }}/2000</span>
           <button class="submit-btn" :disabled="!canSubmit || submitting" @click="submitComment">
-            {{ submitting ? '提交中…' : '发表评论' }}
+            {{ submitting ? t('提交中…') : t('发表评论') }}
           </button>
         </div>
       </div>
@@ -74,12 +76,14 @@
 
     <!-- 评论空状态 -->
     <div v-else class="comment-empty">
-      <p class="empty-text">暂无评论，快来抢沙发吧！</p>
+      <p class="empty-text">{{ t('暂无评论，快来抢沙发吧！') }}</p>
     </div>
   </section>
 </template>
 
 <script setup>
+import { t } from '@/utils/locale';
+import { scrollBehavior } from '@/utils/motion';
 import { ref, computed, watch, onMounted } from 'vue';
 import { getComments, postComment } from '../../api/comments';
 import { useUserStore } from '@/stores/user';
@@ -149,7 +153,7 @@ function setReplyTo(comment) {
   replyTo.value = comment;
   const formEl = document.querySelector('.comment-form-wrapper');
   if (formEl) {
-    formEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    formEl.scrollIntoView({ behavior: scrollBehavior(), block: 'center' });
   }
 }
 

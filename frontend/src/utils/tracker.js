@@ -1,18 +1,9 @@
-/**
- * 页面访问追踪器
- * 在路由守卫中自动上报页面访问（PV/UV）
- */
+/** Optional statistics; unavailable browser storage means no tracking. */
 import { recordVisit } from '../api/visits';
-
-/** 记录一次页面访问 */
-export function trackPageView(pagePath, referrer = '') {
-  // 忽略管理后台页面
+export function trackPageView(pagePath) {
   if (pagePath.startsWith('/admin') || pagePath.startsWith('/login')) return;
-
-  recordVisit({
-    page_path: pagePath,
-    referrer: referrer || document.referrer
-  }).catch(() => {
-    // 记录失败静默处理，不影响用户体验
-  });
+  try {
+    if (localStorage.getItem('visit-statistics') !== 'enabled' || navigator.doNotTrack === '1' || navigator.globalPrivacyControl) return;
+  } catch { return; }
+  recordVisit({ page_path: pagePath, consent: true }).catch(() => {});
 }

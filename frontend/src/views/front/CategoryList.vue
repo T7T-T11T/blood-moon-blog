@@ -12,7 +12,7 @@ fade-in-up 错峰（Intersection Observer） * - 悬浮：标题变主色 + 左�
       <p class="eyebrow animate-fade-in-down">CATEGORY</p>
       <h1 class="page-title animate-fade-in-up">{{ heading }}</h1>
       <p v-if="total > 0" class="page-subtitle animate-fade-in-up delay-100">
-        共 {{ total }} 篇文章
+        {{ t('共') }} {{ total }} {{ t('篇文章') }}
       </p>
       <GGBondSticker mood="upsideDown" size="md" floating :style="{ top: '24px', right: 'clamp(20px, 13vw, 190px)' }" />
     </section>
@@ -35,7 +35,7 @@ fade-in-up 错峰（Intersection Observer） * - 悬浮：标题变主色 + 左�
           :key="article.id"
           class="article-row reveal"
           :style="{ '--row-index': index }"
-          @click="goToArticle(article.id)"
+
         >
           <!-- 主色强调条：悬浮时从左侧展开 -->
           <span class="accent-bar" aria-hidden="true"></span>
@@ -49,12 +49,12 @@ fade-in-up 错峰（Intersection Observer） * - 悬浮：标题变主色 + 左�
               </span>
             </div>
             <!-- 标题 -->
-            <h3 class="article-title">{{ article.title }}</h3>
+            <h3 class="article-title"><router-link class="article-link" :to="`/article/${article.id}`">{{ article.title }}</router-link></h3>
             <!-- 摘要 -->
-            <p class="article-excerpt">{{ article.summary || '暂无摘要' }}</p>
+            <p class="article-excerpt">{{ article.summary || t('暂无摘要') }}</p>
             <!-- 阅读链接 -->
             <span class="article-read">
-              阅读全文
+              {{ t('阅读全文') }}
               <span class="read-arrow">→</span>
             </span>
           </div>
@@ -63,8 +63,8 @@ fade-in-up 错峰（Intersection Observer） * - 悬浮：标题变主色 + 左�
 
       <!-- 空状态 -->
       <div v-else class="empty-state">
-        <p class="empty-title">该分类下暂无文章</p>
-        <p class="empty-desc">去看看其他分类的内容吧</p>
+        <p class="empty-title">{{ t('该分类下暂无文章') }}</p>
+        <p class="empty-desc">{{ t('去看看其他分类的内容吧') }}</p>
       </div>
 
       <!-- 分页 -->
@@ -83,15 +83,16 @@ fade-in-up 错峰（Intersection Observer） * - 悬浮：标题变主色 + 左�
 </template>
 
 <script setup>
+import { t } from '@/utils/locale';
+import { scrollBehavior } from '@/utils/motion';
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
+import { useRoute } from 'vue-router';
 import { View } from '@element-plus/icons-vue';
 import { formatDate } from '@/utils/format';
 import { getArticlesByCategory } from '../../api/articles';
 import GGBondSticker from '../../components/common/GGBondSticker.vue';
 
 const route = useRoute();
-const router = useRouter();
 
 /** 组件根节点引用（用于作用域内的滚动观察） */
 const rootRef = ref(null);
@@ -132,13 +133,7 @@ const heading = computed(() => {
     .replace(/\b\w/g, (c) => c.toUpperCase());
 });
 
-/**
- * 跳转到文章详情页
- * @param {number} id - 文章 ID
- */
-function goToArticle(id) {
-  router.push(`/article/${id}`);
-}
+
 
 /**
  * 加载分类文章
@@ -180,6 +175,10 @@ async function loadArticles() {
 function initObserver() {
   if (observer) observer.disconnect();
   if (!rootRef.value) return;
+  if (!('IntersectionObserver' in window)) {
+    rootRef.value.querySelectorAll('.reveal').forEach(el => el.classList.add('visible'));
+    return;
+  }
   observer = new IntersectionObserver(
     (entries) => {
       entries.forEach((entry) => {
@@ -201,7 +200,7 @@ function initObserver() {
 function handlePageChange(page) {
   currentPage.value = page;
   loadArticles();
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  window.scrollTo({ top: 0, behavior: scrollBehavior() });
 }
 
 /**

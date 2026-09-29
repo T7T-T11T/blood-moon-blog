@@ -26,7 +26,7 @@
     <!-- 空状态 -->
     <div v-else-if="empty" class="async-state async-empty">
       <slot name="empty">
-        <GGBondSticker mood="fishing" size="md" caption="这里暂时没钓到内容" />
+        <GGBondSticker mood="fishing" size="md" :caption="t('这里暂时没钓到内容')" />
         <p class="state-text">{{ emptyMessage }}</p>
       </slot>
     </div>
@@ -37,6 +37,7 @@
 </template>
 
 <script setup>
+import { t } from '@/utils/locale';
 import GGBondSticker from './GGBondSticker.vue';
 
 defineProps({

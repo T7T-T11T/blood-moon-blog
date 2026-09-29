@@ -143,16 +143,17 @@ async function loadStats() {
 
     // 等待 DOM 渲染后初始化图表
     await nextTick();
-    // 路由级懒加载 echarts，仅首次使用时加载
+    // 路由级懒加载 echarts，仅首次使用时加载（echarts 6 按 charts/components/renderers 分包）
     if (!echarts) {
-      const core = await import('echarts/core');
-      const { LineChart } = await import('echarts/lib/chart/line');
-      const { BarChart } = await import('echarts/lib/chart/bar');
-      const { PieChart } = await import('echarts/lib/chart/pie');
-      const { GridComponent } = await import('echarts/lib/component/grid');
-      const { TooltipComponent } = await import('echarts/lib/component/tooltip');
-      const { LegendComponent } = await import('echarts/lib/component/legend');
-      const { CanvasRenderer } = await import('echarts/renderers');
+      const [core, charts, components, renderers] = await Promise.all([
+        import('echarts/core'),
+        import('echarts/charts'),
+        import('echarts/components'),
+        import('echarts/renderers')
+      ]);
+      const { LineChart, BarChart, PieChart } = charts;
+      const { GridComponent, TooltipComponent, LegendComponent } = components;
+      const { CanvasRenderer } = renderers;
       core.use([
         LineChart,
         BarChart,
@@ -185,9 +186,9 @@ function initPieChart(articleStats) {
     tooltip: {
       trigger: 'item',
       formatter: '{b}: {c} 篇（{d}%）',
-      backgroundColor: '#121828',
-      borderColor: '#2a3550',
-      textStyle: { color: '#e2e8f0' }
+      backgroundColor: 'rgba(255, 253, 247, .97)',
+      borderColor: '#d9d2c2',
+      textStyle: { color: '#29334a' }
     },
     legend: {
       bottom: 0,
@@ -195,16 +196,16 @@ function initPieChart(articleStats) {
       itemWidth: 8,
       itemHeight: 8,
       itemGap: 16,
-      textStyle: { color: '#94a3b8', fontSize: 12 }
+      textStyle: { color: '#687184', fontSize: 12 }
     },
-    color: ['#dc2626', '#64748b'],
+    color: ['#78c8a0', '#ffd166'],
     title: {
       text: String(total),
       subtext: '文章总数',
       left: 'center',
       top: '35%',
-      textStyle: { color: '#f1f5f9', fontSize: 26, fontWeight: 700 },
-      subtextStyle: { color: '#94a3b8', fontSize: 12 }
+      textStyle: { color: '#29334a', fontSize: 26, fontWeight: 700 },
+      subtextStyle: { color: '#9298a3', fontSize: 12 }
     },
     series: [
       {
@@ -212,7 +213,7 @@ function initPieChart(articleStats) {
         radius: ['52%', '72%'],
         center: ['50%', '45%'],
         avoidLabelOverlap: false,
-        itemStyle: { borderRadius: 6, borderColor: '#121828', borderWidth: 3 },
+        itemStyle: { borderRadius: 6, borderColor: '#fffdf7', borderWidth: 3 },
         label: { show: false },
         emphasis: {
           scaleSize: 6,
@@ -220,7 +221,7 @@ function initPieChart(articleStats) {
             show: true,
             fontSize: 14,
             fontWeight: 600,
-            color: '#f1f5f9',
+            color: '#29334a',
             formatter: '{b}\n{c} 篇'
           }
         },
@@ -245,17 +246,17 @@ function initLineChart(trend) {
   lineChart.setOption({
     tooltip: {
       trigger: 'axis',
-      backgroundColor: '#121828',
-      borderColor: '#2a3550',
-      textStyle: { color: '#e2e8f0' }
+      backgroundColor: 'rgba(255, 253, 247, .97)',
+      borderColor: '#d9d2c2',
+      textStyle: { color: '#29334a' }
     },
     grid: { left: 36, right: 18, top: 24, bottom: 28 },
     xAxis: {
       type: 'category',
       data: dates,
       boundaryGap: false,
-      axisLine: { lineStyle: { color: '#2a3550' } },
-      axisLabel: { color: '#94a3b8', fontSize: 11 },
+      axisLine: { lineStyle: { color: '#e0dacb' } },
+      axisLabel: { color: '#9298a3', fontSize: 11 },
       axisTick: { show: false }
     },
     yAxis: {
@@ -263,8 +264,8 @@ function initLineChart(trend) {
       minInterval: 1,
       axisLine: { show: false },
       axisTick: { show: false },
-      axisLabel: { color: '#94a3b8', fontSize: 11 },
-      splitLine: { lineStyle: { color: 'rgba(148, 163, 184, 0.14)' } }
+      axisLabel: { color: '#9298a3', fontSize: 11 },
+      splitLine: { lineStyle: { color: 'rgba(79, 113, 143, 0.12)' } }
     },
     series: [
       {
@@ -273,12 +274,12 @@ function initLineChart(trend) {
         smooth: true,
         symbol: 'circle',
         symbolSize: 7,
-        lineStyle: { width: 3, color: '#f87171' },
-        itemStyle: { color: '#dc2626', borderColor: '#fca5a5', borderWidth: 2 },
+        lineStyle: { width: 3, color: '#4f8fdc' },
+        itemStyle: { color: '#4f8fdc', borderColor: '#bfe0ff', borderWidth: 2 },
         areaStyle: {
           color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-            { offset: 0, color: 'rgba(220, 38, 38, 0.35)' },
-            { offset: 1, color: 'rgba(220, 38, 38, 0.02)' }
+            { offset: 0, color: 'rgba(79, 143, 220, 0.3)' },
+            { offset: 1, color: 'rgba(79, 143, 220, 0.02)' }
           ])
         }
       }
@@ -302,16 +303,16 @@ function initBarChart(articles) {
     tooltip: {
       trigger: 'axis',
       axisPointer: { type: 'shadow' },
-      backgroundColor: '#121828',
-      borderColor: '#2a3550',
-      textStyle: { color: '#e2e8f0' }
+      backgroundColor: 'rgba(255, 253, 247, .97)',
+      borderColor: '#d9d2c2',
+      textStyle: { color: '#29334a' }
     },
     grid: { left: 40, right: 24, top: 20, bottom: 44 },
     xAxis: {
       type: 'category',
       data: names,
-      axisLine: { lineStyle: { color: '#2a3550' } },
-      axisLabel: { color: '#94a3b8', fontSize: 11, interval: 0, rotate: 18 },
+      axisLine: { lineStyle: { color: '#e0dacb' } },
+      axisLabel: { color: '#9298a3', fontSize: 11, interval: 0, rotate: 18 },
       axisTick: { show: false }
     },
     yAxis: {
@@ -319,8 +320,8 @@ function initBarChart(articles) {
       minInterval: 1,
       axisLine: { show: false },
       axisTick: { show: false },
-      axisLabel: { color: '#94a3b8', fontSize: 11 },
-      splitLine: { lineStyle: { color: 'rgba(148, 163, 184, 0.14)' } }
+      axisLabel: { color: '#9298a3', fontSize: 11 },
+      splitLine: { lineStyle: { color: 'rgba(79, 113, 143, 0.12)' } }
     },
     series: [
       {
@@ -330,11 +331,11 @@ function initBarChart(articles) {
         itemStyle: {
           borderRadius: [6, 6, 0, 0],
           color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-            { offset: 0, color: '#f87171' },
-            { offset: 1, color: '#991b1b' }
+            { offset: 0, color: '#78c8a0' },
+            { offset: 1, color: '#4f8fdc' }
           ])
         },
-        emphasis: { itemStyle: { color: '#f87171' } }
+        emphasis: { itemStyle: { color: '#78c8a0' } }
       }
     ]
   });

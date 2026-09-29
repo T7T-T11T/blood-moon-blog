@@ -1,12 +1,12 @@
 {
   "name": "寿冬与秋 - 记录技术与成长",
   "short_name": "寿冬与秋",
-  "description": "一个专注于技术分享与个人成长的暗夜哥特风博客",
+  "description": "一个记录技术分享与个人成长的温馨轻快博客",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#0a0e1a",
-  "theme_color": "#0a0e1a",
+  "background_color": "#f7f3e8",
+  "theme_color": "#f7f3e8",
   "icons": [
     {
       "src": "/blood-moon-logo-new.png",

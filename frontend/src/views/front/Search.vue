@@ -6,7 +6,7 @@
     <section class="hero">
       <div class="hero-inner">
         <p class="hero-eyebrow animate-fade-in-down">SEARCH</p>
-        <h1 class="hero-title animate-fade-in-up">搜索文章</h1>
+        <h1 class="hero-title animate-fade-in-up">{{ t('搜索文章') }}</h1>
         <div class="search-form animate-fade-in-up delay-100">
           <el-icon class="search-icon"><Search /></el-icon>
           <input
@@ -14,13 +14,14 @@
             v-model="keyword"
             type="text"
             class="search-input"
-            placeholder="输入关键词搜索…"
+            :placeholder="t('输入关键词搜索…')"
+            :aria-label="t('搜索关键词')"
             @keyup.enter="doSearch"
           />
-          <button class="search-btn" @click="doSearch">搜索</button>
+          <button class="search-btn" @click="doSearch">{{ t('搜索') }}</button>
         </div>
       </div>
-      <GGBondSticker mood="confused" size="lg" floating caption="关键词到底藏哪了" :style="{ top: '16px', right: 'clamp(22px, 12vw, 190px)' }" />
+      <GGBondSticker mood="confused" size="lg" floating :caption="t('关键词到底藏哪了')" :style="{ top: '16px', right: 'clamp(22px, 12vw, 190px)' }" />
     </section>
 
     <!-- ============ 搜索结果 ============ -->
@@ -29,14 +30,14 @@
         :loading="loading"
         :error="error"
         :empty="results.length === 0 && !loading && !error && searched"
-        error-message="搜索失败，请稍后重试"
-        empty-message="未找到匹配的文章，请尝试其他关键词"
-        retry-text="重试"
+        :error-message="t('搜索失败，请稍后重试')"
+        :empty-message="t('未找到匹配的文章，请尝试其他关键词')"
+        :retry-text="t('重试')"
         @retry="doSearch"
       >
         <!-- 结果统计 -->
         <div v-if="searched" class="search-stats">
-          找到 <strong>{{ total }}</strong> 篇相关文章
+          {{ t('找到') }} <strong>{{ total }}</strong> {{ t('篇相关文章') }}
         </div>
 
         <!-- 文章列表 -->
@@ -46,7 +47,7 @@
             :key="article.id"
             class="article-row reveal"
             :style="{ '--row-index': index }"
-            @click="goToArticle(article.id)"
+
           >
             <span class="accent-bar" aria-hidden="true"></span>
             <div class="article-body">
@@ -60,15 +61,10 @@
                   {{ article.view_count || 0 }}
                 </span>
               </div>
-              <!-- eslint-disable vue/no-v-html -->
-              <h3 class="article-title" v-html="highlightKeyword(article.title)"></h3>
-              <p
-                class="article-excerpt"
-                v-html="highlightKeyword(article.summary || '暂无摘要')"
-              ></p>
-              <!-- eslint-enable vue/no-v-html -->
+              <h3 class="article-title"><router-link class="article-link" :to="`/article/${article.id}`"><template v-for="(part, i) in highlightParts(article.title, lastKeyword)" :key="i"><mark v-if="i % 2">{{ part }}</mark><template v-else>{{ part }}</template></template></router-link></h3>
+              <p class="article-excerpt"><template v-for="(part, i) in highlightParts(article.summary || t('暂无摘要'), lastKeyword)" :key="i"><mark v-if="i % 2">{{ part }}</mark><template v-else>{{ part }}</template></template></p>
               <span class="article-read">
-                阅读全文
+                {{ t('阅读全文') }}
                 <span class="read-arrow">→</span>
               </span>
             </div>
@@ -92,6 +88,9 @@
 </template>
 
 <script setup>
+import { t } from '@/utils/locale';
+import { scrollBehavior } from '@/utils/motion';
+import { highlightParts } from '@/utils/highlight';
 import { ref, onMounted, onUnmounted, nextTick } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { Search, View } from '@element-plus/icons-vue';
@@ -119,15 +118,6 @@ let observer = null;
 /** 当前搜索关键词（记录最近一次搜索，用于高亮） */
 const lastKeyword = ref('');
 
-/** 高亮关键词（转义 HTML 防止 XSS） */
-function highlightKeyword(text) {
-  if (!lastKeyword.value || !text) return text;
-  const escaped = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  const kw = lastKeyword.value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const regex = new RegExp(`(${kw})`, 'gi');
-  return escaped.replace(regex, '<mark>$1</mark>');
-}
-
 /** 执行搜索 */
 async function doSearch() {
   const kw = keyword.value.trim();
@@ -144,7 +134,7 @@ async function onPageChange(page) {
   currentPage.value = page;
   await fetchResults();
   // 滚动到顶部
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  window.scrollTo({ top: 0, behavior: scrollBehavior() });
 }
 
 /** 请求搜索结果 */
@@ -174,14 +164,16 @@ async function fetchResults() {
 }
 
 /** 跳转到文章详情 */
-function goToArticle(id) {
-  router.push(`/article/${id}`);
-}
+
 
 /** 初始化滚动动画 */
 function initObserver() {
   if (observer) observer.disconnect();
   if (!rootRef.value) return;
+  if (!('IntersectionObserver' in window)) {
+    rootRef.value.querySelectorAll('.reveal').forEach(el => el.classList.add('visible'));
+    return;
+  }
   observer = new IntersectionObserver(
     (entries) => {
       entries.forEach((entry) => {
