@@ -190,6 +190,7 @@ const navItems = [
   { path: '/', label: '首页', exact: true },
   { path: '/tags', label: '标签', exact: false },
   { path: '/archive', label: '归档', exact: false },
+  { path: '/links', label: '友链', exact: false },
   { path: '/about', label: '关于', exact: false }
 ];
 
