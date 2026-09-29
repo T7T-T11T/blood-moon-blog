@@ -28,11 +28,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
-      # 2. 设置 Node.js
+      # 2. 设置 Node.js（supabase-js 要求 Node 22+ 原生 WebSocket，Node 20 会导致单测失败）
       - name: Setup Node.js
         uses: actions/setup-node@v5
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
           cache-dependency-path: |
             frontend/package-lock.json
