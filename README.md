@@ -14,7 +14,7 @@ Cloudflare Workers（Hono API）
 Supabase（PostgreSQL 与媒体存储）
 ```
 
-`workers-backend/` 是唯一的生产后端。`backend/` 中的 Express 实现仅保留作历史兼容与离线参考，不参与默认开发或部署。
+`workers-backend/` 是唯一的生产后端（原 `backend/` Express 历史兼容层已移除）。
 
 ## 主要功能
 
@@ -93,7 +93,6 @@ git push origin master
 ```text
 frontend/          Vue 3 应用、页面与写作体验
 workers-backend/   Hono + Supabase 生产 API
-backend/           Express 历史兼容实现
 database/          PostgreSQL 迁移脚本
 tests/             冒烟测试与无副作用单元测试
 .github/           自动检查、部署与健康检查工作流

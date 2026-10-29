@@ -524,8 +524,12 @@ const renderedContent = computed(() => {
   if (!article.value || !article.value.content) return '';
 
   // 提取所有 data: URL，替换为合法 HTTPS 占位符
+  // 仅允许无害媒体类型（图片/音频/视频），其余类型（text/html、text/javascript、
+  // image/svg+xml 等可执行/可注入类型）一律丢弃，防止还原时绕过 DOMPurify 白名单
+  const SAFE_DATA_URL_RE = /^data:(image\/(?:png|jpe?g|gif|webp|bmp|avif)|audio\/[\w.+-]+|video\/[\w.+-]+);/i;
   const dataUrls = [];
   let content = article.value.content.replace(/data:[^\s"'<>)]+/g, (match) => {
+    if (!SAFE_DATA_URL_RE.test(match)) return '';
     const idx = dataUrls.length;
     dataUrls.push(match);
     return `${PLACEHOLDER_BASE}/${idx}`;

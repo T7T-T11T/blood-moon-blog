@@ -149,9 +149,10 @@ async function tryUploadToStorage(supabase, bucketName, filePath, fileData, cont
  * @param {string} dir - 存储子目录（images/audio/video/files）
  * @param {Array<string>} allowedPrefixes - 允许的 MIME 前缀（如 ['image/', 'audio/']）
  * @param {number} maxSizeMB - 最大文件大小（MB）
+ * @param {Array<string>} [allowedExactTypes=[]] - 额外允许的精确 MIME 类型白名单
  * @returns {Promise<Response>}
  */
-async function handleUpload(c, dir, allowedPrefixes, maxSizeMB) {
+async function handleUpload(c, dir, allowedPrefixes, maxSizeMB, allowedExactTypes = []) {
   try {
     // 解析 multipart/form-data
     const formData = await c.req.raw.formData();
@@ -161,9 +162,11 @@ async function handleUpload(c, dir, allowedPrefixes, maxSizeMB) {
       return c.json({ code: 400, message: '请上传文件' }, 400);
     }
 
-    // 检查文件类型（使用前缀匹配，更灵活）
+    // 检查文件类型（前缀匹配 + 精确 MIME 白名单双重校验）
     const mimeType = file.type || 'application/octet-stream';
-    if (allowedPrefixes.length > 0 && !allowedPrefixes.some((p) => mimeType.startsWith(p))) {
+    const allowedByPrefix = allowedPrefixes.length === 0 || allowedPrefixes.some((p) => mimeType.startsWith(p));
+    const allowedByExact = allowedExactTypes.length === 0 || allowedExactTypes.includes(mimeType);
+    if (!allowedByPrefix || !allowedByExact) {
       return c.json({ code: 400, message: `不支持的文件类型：${mimeType}` }, 400);
     }
 
@@ -344,10 +347,27 @@ uploadsRouter.post('/video', authMiddleware, adminMiddleware, async (c) => {
 
 /**
  * POST /api/upload/file
- * 上传普通文件（不限类型，最大 50MB）
+ * 上传普通文件（受限类型白名单，最大 50MB）
  */
+const ALLOWED_FILE_MIME_PREFIXES = ['text/'];
+const ALLOWED_FILE_EXACT_TYPES = [
+  'application/pdf',
+  'application/zip',
+  'application/x-7z-compressed',
+  'application/x-rar-compressed',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.ms-powerpoint',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  'application/json',
+  'application/javascript',
+  'text/javascript',
+  'application/x-javascript'
+];
 uploadsRouter.post('/file', authMiddleware, adminMiddleware, async (c) => {
-  return handleUpload(c, 'files', [], 50);
+  return handleUpload(c, 'files', ALLOWED_FILE_MIME_PREFIXES, 50, ALLOWED_FILE_EXACT_TYPES);
 });
 
 /**
@@ -385,12 +405,75 @@ uploadsRouter.get('/list', authMiddleware, adminMiddleware, async (c) => {
 });
 
 /**
+ * 从 URL 中提取存储路径
+ * 支持 Supabase Storage URL（/storage/v1/object/public/<bucket>/<path>）
+ * 与 R2 公开 URL（<MEDIA_PUBLIC_URL>/<path>）两种形态
+ */
+function extractStoragePathFromUrl(env, url) {
+  try {
+    const urlObj = new URL(url);
+    const pathname = decodeURIComponent(urlObj.pathname);
+    const bucketName = env.STORAGE_BUCKET || 'uploads';
+    const supabasePrefix = `/storage/v1/object/public/${bucketName}/`;
+
+    if (pathname.startsWith(supabasePrefix)) {
+      return pathname.slice(supabasePrefix.length);
+    }
+
+    // 其它 object/public 形态（bucket 名不同时）
+    const marker = '/object/public/';
+    const markerIndex = pathname.indexOf(marker);
+    if (markerIndex !== -1) {
+      return pathname.slice(markerIndex + marker.length).split('/').slice(1).join('/');
+    }
+
+    // R2 公开 URL：路径即存储路径（如 images/xxx.png）
+    return pathname.replace(/^\//, '');
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * 从所有已配置存储（R2 + Supabase Storage）中删除文件
+ * @returns {Promise<boolean>} 是否有任一存储实际删除成功
+ */
+async function deleteStoredFile(c, filePath) {
+  const env = c.env;
+  const db = getDatabase(env);
+  let success = false;
+
+  // 1. R2（生产主存储）
+  if (env.MEDIA_BUCKET) {
+    try {
+      await env.MEDIA_BUCKET.delete(filePath);
+      success = true;
+    } catch (error) {
+      console.warn('[Upload] R2 删除失败：', error.message);
+    }
+  }
+
+  // 2. Supabase Storage（兼容旧部署）
+  const bucketName = env.STORAGE_BUCKET || 'uploads';
+  try {
+    const { error } = await db.supabase.storage.from(bucketName).remove([filePath]);
+    if (error) {
+      console.warn('[Upload] Storage 删除失败：', error.message);
+    } else {
+      success = true;
+    }
+  } catch (error) {
+    console.warn('[Upload] Storage 删除异常：', error.message);
+  }
+
+  return success;
+}
+
+/**
  * DELETE /api/upload
- * 删除上传文件（仅 Storage 模式有效）
+ * 删除上传文件（R2 优先，兼容 Supabase Storage；失败不误报成功）
  */
 uploadsRouter.delete('/', authMiddleware, adminMiddleware, async (c) => {
-  const db = getDatabase(c.env);
-
   try {
     const body = await c.req.json();
     const { url } = body;
@@ -399,45 +482,40 @@ uploadsRouter.delete('/', authMiddleware, adminMiddleware, async (c) => {
       return c.json({ code: 400, message: '请提供文件 URL' }, 400);
     }
 
-    // 从 URL 中提取存储路径
-    const bucketName = c.env.STORAGE_BUCKET || 'uploads';
-    const urlObj = new URL(url);
-    const pathPart = urlObj.pathname.replace(`/storage/v1/object/public/${bucketName}/`, '');
+    const filePath = extractStoragePathFromUrl(c.env, url);
+    if (!filePath) {
+      return c.json({ code: 400, message: '无法解析文件路径' }, 400);
+    }
 
-    const { error } = await db.supabase.storage.from(bucketName).remove([pathPart]);
-
-    if (error) {
-      return c.json({ code: 500, message: '删除文件失败', error: error.message }, 500);
+    const deleted = await deleteStoredFile(c, filePath);
+    if (!deleted) {
+      return c.json({ code: 500, message: '删除文件失败，请检查存储配置' }, 500);
     }
 
     return c.json({ code: 200, message: '删除成功' });
   } catch (error) {
     console.error('Delete upload error:', error);
-    return c.json({ code: 200, message: '删除成功（base64 模式无需删除）' });
+    return c.json({ code: 500, message: '删除文件失败' }, 500);
   }
 });
 
 /**
  * DELETE /api/upload/:filename
- * 按文件名删除上传文件
+ * 按文件名删除上传文件（R2 优先，兼容 Supabase Storage；失败不误报成功）
  */
 uploadsRouter.delete('/:filename', authMiddleware, adminMiddleware, async (c) => {
-  const db = getDatabase(c.env);
-
   try {
     const filename = c.req.param('filename');
-    const bucketName = c.env.STORAGE_BUCKET || 'uploads';
 
-    const { error } = await db.supabase.storage.from(bucketName).remove([filename]);
-
-    if (error) {
-      return c.json({ code: 500, message: '删除文件失败', error: error.message }, 500);
+    const deleted = await deleteStoredFile(c, filename);
+    if (!deleted) {
+      return c.json({ code: 500, message: '删除文件失败，请检查存储配置' }, 500);
     }
 
     return c.json({ code: 200, message: '删除成功' });
   } catch (error) {
     console.error('Delete upload error:', error);
-    return c.json({ code: 200, message: '删除成功（base64 模式无需删除）' });
+    return c.json({ code: 500, message: '删除文件失败' }, 500);
   }
 });
 

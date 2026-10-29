@@ -13,6 +13,8 @@ frontend/dist/
 .env
 .env.local
 .env.*.local
+# 全局忽略形如 *.env.* 的密钥文件（如 config.env.prod），防止敏感配置入库
+*.env.*
 backend/.env
 backend/.env.local
 frontend/.env.local

@@ -10,7 +10,8 @@
 
 import { Hono } from 'hono'
 import { getDatabase } from '../db.js'
-import { hashPassword, verifyPassword, generateToken, verifyToken, authMiddleware } from '../auth.js'
+import { getClientIp, hashPassword, verifyPassword, generateToken, verifyToken, authMiddleware } from '../auth.js'
+import { checkRateLimit } from '../lib/rateLimit.js'
 
 const authRouter = new Hono()
 
@@ -31,6 +32,12 @@ authRouter.post('/login', async (c) => {
       return c.json({ code: 400, message: '用户名和密码不能为空' }, 400)
     }
 
+    // 登录限流：同一 IP + 用户名 10 分钟内最多 5 次（成功/失败均计数）
+    const loginKey = `${getClientIp(c)}:${username}`
+    if (!(await checkRateLimit(c, 'login', loginKey, 5, 10 * 60 * 1000))) {
+      return c.json({ code: 429, message: '登录尝试过于频繁，请稍后再试' }, 429)
+    }
+
     // 查找用户
     const user = await db.findOne('users', { username })
     if (!user) {
@@ -43,9 +50,13 @@ authRouter.post('/login', async (c) => {
       return c.json({ code: 401, message: '用户名或密码错误' }, 401)
     }
 
-    // 生成 Token
+    // 生成 Token（角色枚举校验：仅 admin/user 合法，空值或异常角色一律降级为最低权限 user，杜绝空角色提权）
+    if (user.role !== 'admin' && user.role !== 'user') {
+      console.warn(`[Auth] User ${user.id} has unexpected role "${user.role}", downgraded to user`)
+    }
+    const role = user.role === 'admin' ? 'admin' : 'user'
     const token = await generateToken(
-      { userId: user.id, username: user.username, role: user.role || 'admin' },
+      { userId: user.id, username: user.username, role },
       c.env.JWT_SECRET,
       c.env
     )

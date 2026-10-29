@@ -13,6 +13,30 @@ import { authMiddleware, adminMiddleware } from '../auth.js'
 const settingsRouter = new Hono()
 
 /**
+ * 公开设置白名单：仅返回前端实际展示/管理端可编辑的键。
+ * 其余键（含潜在敏感配置）一律不对外返回，避免泄露。
+ */
+const PUBLIC_SETTING_KEYS = [
+  'site_name',
+  'site_description',
+  'site_url',
+  'site_keywords',
+  'site_icp',
+  'footer_text',
+  'author_name',
+  'author_bio',
+  'author_github',
+  'author_email',
+  'author_avatar',
+  'author_qq',
+  'author_wechat',
+  'author_skills',
+  'allow_comments',
+  'comments_moderation'
+]
+const PUBLIC_KEY_SET = new Set(PUBLIC_SETTING_KEYS)
+
+/**
  * GET /api/settings
  * 获取系统设置（公开）
  */
@@ -24,10 +48,12 @@ settingsRouter.get('/', async (c) => {
       order: { column: 'setting_key', ascending: true }
     })
 
-    // 转换为键值对格式
+    // 转换为键值对格式（仅返回白名单内的公开键）
     const result = {}
     for (const item of settings) {
-      result[item.setting_key] = item.setting_value
+      if (PUBLIC_KEY_SET.has(item.setting_key)) {
+        result[item.setting_key] = item.setting_value
+      }
     }
 
     return c.json({
@@ -36,10 +62,10 @@ settingsRouter.get('/', async (c) => {
     })
   } catch (error) {
     console.error('Get settings error:', error)
-    // 返回实际错误信息便于调试（生产环境也返回，因为是只读接口）
+    // 仅返回通用错误信息，避免泄露内部细节
     return c.json({
       code: 500,
-      message: error.message || '服务器错误'
+      message: '服务器错误'
     }, 500)
   }
 })

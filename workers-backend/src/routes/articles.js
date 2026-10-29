@@ -423,7 +423,8 @@ articlesRouter.get('/public/:id', async (c) => {
 
   try {
     const id = parseInt(c.req.param('id'));
-    const article = await db.findOne('articles', { id });
+    // 仅允许公开已发布文章，未发布/草稿一律按不存在处理
+    const article = await db.findOne('articles', { id, status: '已发布' });
 
     if (!article) {
       return c.json({ code: 404, message: '文章不存在' }, 404);

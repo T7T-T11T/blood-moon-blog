@@ -7,11 +7,11 @@
 
 import { Hono } from 'hono'
 import { getDatabase } from '../db.js'
-import { authMiddleware } from '../auth.js'
+import { authMiddleware, adminMiddleware } from '../auth.js'
 
 const exportRouter = new Hono()
 
-exportRouter.get('/comments', authMiddleware, async (c) => {
+exportRouter.get('/comments', authMiddleware, adminMiddleware, async (c) => {
   const db = getDatabase(c.env)
   try {
     const status = c.req.query('status')
@@ -31,7 +31,7 @@ exportRouter.get('/comments', authMiddleware, async (c) => {
   }
 })
 
-exportRouter.get('/articles', authMiddleware, async (c) => {
+exportRouter.get('/articles', authMiddleware, adminMiddleware, async (c) => {
   const db = getDatabase(c.env)
   try {
     const status = c.req.query('status')
