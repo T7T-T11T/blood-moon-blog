@@ -151,7 +151,7 @@ async function fetchResults() {
     const data = res.data || {};
     results.value = data.list || [];
     total.value = (data.pagination && data.pagination.total) || 0;
-    totalPages.value = (data.pagination && data.pagination.total_pages) || 0;
+    totalPages.value = Math.ceil((data.pagination?.total || 0) / (data.pagination?.page_size || pageSize));
     lastKeyword.value = kw;
     await nextTick();
     initObserver();

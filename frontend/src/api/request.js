@@ -8,6 +8,7 @@
  */
 import axios from 'axios';
 import router from '../router';
+import { useUserStore } from '../stores/user';
 
 /**
  * 获取 API 基础地址
@@ -67,8 +68,7 @@ request.interceptors.response.use(
         // token 过期或未登录，清除登录信息并跳转登录页（加锁防止并发重复跳转）
         if (!isRedirecting) {
           isRedirecting = true;
-          localStorage.removeItem('token');
-          localStorage.removeItem('username');
+          useUserStore().logout();
           ElMessage.error('登录已过期，请重新登录');
           router.push('/login').finally(() => {
             isRedirecting = false;

@@ -234,7 +234,7 @@ async function fetchList() {
     if (res.code === 200) {
       musicList.value = res.data.list;
       pagination.total = res.data.pagination.total;
-      pagination.total_pages = res.data.pagination.total_pages;
+      pagination.total_pages = Math.ceil(pagination.total / pagination.page_size);
       total.value = res.data.pagination.total;
     }
   } catch (e) {
