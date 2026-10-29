@@ -6,7 +6,7 @@
  * - 其他同源静态资源：stale-while-revalidate
  */
 const CACHE_PREFIX = 'blood-moon-blog';
-const SHELL_CACHE = CACHE_PREFIX + '-shell-v2';
+const SHELL_CACHE = CACHE_PREFIX + '-shell-v3';
 const ASSET_CACHE = CACHE_PREFIX + '-assets-v2';
 
 self.addEventListener('install', (event) => {
@@ -79,13 +79,15 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       caches.match(request).then((cached) => {
         if (cached) return cached;
-        return fetch(request).then((response) => {
-          if (response && response.ok) {
-            const clone = response.clone();
-            caches.open(ASSET_CACHE).then((cache) => cache.put(request, clone));
-          }
-          return response;
-        });
+        return fetch(request)
+          .then((response) => {
+            if (response && response.ok) {
+              const clone = response.clone();
+              caches.open(ASSET_CACHE).then((cache) => cache.put(request, clone));
+            }
+            return response;
+          })
+          .catch(() => caches.match(request));
       })
     );
     return;
@@ -94,13 +96,15 @@ self.addEventListener('fetch', (event) => {
   // 其他同源静态资源：stale-while-revalidate
   event.respondWith(
     caches.match(request).then((cached) => {
-      const network = fetch(request).then((response) => {
-        if (response && response.ok) {
-          const clone = response.clone();
-          caches.open(ASSET_CACHE).then((cache) => cache.put(request, clone));
-        }
-        return response;
-      });
+      const network = fetch(request)
+        .then((response) => {
+          if (response && response.ok) {
+            const clone = response.clone();
+            caches.open(ASSET_CACHE).then((cache) => cache.put(request, clone));
+          }
+          return response;
+        })
+        .catch(() => caches.match(request));
       return cached || network;
     })
   );
