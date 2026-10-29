@@ -153,13 +153,15 @@ async function fetchResults() {
     total.value = (data.pagination && data.pagination.total) || 0;
     totalPages.value = Math.ceil((data.pagination?.total || 0) / (data.pagination?.page_size || pageSize));
     lastKeyword.value = kw;
-    await nextTick();
-    initObserver();
   } catch (e) {
     console.error('搜索失败:', e);
     error.value = true;
   } finally {
     loading.value = false;
+    // 等 AsyncData 从 loading 态切换到列表渲染完成后再绑定滚动动画，
+    // 否则 initObserver 会观察到 0 个 .reveal 节点，卡片恒为 opacity:0
+    await nextTick();
+    initObserver();
   }
 }
 
