@@ -213,7 +213,7 @@ articlesRouter.get('/public/search', async (c) => {
   const db = getDatabase(c.env);
 
   try {
-    const keyword = c.req.query('keyword') || '';
+    const keyword = (c.req.query('keyword') || '').trim().toLowerCase();
     const page = parseInt(c.req.query('page') || '1');
     const pageSize = parseInt(c.req.query('page_size') || '10');
 
@@ -223,13 +223,13 @@ articlesRouter.get('/public/search', async (c) => {
       order: { column: 'created_at', ascending: false }
     });
 
-    // 客户端搜索（简单实现）
+    // 客户端搜索（简单实现，不区分大小写）
     const results = allArticles.filter(
       (a) =>
         !keyword ||
-        (a.title && a.title.includes(keyword)) ||
-        (a.summary && a.summary.includes(keyword)) ||
-        (a.content && a.content.includes(keyword))
+        (a.title && a.title.toLowerCase().includes(keyword)) ||
+        (a.summary && a.summary.toLowerCase().includes(keyword)) ||
+        (a.content && a.content.toLowerCase().includes(keyword))
     );
 
     const total = results.length;
